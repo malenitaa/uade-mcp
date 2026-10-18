@@ -31,6 +31,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_asistencia` | Presentes, inasistencias y detalle por clase |
 | `webcampus_historial` | Todas las materias del plan con situación, nota y fecha, y el promedio |
 | `webcampus_cuenta` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
+| `planuade_link_importar` | Un link de [Plan UADE](https://planuade.ar) con tus aprobadas, finales pendientes y cursadas. Lo abrís vos y confirmás ahí |
 
 ## Cómo trata tus datos
 

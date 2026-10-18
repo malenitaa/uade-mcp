@@ -216,10 +216,11 @@ https://planuade.ar/fain#importar=<base64url(JSON firmado con hash de integridad
   sigue siendo decisión tuya.
 - No se suma ninguna API pública nueva ni nada que autenticar. La superficie de ataque no crece.
 
-> ⚠ **Hallazgo aparte:** hoy `/api/sync` identifica al usuario **solo por el legajo** (3 a 10 dígitos, sin
-> ningún secreto). Cualquiera que sepa o adivine un legajo puede leer y **sobrescribir** el progreso de esa
-> persona. El hash con pepper protege la base, no la API. Es un IDOR (OWASP A01, Broken Access Control).
-> Se arregla en el repo `facultades`, no acá. Hasta que se arregle, el MCP no va a usar `/api/sync`.
+> **Sobre `/api/sync`:** identifica solo por legajo, sin secreto, así que quien sepa un legajo puede
+> leer y pisar ese progreso. PlanUADE lo **acepta por diseño** (ver su `SECURITY.md`: el dato no es
+> sensible, hay historial de versiones y rate limit). El MCP no usa `/api/sync`: el import es local y
+> la persona decide después si sincroniza. Si en algún momento se suman datos más sensibles, conviene
+> revisar esa decisión (sería OWASP A01).
 
 ---
 
@@ -266,7 +267,7 @@ a qué hosts se conecta, qué no hace nunca y cómo borrar todo (`uade-mcp logou
 
 ## 12. Pendientes / a evaluar
 
-- [ ] **PlanUADE:** implementar `#importar=` en `facultades` (sección 8) y arreglar el IDOR de `/api/sync`.
+- [x] **PlanUADE:** `#importar=` en `facultades` (sección 8; formato en `facultades/docs/IMPORTAR.md`).
 - [ ] **Graph:** registrar una app de prueba y ver si el tenant UADE permite consentimiento de usuario.
 - [ ] **PIA:** volver a mapear cuando abra una inscripción.
 - [ ] **Stack:** propuesta TypeScript + `@modelcontextprotocol/sdk` + `undici` (HTTP con allowlist) + `cheerio` (parseo) + `keytar`/`@napi-rs/keyring` (llavero) + `@azure/msal-node`.

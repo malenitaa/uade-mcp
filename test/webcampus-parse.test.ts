@@ -100,7 +100,7 @@ describe('WebCampus', () => {
     ]);
     expect(h.materias[0]).toMatchObject({ nombre: 'MATERIA APROBADA', horas: 68, fechaAprobacion: '2028-12-15' });
     expect(h.materias[1]?.fechaAprobacion).toBe('2029-03-05'); // día sin cero adelante
-    expect(h.materias[3]?.notaTexto).toBe('A FINAL PREVIO');
+    expect(h.materias[3]).toMatchObject({ notaTexto: 'A FINAL PREVIO', fechaRegularizacion: '2029-12-02' });
   });
 
   it('cuenta corriente: sin deuda, vencimientos y pagos', () => {

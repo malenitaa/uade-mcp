@@ -241,6 +241,8 @@ export interface MateriaHistorial {
   nota: number | null;
   notaTexto: string | null;
   fechaAprobacion: string | null;
+  // Para final pendiente: fecha en que quedó regularizada la cursada (corre el vencimiento de 2 años).
+  fechaRegularizacion: string | null;
 }
 
 export interface Historial {
@@ -280,6 +282,14 @@ export function parseHistorial(html: string): Historial {
     // El detalle (fila oculta siguiente) trae la fecha del acta que aprobó la materia.
     const detalle = $tr.next('tr.tr_grilla_hide');
     const fechaActa = detalle.find('tr.tr_tbl_up').filter((_, r) => /Fecha Acta/i.test($(r).text())).first().text();
+    // La fila de detalle con estado "A FINAL" trae la fecha en que se regularizó la cursada.
+    const regularizada = detalle
+      .find('tr.tr_tbl_int')
+      .filter((_, r) => /A FINAL/i.test(clean($(r).children('td').eq(4).text())))
+      .first()
+      .children('td')
+      .first()
+      .text();
 
     materias.push({
       codigo: td[0] ?? '',
@@ -291,6 +301,7 @@ export function parseHistorial(html: string): Historial {
       nota: notaNum,
       notaTexto,
       fechaAprobacion: situacion === 'aprobada' ? parseFecha(fechaActa) : null,
+      fechaRegularizacion: situacion === 'final_pendiente' ? parseFecha(regularizada) : null,
     });
   });
 
