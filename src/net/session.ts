@@ -71,6 +71,9 @@ export class SessionClient {
     path: string,
     init: { method: 'GET' | 'POST'; body?: URLSearchParams; headers?: Record<string, string> },
   ): Promise<Page> {
+    // El llavero es la fuente de verdad: si la persona volvió a iniciar sesión con el MCP
+    // abierto, se toma la sesión nueva sin tener que reiniciar el cliente.
+    this.cookie = this.store.load() ?? this.cookie;
     if (!this.cookie) throw new SessionExpiredError(this.site.nombre);
     const res = await safeFetch(new URL(path, this.site.origin), { ...init, cookie: this.cookie });
 

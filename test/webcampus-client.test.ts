@@ -106,3 +106,15 @@ describe('Inscripciones con la sesión vencida', () => {
     await expect(insc.ventanas()).rejects.toThrow('respondió 500');
   });
 });
+
+describe('relogin con el MCP abierto', () => {
+  it('toma la sesión nueva del llavero sin reiniciar', async () => {
+    const calls = stubFetch(() => new Response('<html></html>'));
+    let guardada: string | null = 'sessionuade=vieja';
+    const client = new WebCampusClient({ load: () => guardada, save: (c) => { guardada = c; } });
+    await client.get('/HomeWC.aspx');
+    guardada = 'sessionuade=nueva'; // la persona corrió login en otra terminal
+    await client.get('/HomeWC.aspx');
+    expect(calls.map((c) => c.cookie)).toEqual(['sessionuade=vieja', 'sessionuade=nueva']);
+  });
+});
