@@ -1,7 +1,7 @@
 // Sitio de inscripciones (inscripciones.uade.edu.ar): ventanas de inscripción con sus fechas y
 // el link a la Programación de Clases de WebCampus. Solo lectura: no abre PIA ni inscribe.
 import * as cheerio from 'cheerio';
-import { keychainStore, SessionClient, type SessionStore } from '../../net/session.js';
+import { keychainStore, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
 import { parseFecha } from '../webcampus/parse.js';
 
 export const INSCRIPCIONES = 'https://inscripciones.uade.edu.ar';
@@ -69,7 +69,22 @@ export class Inscripciones {
   constructor(private readonly client = new InscripcionesClient()) {}
 
   async ventanas(): Promise<VentanaInscripcion[]> {
-    return parseVentanas((await this.client.get('/Home/ObtenerInscripciones')).html);
+    try {
+      return parseVentanas((await this.client.get('/Home/ObtenerInscripciones')).html);
+    } catch (err) {
+      // Con la sesión vencida este endpoint responde 500 en vez de mandar al login:
+      // se pregunta a ValidarUsuario (devuelve true/false) para dar el mensaje correcto.
+      if (err instanceof SessionExpiredError || !(await this.sesionValida())) throw new SessionExpiredError('Inscripciones');
+      throw err;
+    }
+  }
+
+  private async sesionValida(): Promise<boolean> {
+    try {
+      return (await this.client.get('/Home/ValidarUsuario')).html.trim() === 'true';
+    } catch {
+      return false;
+    }
   }
 
   async linkProgramacion(): Promise<string> {

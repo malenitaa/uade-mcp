@@ -277,4 +277,4 @@ a qué hosts se conecta, qué no hace nunca y cómo borrar todo (`uade-mcp logou
 - [ ] **Tests:** fixtures HTML **anonimizados**. Nunca commitear HTML real con datos personales.
 - [ ] Revisar normativa UADE sobre acceso automatizado (`MenuItemId=280`).
 - [ ] Hoja de datos pública (§11) y publicar en npm con versión fija.
-- [ ] Duración de la sesión de WebCampus: medir cuánto dura la cookie antes de pedir login otra vez.
+- [ ] Duración de la sesión de WebCampus. Primer dato (18/10/2026): login a las 16:42, último uso a las ~17:15 y vencida a las 20:03 (hora de Buenos Aires). O sea, dura menos de unas 3 h, probablemente por inactividad. Clave para decidir un modo remoto: obligaría a reloguearse varias veces por día.

@@ -3,10 +3,17 @@
 import { loadSession, saveSession } from '../auth/store.js';
 import { mergeCookies, safeFetch } from './http.js';
 
+// El comando de login tal como lo tiene que escribir la persona en SU compu: si el MCP corre
+// desde una carpeta (node …/dist/index.js), con esa ruta; si está instalado, `uade-mcp login`.
+export function loginCommand(entry: string | undefined = process.argv[1]): string {
+  if (entry && /[\\/]dist[\\/]index\.js$/.test(entry)) return `node "${entry}" login`;
+  return 'uade-mcp login';
+}
+
 export class SessionExpiredError extends Error {
   constructor(sitio: string) {
     super(
-      `No hay sesión de ${sitio} o venció. Abrí una terminal y corré \`uade-mcp login\` ` +
+      `No hay sesión de ${sitio} o venció. Abrí una terminal y corré: ${loginCommand()} ` +
         '(se abre el navegador, iniciás sesión con tu cuenta de UADE y listo).',
     );
     this.name = 'SessionExpiredError';

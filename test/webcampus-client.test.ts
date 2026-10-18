@@ -82,3 +82,27 @@ describe('WebCampusClient', () => {
     await expect(new WebCampusClient(memStore('a=1')).get('/Contenidos/ContenidoDesvincular.aspx?IdAula=1')).rejects.toThrow('desvincular');
   });
 });
+
+describe('comando de login en el mensaje', () => {
+  it('usa la ruta real cuando el MCP corre desde una carpeta', async () => {
+    const { loginCommand } = await import('../src/net/session.js');
+    expect(loginCommand('/Users/x/Desktop/uade-mcp/dist/index.js')).toBe('node "/Users/x/Desktop/uade-mcp/dist/index.js" login');
+    expect(loginCommand('/usr/local/bin/uade-mcp')).toBe('uade-mcp login');
+  });
+});
+
+describe('Inscripciones con la sesión vencida', () => {
+  it('un 500 + ValidarUsuario=false se informa como sesión vencida', async () => {
+    const { Inscripciones, InscripcionesClient } = await import('../src/sources/inscripciones/index.js');
+    stubFetch((u) => (u.pathname === '/Home/ValidarUsuario' ? new Response('false') : new Response('error', { status: 500 })));
+    const insc = new Inscripciones(new InscripcionesClient(memStore('a=1')));
+    await expect(insc.ventanas()).rejects.toBeInstanceOf(SessionExpiredError);
+  });
+
+  it('un 500 con la sesión válida se informa como error de UADE', async () => {
+    const { Inscripciones, InscripcionesClient } = await import('../src/sources/inscripciones/index.js');
+    stubFetch((u) => (u.pathname === '/Home/ValidarUsuario' ? new Response('true') : new Response('error', { status: 500 })));
+    const insc = new Inscripciones(new InscripcionesClient(memStore('a=1')));
+    await expect(insc.ventanas()).rejects.toThrow('respondió 500');
+  });
+});
