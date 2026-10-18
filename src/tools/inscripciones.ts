@@ -18,44 +18,28 @@ export function registerInscripcionesTools(
     'uade_enrollment_windows',
     {
       title: 'Enrollment windows',
-      description:
-        'UADE enrollment windows (regular courses, intensive MRI, summer, withdrawals, etc.) with opening and closing ' +
-        'date and whether they are open for the student. Read live from the enrollment site. ' +
-        'Read-only: it does not enroll or withdraw.',
+      description: 'Enrollment windows (courses, MRI, summer, withdrawals) with open/close dates and whether open. Cannot enroll.',
       annotations: READ_ONLY,
     },
     () => read(() => insc.ventanas()),
   );
 
   server.registerTool(
-    'webcampus_offered_subjects',
-    {
-      title: 'Subjects with scheduled classes',
-      description:
-        "Subjects of the student's degree that have classes scheduled for the next term (code and name). " +
-        'Use the code with webcampus_class_offering. Read-only.',
-      annotations: READ_ONLY,
-    },
-    () => read(async () => wc.ofertaMaterias(await insc.linkProgramacion())),
-  );
-
-  server.registerTool(
     'webcampus_class_offering',
     {
       title: 'Classes offered for a subject',
-      description:
-        'Every scheduled class of a subject: campus, class number, shift, weekdays, time, dates, language and how it is ' +
-        'passed (final exam, promotion, final project). Useful to choose before enrolling. It does not list teachers ' +
-        '(see webcampus_exam_schedule or webcampus_teachers). Read-only.',
+      description: 'Next term class schedule. No subject: subjects offered for the degree. With subject code: its classes (campus, shift, weekdays, time, dates, how it is passed).',
       inputSchema: {
-        subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/).describe('subject code, e.g. 3.4.071 (from webcampus_offered_subjects)'),
+        subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/).optional().describe('code, e.g. 3.4.071'),
         shift: z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE']).optional(),
       },
       annotations: READ_ONLY,
     },
     ({ subject, shift }) =>
       read(async () => {
-        const clases = await wc.oferta(await insc.linkProgramacion(), subject);
+        const link = await insc.linkProgramacion();
+        if (!subject) return { materias: (await wc.ofertaMaterias(link)).map((m) => `${m.codigo} ${m.nombre}`) };
+        const clases = await wc.oferta(link, subject);
         return shift ? clases.filter((c) => c.turno.toUpperCase().includes(shift)) : clases;
       }),
   );

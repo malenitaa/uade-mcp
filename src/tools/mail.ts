@@ -15,20 +15,15 @@ export function registerMailTools(
     'email_compose_draft',
     {
       title: 'Prepare an email draft',
-      description:
-        "Opens Outlook web in the student's browser with a new email already filled in (to, cc, subject, body). " +
-        'It does NOT send anything: the student reviews it and presses Send, or closes it. Only @uade.edu.ar ' +
-        'recipients. To email a teacher, first get their address with webcampus_current_courses (idAula) and ' +
-        'webcampus_teachers. Write the email in Spanish from Argentina, polite and brief, signed with the ' +
-        "student's name only if you know it. Never tell the student the email was sent.",
+      description: 'Opens a pre-filled email in Outlook web for the student to review and send. Never sends. Only @uade.edu.ar recipients (get teachers with webcampus_teachers).',
       inputSchema: {
-        to: z.array(z.string()).min(1).max(10).describe('recipient emails, @uade.edu.ar only'),
+        to: z.array(z.string()).min(1).max(10),
         cc: z.array(z.string()).max(10).optional(),
         subject: z.string().min(1).max(200),
-        body: z.string().min(1).max(4000).describe('plain text; line breaks allowed'),
-        open: z.boolean().default(true).describe('open the browser automatically (default true)'),
+        body: z.string().min(1).max(4000),
+        open: z.boolean().default(true),
       },
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: true },
     },
     ({ to, cc, subject, body, open: abrir }) =>
       run(granted, 'webcampus.leer', async () => {

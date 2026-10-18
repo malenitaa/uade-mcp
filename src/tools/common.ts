@@ -1,7 +1,8 @@
 // Shared helpers for tools: permission check, error handling and Argentine date format.
 import { requirePermission, type Permission } from '../auth/permissions.js';
 
-export const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+// Only readOnlyHint: the other annotations would repeat defaults and cost tokens on every message.
+export const READ_ONLY = { readOnlyHint: true } as const;
 
 export type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
 
@@ -21,6 +22,23 @@ export function toArgentineDates<T>(value: T): T {
   return value;
 }
 
+// Drops null, undefined, empty strings, empty arrays and empty objects: the agent pays for every
+// character of a tool result, and an absent field says the same as an empty one.
+export function compact<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(compact).filter((v) => !isEmpty(v)) as T;
+  if (value && typeof value === 'object') {
+    const out = Object.entries(value)
+      .map(([k, v]) => [k, compact(v)] as const)
+      .filter(([, v]) => !isEmpty(v));
+    return Object.fromEntries(out) as T;
+  }
+  return value;
+}
+function isEmpty(v: unknown): boolean {
+  return v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0) ||
+    (typeof v === 'object' && v !== null && !Array.isArray(v) && Object.keys(v).length === 0);
+}
+
 export async function run(
   granted: ReadonlySet<Permission>,
   permission: Permission,
@@ -28,8 +46,8 @@ export async function run(
 ): Promise<ToolResult> {
   try {
     requirePermission(granted, permission);
-    const data = toArgentineDates(await fn());
-    return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] };
+    const data = compact(toArgentineDates(await fn()));
+    return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data) }] };
   } catch (err) {
     // Error messages are already in Spanish: they are meant to be relayed to the student as is.
     return { content: [{ type: 'text', text: (err as Error).message }], isError: true };

@@ -1,123 +1,140 @@
-// Read-only WebCampus tools. All of them require the webcampus.leer permission.
+// WebCampus tools. All read-only and behind webcampus.leer. Descriptions are short on purpose:
+// they travel with every message the agent sends; shared rules live in the server instructions.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { WebCampus } from '../sources/webcampus/index.js';
+import type { MateriaHistorial } from '../sources/webcampus/parse.js';
 import { READ_ONLY, run } from './common.js';
+
+const idAula = z.string().regex(/^\d+$/).describe('from webcampus_current_courses');
+
+// Transcript summary: what each status needs and nothing more. sin_cursar collapses to "code name".
+function resumirHistorial(materias: MateriaHistorial[]) {
+  const de = (s: MateriaHistorial['situacion']) => materias.filter((m) => m.situacion === s);
+  return {
+    conteo: Object.fromEntries(
+      ['aprobada', 'equivalencia', 'final_pendiente', 'cursando', 'sin_cursar'].map((s) => [s, de(s as MateriaHistorial['situacion']).length]),
+    ),
+    aprobadas: de('aprobada').map((m) => ({ codigo: m.codigo, nombre: m.nombre, nota: m.nota, fecha: m.fechaAprobacion })),
+    equivalencias: de('equivalencia').map((m) => `${m.codigo} ${m.nombre}`),
+    finalesPendientes: de('final_pendiente').map((m) => ({ codigo: m.codigo, nombre: m.nombre, regularizada: m.fechaRegularizacion })),
+    cursando: de('cursando').map((m) => `${m.codigo} ${m.nombre}`),
+    sinCursar: de('sin_cursar').map((m) => `${m.codigo} ${m.nombre} (${m.anio.toLowerCase()})`),
+  };
+}
 
 export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<Permission>, wc = new WebCampus()): void {
   const read = (fn: () => Promise<unknown>) => run(granted, 'webcampus.leer', fn);
 
   server.registerTool(
     'webcampus_terms',
-    {
-      title: 'Academic terms',
-      description: "The student's terms (cuatrimestres) in WebCampus, with id and name. Read-only.",
-      annotations: READ_ONLY,
-    },
+    { title: 'Terms', description: "Student's terms (id, name).", annotations: READ_ONLY },
     () => read(() => wc.periodos()),
   );
 
   server.registerTool(
     'webcampus_current_courses',
     {
-      title: 'Courses of the term',
-      description:
-        'Courses the student is taking in a term: weekday, time, room and campus, course dates, final exam date, ' +
-        'grade of each assessment and final status, plus links to the Teams team and course notes. ' +
-        'Without a term, uses the most recent one. Read-only.',
-      inputSchema: { term: z.string().regex(/^\d+$/).optional().describe('term id from webcampus_terms') },
+      title: 'Current courses',
+      description: 'Courses of a term (default: latest): idAula, weekday, time, room, dates, final exam date, grades.',
+      inputSchema: {
+        term: z.string().regex(/^\d+$/).optional(),
+        includeLinks: z.boolean().default(false).describe('Teams and notes links'),
+      },
       annotations: READ_ONLY,
     },
-    ({ term }) => read(() => wc.cursada(term)),
+    ({ term, includeLinks }) =>
+      read(async () => {
+        const r = await wc.cursada(term);
+        return { periodo: r.periodo.nombre, aulas: r.aulas.map((a) => (includeLinks ? a : { ...a, links: undefined })) };
+      }),
   );
 
   server.registerTool(
     'webcampus_attendance',
     {
-      title: 'Attendance of a course',
-      description: 'Attendance summary (present, absent, not yet recorded) and per-class detail for one course. Read-only.',
-      inputSchema: { idAula: z.string().regex(/^\d+$/).describe('idAula from webcampus_current_courses') },
+      title: 'Attendance',
+      description: 'Attendance summary of a course; detail=true adds each class.',
+      inputSchema: { idAula, detail: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
-    ({ idAula }) => read(() => wc.asistencia(idAula)),
+    ({ idAula: id, detail }) =>
+      read(async () => {
+        const a = await wc.asistencia(id);
+        return detail ? a : { resumen: a.resumen, faltas: a.clases.filter((c) => c.estado === 'ausente' || c.estado === 'media_falta'), aviso: a.aviso };
+      }),
   );
 
   server.registerTool(
     'webcampus_transcript',
     {
-      title: 'Academic transcript',
-      description:
-        "Every subject of the student's degree plan with its status (aprobada, final_pendiente, cursando, " +
-        'equivalencia, sin_cursar), grade, year and approval date, plus the grade average. ' +
-        'Without a plan, uses the active degree. Read-only.',
-      inputSchema: { plan: z.string().regex(/^\d+$/).optional().describe('plan code, only if the student has more than one degree') },
+      title: 'Transcript',
+      description: 'Degree plan status: counts, passed (grade, date), pending finals, current, not taken; average. detail=true for every field.',
+      inputSchema: { plan: z.string().regex(/^\d+$/).optional(), detail: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
-    ({ plan }) => read(() => wc.historial(plan)),
+    ({ plan, detail }) =>
+      read(async () => {
+        const h = await wc.historial(plan);
+        return detail ? h : { carrera: h.carrera, plan: h.plan, promedio: h.promedio, ...resumirHistorial(h.materias) };
+      }),
   );
 
   server.registerTool(
     'webcampus_account_balance',
     {
       title: 'Tuition account',
-      description:
-        'Overdue debt, upcoming due dates and payments made. Read-only: this server cannot pay or generate payment slips.',
+      description: 'Overdue debt, upcoming due dates and recent payments. Cannot pay.',
+      inputSchema: { allPayments: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
-    () => read(() => wc.cuenta()),
+    ({ allPayments }) =>
+      read(async () => {
+        const c = await wc.cuenta();
+        return allPayments ? c : { ...c, pagos: c.pagos.slice(0, 5), pagosTotales: c.pagos.length };
+      }),
   );
 
   server.registerTool(
     'webcampus_exam_schedule',
     {
       title: 'Final exam schedule',
-      description:
-        'Final exams (exámenes previos) published by UADE: date, time, campus, room, class number and examiners. ' +
-        'Found automatically in the WebCampus news, so it is always the latest schedule. Without a query, only the ' +
-        "student's subjects with a pending final or currently being taken. With a query, filters by subject code " +
-        '(e.g. 3.4.071) or name. Exam registration closes 48 h before the exam at 21:00. Read-only.',
-      inputSchema: { query: z.string().min(2).max(80).optional().describe('subject code or part of its name') },
+      description: "Published final exams (date, time, campus, class, examiners). No query: the student's pending/current subjects. Query: code or name.",
+      inputSchema: { query: z.string().min(2).max(80).optional() },
       annotations: READ_ONLY,
     },
-    ({ query }) => read(() => wc.examenesPrevios(query)),
-  );
-
-  server.registerTool(
-    'webcampus_teachers',
-    {
-      title: 'Teaching staff of a course',
-      description:
-        'Name and email of the teaching staff of a course the student is taking. Never returns classmates’ data. ' +
-        'Read-only: it does not send emails.',
-      inputSchema: { idAula: z.string().regex(/^\d+$/).describe('idAula from webcampus_current_courses') },
-      annotations: READ_ONLY,
-    },
-    ({ idAula }) => read(() => wc.docentes(idAula)),
+    ({ query }) =>
+      read(async () => {
+        const r = await wc.examenesPrevios(query);
+        return { filtro: r.filtro, examenes: r.examenes.map((e) => ({ ...e, aula: e.aula === 'A/C' ? 'a confirmar' : e.aula })) };
+      }),
   );
 
   server.registerTool(
     'webcampus_course_calendar',
     {
-      title: 'Midterm, make-up and final dates of my courses',
-      description:
-        "The student's own dates from each course's planning (WebCampus 'Mi Semana'): midterms (evaluacion), " +
-        'make-ups (recuperatorio) and final exam (examen_final), with weekday, time, room and campus. ' +
-        'Without idAula, all current courses. Set onlyAssessments=false to also list every regular class. ' +
-        'This is the best source for "when is my midterm". Read-only.',
-      inputSchema: {
-        idAula: z.string().regex(/^\d+$/).optional().describe('idAula from webcampus_current_courses; omit for all courses'),
-        onlyAssessments: z.boolean().default(true),
-      },
+      title: 'My midterm and final dates',
+      description: "Student's own midterm, make-up and final dates per course (with time and room). Best source for 'when is my midterm'.",
+      inputSchema: { idAula: idAula.optional(), allClasses: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
-    ({ idAula, onlyAssessments }) =>
+    ({ idAula: id, allClasses }) =>
       read(async () => {
-        const planes = idAula ? [{ idAula, ...(await wc.planificacion(idAula)) }] : await wc.planificaciones();
+        const planes = id ? [{ idAula: id, ...(await wc.planificacion(id)) }] : await wc.planificaciones();
         return planes.map((p) => ({
-          ...p,
-          actividades: onlyAssessments ? p.actividades.filter((a) => a.actividad !== 'cursada') : p.actividades,
+          materia: p.materia,
+          idAula: p.idAula,
+          actividades: (allClasses ? p.actividades : p.actividades.filter((a) => a.actividad !== 'cursada')).map((a) => ({
+            fecha: a.fecha, dia: a.dia, horario: a.horario, actividad: a.actividad, aula: a.aula, sede: a.sede,
+          })),
         }));
       }),
+  );
+
+  server.registerTool(
+    'webcampus_teachers',
+    { title: 'Teaching staff', description: "Name and email of a course's teachers (never classmates).", inputSchema: { idAula }, annotations: READ_ONLY },
+    ({ idAula: id }) => read(() => wc.docentes(id)),
   );
 }

@@ -20,17 +20,13 @@ export function registerPlanUadeTools(
     'planuade_import_transcript',
     {
       title: 'Load the transcript into Plan UADE',
-      description:
-        "Reads the student's transcript from WebCampus and opens planuade.ar in their default browser with it " +
-        '(passed subjects with grade, pending finals and current courses). Plan UADE only applies what changed, and ' +
-        'only after the student accepts its confirmation dialog. The data travels in the URL fragment, never to a server. ' +
-        'Set open=false to just get the link.',
+      description: 'Opens planuade.ar in the browser with the student\'s transcript; the student confirms there. open=false returns the link.',
       inputSchema: {
-        plan: z.string().regex(/^\d+$/).optional().describe('plan code, only if the student has more than one degree'),
-        faculty: z.enum(FACULTADES).optional().describe('only if the tool asks for it because it does not know the plan'),
-        open: z.boolean().default(true).describe('open the browser automatically (default true)'),
+        plan: z.string().regex(/^\d+$/).optional(),
+        faculty: z.enum(FACULTADES).optional().describe('only if asked'),
+        open: z.boolean().default(true),
       },
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true },
     },
     ({ plan, faculty, open: abrir }) =>
       run(granted, 'webcampus.leer', async () => {
