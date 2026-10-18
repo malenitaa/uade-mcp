@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+*.log
+# Nunca commitear HTML real ni datos personales: los fixtures van anonimizados en test/fixtures/
+capturas/
+*.har
+.uade-mcp/

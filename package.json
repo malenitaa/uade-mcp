@@ -1,0 +1,31 @@
+{
+  "name": "uade-mcp",
+  "version": "0.0.1",
+  "description": "MCP no oficial para WebCampus, PIA y Teams de UADE. Corre local, sin telemetría.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "cheerio": "^1.2.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "private": true,
+  "bin": {
+    "uade-mcp": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

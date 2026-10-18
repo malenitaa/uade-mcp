@@ -1,0 +1,250 @@
+# UADE-MCP — diseño (v0)
+
+MCP no oficial para que un agente (Claude, etc.) lea WebCampus, PIA y, más adelante, Teams/mail,
+y sincronice materias aprobadas con PlanUADE. Este documento no contiene datos personales:
+solo la estructura relevada el 2026-10-18.
+
+---
+
+## 1. Principios (no negociables)
+
+1. **Corre en tu compu, por stdio.** No hay servidor nuestro en el medio. Nadie más ve tus cookies, notas ni cuota.
+2. **Cero telemetría.** Ni analytics, ni crash reporting, ni "update check". El único tráfico de red
+   sale a los hosts de la allowlist (sección 4). Los logs son locales y se redactan.
+3. **Solo lectura por defecto.** Las herramientas que escriben vienen apagadas y se activan con un flag
+   explícito en la config (`"allowWrites": ["teams.entregar"]`, por ejemplo), nunca desde el chat.
+4. **El agente no puede autoconfirmarse.** Toda escritura pide confirmación **al humano, fuera del modelo**
+   (ver sección 3). Un "sí, hacelo" en el chat no alcanza.
+5. **Hay cosas que nunca hace**, ni aunque se las pidas (lista negra, sección 5).
+6. **El contenido externo es dato, no instrucciones.** Novedades, consignas, mails y archivos se devuelven
+   marcados como no confiables y no pueden disparar escrituras.
+
+---
+
+## 2. Identidad y credenciales
+
+**La cuenta Microsoft de UADE (Entra ID, `@uade.edu.ar`) es la identidad base de todo**: WebCampus,
+Teams, inscripciones, mail y hasta el wifi. Hay dos formas de usarla:
+
+- **Inscripciones, PIA, Teams, mail y SharePoint** usan OAuth/OIDC con Microsoft. Usamos MSAL y el
+  agente nunca ve el token.
+- **WebCampus** pide esas mismas credenciales, pero en un formulario ASP.NET propio
+  (`Login.aspx`), no por OAuth. El MCP hace ese login una vez y se queda con la **cookie de sesión**.
+  - A investigar: si WebCampus acepta un SSO de Microsoft escondido (por ejemplo, desde
+    `inscripciones` → `MenuItemId=114`). Si existe, la contraseña no hace falta nunca.
+
+Como es **una sola credencial para todo**, el riesgo es mayor: si se filtra, se filtra tu cuenta entera
+de UADE. Por eso la regla por defecto es **no guardar la contraseña**.
+
+### Almacenamiento
+
+| Qué | Dónde | Notas |
+|---|---|---|
+| Cookie de sesión WebCampus (`ASP.NET_SessionId` + auth) | Llavero de macOS / Credential Manager / libsecret | Nunca en un archivo plano ni en `.env` |
+| Tokens de Microsoft (PIA, y más adelante Teams/mail) | Llavero del sistema, vía MSAL con caché cifrada | Refresh token cifrado por el SO |
+| Contraseña de WebCampus | **No se guarda por defecto.** | Opt-in explícito: `uade-mcp login --recordar` la guarda en el llavero y avisa claramente qué implica |
+| Caché de datos (notas, historial) | `~/.uade-mcp/cache.db` cifrada con clave del llavero | Opcional; `uade-mcp purge` la borra entera |
+
+- El login es un **comando que corrés vos** (`uade-mcp login`), no una herramienta que pueda llamar el agente.
+  Si la sesión vence, el MCP devuelve "sesión vencida, corré `uade-mcp login`". No reintenta solo.
+- Para Microsoft: device-code flow o el navegador del sistema. El agente nunca ve el token.
+- Nada se exporta a otro host. Si algún día hay sync entre compus, va a ser explícito y cifrado de punta a punta (E2E), con opt-in.
+
+---
+
+## 3. Modelo de permisos (lo que te pasó con Slack, que no vuelva a pasar)
+
+**Problema:** "dale, conectate, hacé lo que sea" le dio al agente un permiso amplio, y el agente lo
+usó para algo que no esperabas (mandar mensajes con tu cuenta).
+
+**Diseño:**
+
+1. **Permisos con nombre y alcance**, nunca genéricos. No existe "conectate". Existen permisos concretos:
+   `webcampus.leer`, `pia.leer`, `pia.inscribir`, `teams.leer_tareas`, `teams.entregar`, `mail.leer`, `mail.enviar`.
+2. **Se otorgan en la config, no en el chat.** Para habilitar `teams.entregar` editás
+   `~/.uade-mcp/config.json` o corrés `uade-mcp permitir teams.entregar`. El CLI muestra:
+   > Esto permite que el agente **suba archivos como entrega en tareas de Teams en tu nombre**.
+   > Cada entrega igual te va a pedir confirmación. No permite enviar mensajes ni mails.
+   > ¿Habilitar? Escribí `teams.entregar` para confirmar:
+
+   Hay que tipear el nombre del permiso. Un "sí" no alcanza.
+3. **Cada escritura se hace en dos pasos:**
+   - `preparar_*` → devuelve un resumen legible ("Vas a entregar `tp2.pdf` (340 KB) en *Paradigmas, TP2*,
+     vence el 20/10 23:59. Esto **no se puede deshacer** desde acá.") y un `id` de borrador.
+   - `confirmar_*(id)` → el servidor le pide confirmación **al humano por MCP elicitation**
+     (un diálogo que muestra el cliente). Eso no pasa por el modelo, así que el modelo no puede contestarse solo.
+     Si el cliente no soporta elicitation, la escritura queda **deshabilitada**: no hay fallback.
+   - El borrador vence a los 5 minutos y se invalida si cambia cualquier parámetro.
+4. **Ninguna escritura se encadena a una lectura de contenido externo** en el mismo pedido sin confirmación
+   (por ejemplo, una consigna que diga "entregá esto ya" no hace nada sola).
+5. **Auditoría local:** `~/.uade-mcp/audit.log` registra cada escritura (qué, cuándo, resultado), sin contenido sensible.
+
+---
+
+## 4. Allowlist de red
+
+```
+www.webcampus.uade.edu.ar
+inscripciones.uade.edu.ar
+inscripcionespia.uade.edu.ar
+login.microsoftonline.com            (solo auth)
+graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
+api.github.com                       (opcional)
+(PlanUADE no: el MCP solo arma un link local, ver sección 9)
+```
+
+Cualquier otro host se rechaza en el cliente HTTP. Hablamos HTTP directo, sin navegador, así que **no
+se ejecutan** Google Analytics, Application Insights ni **Hotjar**, que sí están embebidos en el sitio de
+inscripciones (Hotjar graba sesiones).
+
+---
+
+## 5. Lista negra (nunca, sin excepción)
+
+- Pagar, generar cupones de pago, alta/baja de débito automático (`MenuItemId=508`).
+- **Desvincularse de materias o aulas** (`/Contenidos/ContenidoDesvincular.aspx`). Ojo: el link está en la misma pantalla de las materias.
+- **Bajas** de inscripción y cambios de pack en PIA (`CambioAsignaturaPack`). Las bajas se hacen en
+  inscripciones y quedan fuera del MCP por decisión de producto. Las **altas sí** se permiten (sección 7).
+- Editar datos personales, cambiar o recuperar contraseña.
+- Cerrar sesión de WebCampus (postback `lnkCerrarSesion`), para no romper tu sesión del navegador.
+- "Enviar documentación escaneada", trámites web.
+- Buscador de Personas: no se expone, porque son datos de terceros.
+
+El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte del código.
+
+---
+
+## 6. Mapa relevado
+
+### WebCampus (`www.webcampus.uade.edu.ar`): ASP.NET WebForms, sin API JSON. Todo se scrapea del HTML
+
+| Dato | URL | Estructura |
+|---|---|---|
+| Notas del cuatrimestre | `/Home.aspx?Periodo={id}` (los períodos salen del menú "Mis Cursos") | Tablas por materia: Evaluación 1..4, Entrega final, Recup., Informe Cursada, Examen Final, Condición Final |
+| Aulas del período | mismo HTML, `[id$=tbl_Aulas]` | Por aula: nombre, `MiAula.aspx?IdAula=`, link a Teams, SharePoint (apuntes), Asistencia, Integrantes, Mi Semana, Novedades |
+| Asistencia | `/AsistenciaAlumnos.aspx?IdAula={id}` | "Resumen de clases" + "Referencias" |
+| Planificación semanal | `/PlanificacionClases/MiSemana.aspx?IdAula={id}` | |
+| Novedades del aula | `/Contenidos/NovedadHist.aspx?IdAula={id}&IdNov=0` | Contenido no confiable |
+| Historial académico / aprobadas | `/HistorialAcademico/Plan_Acedemico.aspx` | Clases `asign_plan`, `activa`, `plan`, `carrera` |
+| Correlativas | `.../Plan_Acedemico.aspx?VieneDe=Correlativa` | |
+| Plan de estudios | `.../Plan_Acedemico.aspx?VieneDe=Plan` | |
+| Cuenta corriente | `/Contenidos/CuentaCorrientes.aspx` | `TableDeudaVencida`, `TableProximosVenc`, `TablePagosRealizados` |
+| Aranceles | `/Aranceles/ArancelesWC.aspx` | `tbl_Pago` |
+| Comprobantes | `/contenidos/MisComprobantes.aspx` | `TableMisComprobantes` |
+| Marcaciones (ingresos al edificio) | `/Contenidos/Marcaciones.aspx` | Filtro por rango de fechas (postback) |
+| Novedades / agenda generales | `/MiContenido/Novedades.aspx`, `/MiContenido/Agenda.aspx?Id=` | |
+| Fechas de exámenes | Novedades ("Exámenes previos…"), PDF Calendario académico (`MenuItemId=403`), PDF Cronogramas (`MenuItemId=428`) | Hay que parsear los PDFs |
+
+### Inscripciones (`inscripciones.uade.edu.ar`): ASP.NET MVC, login con Microsoft Entra (tenant UADE)
+
+| Endpoint | Tipo | Qué |
+|---|---|---|
+| `GET /Home/ValidarUsuario` | JSON `boolean` | Sesión válida |
+| `GET /Home/ObtenerInscripciones` | HTML parcial | Ventanas de inscripción disponibles. Cada una es un link `data-linkid` a PIA con `param` cifrado y `data-tipolink` (`InscripcionAsignatura`, `CambioAsignaturaPack`) |
+| `GET /Home/Logout` | | No se expone |
+
+### PIA (`inscripcionespia.uade.edu.ar`)
+
+- `InscripcionClaseBuscar.aspx?param=…`, `InscripcionInicio.aspx?param=…`
+- Abrirlo directo hoy devuelve **401**. Puede ser porque la ventana de inscripción está cerrada o porque
+  exige algo más (Referer, otra cookie). **Hay que volver a mirarlo cuando abra la próxima inscripción.**
+- Alcance: **buscar asignaturas**, ver **docente** (si figura), **sede**, **horario**, cupos y tu carrito.
+  **Alta** de inscripción con el permiso `pia.inscribir` y confirmación por elicitation. Nunca bajas ni cambios de pack.
+
+### Teams / SharePoint / Mail: Microsoft 365, tenant UADE
+
+- WebCampus ya da, por aula, el link al Team y a la carpeta de SharePoint de apuntes. Eso sirve para listar
+  "dónde está cada cosa" sin Graph.
+- Leer tareas, entregar y leer mail requiere Microsoft Graph (`EduAssignments.*`, `Mail.Read`, `Files.Read`).
+  **Pendiente:** probar si el tenant deja que un alumno apruebe una app propia. Si no deja, se evalúa
+  otra cosa (ver sección 8).
+
+---
+
+## 7. Herramientas v1 (todas de solo lectura)
+
+| Tool | Devuelve |
+|---|---|
+| `webcampus_periodos` | Cuatrimestres disponibles |
+| `webcampus_notas(periodo?)` | Notas por materia y evaluación, y condición final |
+| `webcampus_aulas(periodo?)` | Aulas, con links a Teams y SharePoint |
+| `webcampus_asistencia(aula)` | Resumen de asistencia |
+| `webcampus_semana(aula)` | Planificación |
+| `webcampus_novedades(aula?)` | Novedades (marcadas como no confiables) |
+| `webcampus_historial` | Materias aprobadas, con nota y fecha |
+| `webcampus_correlativas` | Qué te habilita cada materia |
+| `webcampus_cuenta` | Deuda vencida, próximos vencimientos, pagos. **Sin pagar** |
+| `webcampus_fechas_examen` | Lo que sale de novedades y PDFs |
+| `pia_ventanas` | Inscripciones abiertas o próximas |
+| `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |
+| `pia_carrito` | Lo que tenés en el carrito o ya inscripto |
+| `planuade_link_importar` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 9) |
+
+**Escrituras (cada una con su permiso y confirmación por elicitation):**
+
+| Tool | Permiso |
+|---|---|
+| `pia_preparar_alta` → `pia_confirmar_alta` | `pia.inscribir` |
+| `teams_preparar_entrega` → `teams_confirmar_entrega` | `teams.entregar` (si Graph se puede usar) |
+| `mail_preparar` → `mail_confirmar_envio` | `mail.enviar` (si Graph se puede usar) |
+
+GitHub: usamos el MCP oficial de GitHub en vez de reimplementarlo.
+
+---
+
+## 9. PlanUADE: integración local-first
+
+PlanUADE (`malenitaa/facultades`) guarda el progreso en `localStorage` (`uademap::state::<carrera>`),
+y opcionalmente lo sincroniza en `/api/sync` usando el legajo. Los ids de materia son los mismos códigos
+que usa WebCampus (`3.1.062`, …), así que el mapeo es directo.
+
+**Diseño:** el MCP **no le habla a ningún servidor de PlanUADE**. Arma un link así:
+
+```
+https://planuade.ar/fain#importar=<base64url(JSON firmado con hash de integridad)>
+```
+
+- Lo que va después del `#` **no viaja al servidor**: el navegador no lo manda. Vercel no lo ve y no
+  aparece en ningún log.
+- PlanUADE lo lee, muestra *"Se van a marcar como aprobadas estas 19 materias (con nota): … ¿Aplicar?"*,
+  y recién cuando tocás aplicar lo escribe en tu `localStorage`. Si después querés sincronizar, eso
+  sigue siendo decisión tuya.
+- No se suma ninguna API pública nueva ni nada que autenticar. La superficie de ataque no crece.
+
+> ⚠ **Hallazgo aparte:** hoy `/api/sync` identifica al usuario **solo por el legajo** (3 a 10 dígitos, sin
+> ningún secreto). Cualquiera que sepa o adivine un legajo puede leer y **sobrescribir** el progreso de esa
+> persona. El hash con pepper protege la base, no la API. Es un IDOR (OWASP A01, Broken Access Control).
+> Se arregla en el repo `facultades`, no acá. Hasta que se arregle, el MCP no va a usar `/api/sync`.
+
+---
+
+## 10. ¿Por qué no ScrapingBee (ni ningún servicio de scraping)?
+
+- Para hacer el scraping, el servicio necesitaría **tu cookie de sesión de UADE**. Es decir, un tercero
+  vería tus notas, tu cuenta corriente y tus datos personales. Eso choca con el principio 1 y con el 2.
+- No hace falta: WebCampus es HTML que arma el servidor, sin JavaScript que ejecutar. Un `fetch` y
+  `cheerio` lo parsean en milisegundos. Lo lento es la red de UADE, y eso no lo arregla ningún proxy.
+- **"Nuestra API" es una capa local**: `src/sources/webcampus/*` convierte cada página en JSON tipado.
+  El MCP (y más adelante una CLI) usan esa capa. Los PDFs (calendario, cronogramas) se parsean una
+  sola vez y se guardan en la caché cifrada, indexados por hash del archivo.
+
+---
+
+## 11. Cumplimiento (a validar)
+
+Cuando el código esté, se valida contra: **OWASP ASVS 4/5** (nivel 2), **OWASP Top 10 for LLM
+Applications** (sobre todo LLM01 prompt injection, LLM06 excessive agency y LLM02 fuga de datos
+sensibles), **NIST SSDF (SP 800-218)** para el proceso de desarrollo, **NIST AI RMF**, controles de
+**ISO/IEC 27001:2022 Anexo A** que aplican a un proyecto chico (8.25 a 8.28: desarrollo seguro), y la
+**Ley 25.326** argentina de protección de datos personales.
+
+---
+
+## 8. Pendientes / a evaluar
+
+- [ ] **PlanUADE:** implementar `#importar=` en `facultades` (sección 9) y arreglar el IDOR de `/api/sync`.
+- [ ] **Graph:** registrar una app de prueba y ver si el tenant UADE permite consentimiento de usuario.
+- [ ] **PIA:** volver a mapear cuando abra una inscripción.
+- [ ] **Stack:** propuesta TypeScript + `@modelcontextprotocol/sdk` + `undici` (HTTP con allowlist) + `cheerio` (parseo) + `keytar`/`@napi-rs/keyring` (llavero) + `@azure/msal-node`.
+- [ ] **Tests:** fixtures HTML **anonimizados**. Nunca commitear HTML real con datos personales.
+- [ ] Revisar normativa UADE sobre acceso automatizado (`MenuItemId=280`).
