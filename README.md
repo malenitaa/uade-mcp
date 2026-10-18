@@ -4,7 +4,7 @@ MCP no oficial para que tu agente (Claude, ChatGPT o cualquier cliente MCP) lea 
 busque e inscriba en **PIA** y, más adelante, maneje **Teams** y el **mail** de UADE. También le
 pasa tus materias aprobadas a [Plan UADE](https://planuade.ar).
 
-Proyecto hecho por estudiantes, sin afiliación con la universidad.
+Proyecto hecho por estudiantes, sin afiliación con la universidad. Página: [planuade.ar/mcp](https://planuade.ar/mcp).
 
 > **Estado: v0, en construcción.** Funciona la lectura de WebCampus: períodos, materias del cuatrimestre
 > (horario, sede, notas, fecha de final), asistencia, historial académico y cuenta corriente.
