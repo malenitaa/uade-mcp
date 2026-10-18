@@ -26,10 +26,20 @@ export function parseMoney(raw: string): number | null {
 }
 
 // d/m/yyyy o dd/mm/yyyy → yyyy-mm-dd (ISO). WebCampus a veces no pone el cero adelante.
+// Ojo: el historial académico usa mes/día/año (formato de EE.UU.); para eso está parseFechaMDY.
 const FECHA = /(\d{1,2})\/(\d{1,2})\/(\d{4})/;
+function iso(y: string, m: string, d: string): string | null {
+  const [mm, dd] = [Number(m), Number(d)];
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null; // nunca devolver una fecha imposible
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
 export function parseFecha(raw: string): string | null {
   const m = raw.match(FECHA);
-  return m ? `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}` : null;
+  return m ? iso(m[3]!, m[2]!, m[1]!) : null;
+}
+export function parseFechaMDY(raw: string): string | null {
+  const m = raw.match(FECHA);
+  return m ? iso(m[3]!, m[1]!, m[2]!) : null;
 }
 
 // ── Períodos (menú "Mis Cursos") ──────────────────────────────────────────────
@@ -300,8 +310,9 @@ export function parseHistorial(html: string): Historial {
       situacionTexto: td[2] ?? '',
       nota: notaNum,
       notaTexto,
-      fechaAprobacion: situacion === 'aprobada' ? parseFecha(fechaActa) : null,
-      fechaRegularizacion: situacion === 'final_pendiente' ? parseFecha(regularizada) : null,
+      // El historial usa mes/día/año (verificado: en 43 fechas reales el segundo número pasa de 12).
+      fechaAprobacion: situacion === 'aprobada' ? parseFechaMDY(fechaActa) : null,
+      fechaRegularizacion: situacion === 'final_pendiente' ? parseFechaMDY(regularizada) : null,
     });
   });
 

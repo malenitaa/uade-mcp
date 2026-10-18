@@ -23,6 +23,16 @@ describe('parseMoney', () => {
   ])('%s → %s', (raw, n) => expect(parseMoney(raw)).toBe(n));
 });
 
+describe('fechas', () => {
+  it('día/mes/año en general, mes/día/año en el historial, y nunca fechas imposibles', async () => {
+    const { parseFecha, parseFechaMDY } = await import('../src/sources/webcampus/parse.js');
+    expect(parseFecha('4/08/2030')).toBe('2030-08-04');
+    expect(parseFechaMDY('7/17/2024')).toBe('2024-07-17');
+    expect(parseFecha('7/17/2024')).toBeNull(); // mes 17
+    expect(parseFechaMDY('17/07/2024')).toBeNull();
+  });
+});
+
 describe('WebCampus', () => {
   it('períodos', () => {
     expect(parsePeriodos(fx('homewc.html'))).toEqual([
