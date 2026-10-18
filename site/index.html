@@ -1,0 +1,422 @@
+<title>UADE-MCP</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="MCP no oficial para que tu agente de IA lea tu WebCampus de UADE: notas, finales, inscripciones y oferta de clases. Corre en tu compu, sin telemetría.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: una sola columna de lectura; la hoja de datos y la instalación se ven como un acta de examen (renglones numerados, letra de máquina, tinta de birome). */
+:root {
+  --paper: #f4f6f8;      /* papel de acta, gris frío */
+  --sheet: #ffffff;      /* hoja */
+  --ink: #18202b;        /* texto */
+  --muted: #5b6573;      /* texto secundario */
+  --rule: #d6dce4;       /* renglones */
+  --birome: #1f45b5;     /* tinta azul de birome */
+  --birome-soft: #e6ecfb;
+  --ok: #1d7a4b;
+  --ok-soft: #e3f3ea;
+  --stop: #a3342b;
+  --stop-soft: #f8e7e5;
+  --code-bg: #eef1f5;
+  --display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f141b; --sheet: #161d27; --ink: #e6eaf0; --muted: #9aa6b5; --rule: #2a3442;
+    --birome: #8aa6ff; --birome-soft: #1c2742; --ok: #6fd0a0; --ok-soft: #15301f;
+    --stop: #f0938a; --stop-soft: #3a1c1a; --code-bg: #1b2330; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f141b; --sheet: #161d27; --ink: #e6eaf0; --muted: #9aa6b5; --rule: #2a3442;
+  --birome: #8aa6ff; --birome-soft: #1c2742; --ok: #6fd0a0; --ok-soft: #15301f;
+  --stop: #f0938a; --stop-soft: #3a1c1a; --code-bg: #1b2330; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 17px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 72px; }
+a { color: var(--birome); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, [role="tab"]:focus-visible { outline: 2px solid var(--birome); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.12; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); letter-spacing: -0.015em; }
+h1 em { font-style: italic; font-weight: 400; color: var(--birome); }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.3rem); }
+h3 { font-size: 1.2rem; }
+p { margin: 0; max-width: 65ch; }
+.eyebrow { font: 700 0.78rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.15rem; color: var(--muted); }
+section { display: grid; gap: 20px; min-width: 0; }
+section > header { display: grid; gap: 10px; }
+
+/* Barra superior */
+.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; font: 0.9rem var(--mono); }
+.brand { font-weight: 700; letter-spacing: 0.04em; color: var(--ink); text-decoration: none; }
+.brand span { color: var(--birome); }
+.top nav { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--birome); }
+
+/* Hero */
+.hero { display: grid; gap: 28px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+.hero-copy { display: grid; gap: 18px; min-width: 0; }
+.ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px; font: 700 0.98rem var(--body); text-decoration: none; border: 1.5px solid var(--birome); }
+.btn.primary { background: var(--birome); color: var(--sheet); }
+.btn.ghost { color: var(--birome); background: transparent; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 0.86rem var(--mono); color: var(--muted); }
+.facts b { color: var(--ink); }
+
+/* Ejemplo de chat */
+.chat { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 18px; display: grid; gap: 12px; min-width: 0; box-shadow: 0 1px 0 var(--rule); }
+.chat .tag { justify-self: start; font: 700 0.72rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.msg { padding: 10px 14px; border-radius: 10px; font-size: 0.97rem; max-width: 92%; }
+.msg.me { justify-self: end; background: var(--birome); color: var(--sheet); border-bottom-right-radius: 3px; }
+.msg.bot { justify-self: start; background: var(--code-bg); border-bottom-left-radius: 3px; }
+.msg.bot ul { margin: 6px 0 0; padding-left: 18px; }
+.call { justify-self: start; font: 0.8rem var(--mono); color: var(--muted); }
+.call::before { content: "↳ "; color: var(--birome); }
+
+/* Preguntas */
+.qa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; padding: 0; list-style: none; }
+.qa li { display: grid; gap: 4px; padding: 14px 0; border-top: 1px solid var(--rule); min-width: 0; }
+.qa q { font-family: var(--display); font-size: 1.15rem; quotes: "“" "”"; }
+.qa code { font: 0.82rem var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+
+/* Acta (hoja de datos) */
+.acta { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; overflow-x: auto; }
+.acta-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; padding: 14px 18px; border-bottom: 2px solid var(--ink); font: 0.85rem var(--mono); }
+.acta-head b { letter-spacing: 0.08em; text-transform: uppercase; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 11px 18px; border-bottom: 1px solid var(--rule); }
+th { font: 700 0.74rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+td.ren { font: 0.85rem var(--mono); color: var(--muted); width: 1%; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.val { font-size: 0.96rem; }
+td.st { width: 1%; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font: 700 0.74rem var(--mono); letter-spacing: 0.04em; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.no { background: var(--stop-soft); color: var(--stop); }
+.pill.soon { background: var(--birome-soft); color: var(--birome); }
+
+/* Nunca / permisos */
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.two > div { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; }
+.list li::before { font: 700 0.95rem var(--mono); }
+.never li::before { content: "✕"; color: var(--stop); }
+.steps { counter-reset: s; }
+.steps li { counter-increment: s; }
+.steps li::before { content: counter(s) "."; color: var(--birome); }
+
+/* Instalación */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--rule); }
+[role="tab"] { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; font: 700 0.95rem var(--body); color: var(--muted); cursor: pointer; margin-bottom: -1px; }
+[role="tab"][aria-selected="true"] { color: var(--birome); border-bottom-color: var(--birome); }
+.panel { display: grid; gap: 14px; padding-top: 18px; min-width: 0; }
+.code { position: relative; background: var(--code-bg); border-radius: 8px; min-width: 0; }
+.code pre { margin: 0; padding: 14px 16px; padding-right: 92px; overflow-x: auto; font: 0.88rem/1.55 var(--mono); white-space: pre; }
+.copy { position: absolute; top: 8px; right: 8px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); font: 700 0.75rem var(--mono); cursor: pointer; }
+.copy[data-done] { color: var(--ok); border-color: var(--ok); }
+.note { font-size: 0.92rem; color: var(--muted); }
+.beta { display: grid; gap: 6px; padding: 14px 16px; border-radius: 10px; background: var(--birome-soft); }
+.beta b { color: var(--birome); }
+
+/* Roadmap */
+.road { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.road > div { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.road ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 0.95rem; }
+
+/* FAQ */
+details { border-top: 1px solid var(--rule); padding: 14px 0; }
+details:last-child { border-bottom: 1px solid var(--rule); }
+summary { cursor: pointer; font-family: var(--display); font-size: 1.15rem; }
+details p { margin-top: 8px; color: var(--muted); }
+
+footer { display: grid; gap: 8px; font: 0.86rem var(--mono); color: var(--muted); border-top: 2px solid var(--ink); padding-top: 18px; }
+
+@media (max-width: 760px) {
+  .hero, .two, .road, .qa { grid-template-columns: minmax(0, 1fr); }
+  .wrap { gap: 56px; padding-block: 24px 48px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .copy, .btn, [role="tab"] { transition: background-color .15s, color .15s, border-color .15s; }
+}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="#">uade<span>·</span>mcp <span style="color:var(--muted);font-weight:400">v0.1.0</span></a>
+    <nav aria-label="Secciones">
+      <a href="#preguntas">qué hace</a>
+      <a href="#datos">hoja de datos</a>
+      <a href="#instalar">instalar</a>
+      <a href="#roadmap">roadmap</a>
+      <a href="#faq">preguntas</a>
+      <a href="https://github.com/malenitaa/uade-mcp">github ↗</a>
+    </nav>
+  </div>
+
+  <div class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">MCP no oficial · Universidad Argentina de la Empresa</span>
+      <h1>Tu WebCampus, <em>en tu chat.</em></h1>
+      <p class="lead">Preguntale a Claude (o al agente que uses) cuándo es tu final, cuántas faltas tenés o qué horarios hay de una materia. El MCP lee WebCampus e Inscripciones desde tu compu y te responde con datos de hoy.</p>
+      <div class="ctas">
+        <a class="btn primary" href="#instalar">Instalar en tu compu ↓</a>
+        <a class="btn ghost" href="#datos">Qué guarda y qué no</a>
+      </div>
+      <div class="facts">
+        <span><b>12</b> herramientas</span>
+        <span>corre en <b>tu compu</b></span>
+        <span><b>0</b> telemetría</span>
+        <span>login con <b>@uade.edu.ar</b></span>
+      </div>
+    </div>
+
+    <div class="chat" aria-label="Conversación de ejemplo">
+      <span class="tag">Ejemplo</span>
+      <div class="msg me">¿Cuándo rindo Matemática Discreta y quién toma?</div>
+      <span class="call">webcampus_exam_schedule</span>
+      <div class="msg bot">El previo es el <b>10/12/2026</b> de 12:30 a 15:15 en la sede Buenos Aires. Lo toman dos docentes de la cátedra.
+        <ul><li>Te podés inscribir hasta el <b>08/12/2026</b> a las 21 h.</li></ul>
+      </div>
+      <div class="msg me">¿Y me conviene anotarme en verano?</div>
+      <span class="call">uade_enrollment_windows</span>
+      <div class="msg bot">La inscripción a Asignaturas Verano 2027 está abierta del <b>05/10/2026</b> al <b>28/02/2027</b>.</div>
+    </div>
+  </div>
+
+  <section id="preguntas">
+    <header>
+      <span class="eyebrow">Qué le podés preguntar</span>
+      <h2>Lo que hoy buscás en cinco pestañas distintas</h2>
+    </header>
+    <ul class="qa">
+      <li><q>¿Qué notas me pusieron este cuatrimestre?</q><code>webcampus_current_courses</code></li>
+      <li><q>¿Cuántas faltas tengo en Paradigma?</q><code>webcampus_attendance</code></li>
+      <li><q>¿Cuándo son mis finales y en qué aula?</q><code>webcampus_exam_schedule</code></li>
+      <li><q>¿Qué inscripciones están abiertas y hasta cuándo?</q><code>uade_enrollment_windows</code></li>
+      <li><q>¿Qué horarios hay de Ciencia de Datos a la noche?</q><code>webcampus_offered_subjects · webcampus_class_offering</code></li>
+      <li><q>¿Cuál es el mail del profe de Evaluación de Proyectos?</q><code>webcampus_teachers</code></li>
+      <li><q>¿Cuánto me falta para recibirme y cuál es mi promedio?</q><code>webcampus_transcript</code></li>
+      <li><q>¿Tengo alguna cuota vencida?</q><code>webcampus_account_balance</code></li>
+      <li><q>Cargá mi historial en Plan UADE.</q><code>planuade_import_transcript</code></li>
+      <li><q>¿Qué permisos tiene habilitados?</q><code>uade_status</code></li>
+    </ul>
+    <p class="note">Las respuestas llegan en castellano, con fechas dd/mm/aaaa y hora de 24 h. Todo se lee en vivo: cuando UADE publica el cronograma de previos o abre una inscripción nueva, el MCP lo encuentra solo.</p>
+  </section>
+
+  <section id="datos">
+    <header>
+      <span class="eyebrow">Hoja de datos</span>
+      <h2>Qué hace, qué guarda y a dónde se conecta</h2>
+      <p>Cada renglón dice qué hace el código hoy, no lo que nos gustaría que haga.</p>
+    </header>
+    <div class="acta">
+      <div class="acta-head"><b>Acta · uade-mcp</b><span>Revisión 0.1.0 · Licencia MIT</span></div>
+      <table>
+        <thead><tr><th scope="col">Renglón</th><th scope="col">Concepto</th><th scope="col">Valor</th><th scope="col">Estado</th></tr></thead>
+        <tbody>
+          <tr><td class="ren">01</td><td>Dónde corre</td><td class="val">En tu compu, por stdio. No hay ningún servidor nuestro en el medio.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">02</td><td>Login</td><td class="val">Cuenta Microsoft de UADE, en una ventana del navegador. La contraseña y el MFA los escribís vos en la página de Microsoft.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">03</td><td>Qué guarda</td><td class="val">Solo las cookies de sesión de WebCampus e Inscripciones, en el llavero del sistema (Llavero de macOS, Credential Manager, libsecret).</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">04</td><td>Contraseña</td><td class="val">Nunca se guarda ni pasa por el código.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">05</td><td>Red</td><td class="val">Solo HTTPS a webcampus.uade.edu.ar, inscripciones.uade.edu.ar, inscripcionespia.uade.edu.ar y login.microsoftonline.com. Cualquier otro host se bloquea en el código, también al seguir redirecciones.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">06</td><td>Cookies</td><td class="val">Cada cookie viaja solo al sitio que la creó. Las de analytics (Google, Hotjar, Application Insights) se descartan.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">07</td><td>Telemetría</td><td class="val">Ninguna. Ni analytics, ni reportes de errores, ni chequeo de actualizaciones.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">08</td><td>Tu configuración</td><td class="val">No toca la configuración de Claude ni de otras apps. La línea para agregarlo la corrés vos.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">09</td><td>Escritura</td><td class="val">Apagada por defecto. Cada acción que escribe tiene su propio permiso y te pide confirmación en un diálogo que el agente no puede contestar solo.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">10</td><td>Datos de terceros</td><td class="val">De tus cursos solo devuelve el equipo docente. Nunca mails ni legajos de compañeros.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+          <tr><td class="ren">11</td><td>Plan UADE</td><td class="val">El historial viaja en el link, después del #, que el navegador no manda a ningún servidor. Plan UADE te muestra qué cambia y aplica solo si aceptás.</td><td class="st"><span class="pill soon">EN REVISIÓN</span></td></tr>
+          <tr><td class="ren">12</td><td>Requisitos</td><td class="val">Node.js 20 o superior, y Chrome, Edge, Brave o Chromium para el login.</td><td class="st"><span class="pill ok">OK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="nunca">
+    <div class="two">
+      <div>
+        <span class="eyebrow">Lista negra</span>
+        <h3>Lo que no hace nunca, aunque se lo pidas</h3>
+        <ul class="list never">
+          <li>Pagar, generar cupones ni tocar el débito automático.</li>
+          <li>Darte de baja de una materia o desvincularte de un aula.</li>
+          <li>Cambiar tus datos personales o tu contraseña.</li>
+          <li>Buscar a otras personas en el buscador de UADE.</li>
+          <li>Cerrar tu sesión de WebCampus.</li>
+        </ul>
+        <p class="note">Esto está bloqueado en el cliente HTTP, por dirección. Un error en otra parte del código no alcanza para saltearlo.</p>
+      </div>
+      <div>
+        <span class="eyebrow">Permisos</span>
+        <h3>Un “dale, hacé lo que sea” no alcanza</h3>
+        <ul class="list steps">
+          <li>Leer viene habilitado. Escribir (inscribirte, entregar, mandar un mail) viene apagado.</li>
+          <li>Cada permiso se prende desde la terminal tipeando su nombre, por ejemplo <code>pia.inscribir</code>. Antes te explica qué permite y qué no.</li>
+          <li>El agente prepara la acción y te muestra un resumen: qué, dónde y si se puede deshacer.</li>
+          <li>Confirmás en un diálogo de tu cliente. El agente no puede responderlo por vos, y sin ese diálogo no hay escritura.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="instalar">
+    <header>
+      <span class="eyebrow">Instalación · unos 5 minutos</span>
+      <h2>Instalarlo en tu compu</h2>
+    </header>
+    <div class="beta">
+      <b>Beta privada.</b>
+      <p>Por ahora se instala desde el código. Cuando esté publicado en npm alcanza con <code>npx -y uade-mcp</code>.</p>
+    </div>
+
+    <div class="code"><button class="copy" type="button" id="copy-setup">Copiar</button><pre id="setup">git clone https://github.com/malenitaa/uade-mcp.git ~/uade-mcp
+cd ~/uade-mcp && npm install && npm run build
+node dist/index.js login</pre></div>
+    <p class="note">El login abre una ventana del navegador. Entrás con tu cuenta de UADE y la ventana se cierra sola cuando aparece tu WebCampus.</p>
+
+    <div class="tabs" role="tablist" aria-label="Cliente">
+      <button role="tab" id="tab-code" aria-controls="p-code" aria-selected="true">Claude Code</button>
+      <button role="tab" id="tab-desktop" aria-controls="p-desktop" aria-selected="false" tabindex="-1">Claude Desktop</button>
+      <button role="tab" id="tab-cursor" aria-controls="p-cursor" aria-selected="false" tabindex="-1">Cursor</button>
+      <button role="tab" id="tab-other" aria-controls="p-other" aria-selected="false" tabindex="-1">Otros</button>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p-code" aria-labelledby="tab-code">
+      <div class="code"><button class="copy" type="button" id="copy-code">Copiar</button><pre id="cmd-code">claude mcp add --scope user uade -- node ~/uade-mcp/dist/index.js</pre></div>
+      <p class="note">Después abrí Claude Code y preguntá algo: “¿cuándo son mis finales?”.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="p-desktop" aria-labelledby="tab-desktop" hidden>
+      <p>Abrí Settings → Developer → Edit Config y sumá esto dentro de <code>mcpServers</code>, sin borrar lo que ya tengas:</p>
+      <div class="code"><button class="copy" type="button" id="copy-desktop">Copiar</button><pre id="cmd-desktop">"uade": {
+  "command": "node",
+  "args": ["/Users/TU_USUARIO/uade-mcp/dist/index.js"]
+}</pre></div>
+      <p class="note">Cambiá TU_USUARIO por el tuyo y reiniciá Claude Desktop.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="p-cursor" aria-labelledby="tab-cursor" hidden>
+      <p>Abrí <code>~/.cursor/mcp.json</code> y sumá esto dentro de <code>mcpServers</code>:</p>
+      <div class="code"><button class="copy" type="button" id="copy-cursor">Copiar</button><pre id="cmd-cursor">"uade": {
+  "command": "node",
+  "args": ["/Users/TU_USUARIO/uade-mcp/dist/index.js"]
+}</pre></div>
+    </div>
+    <div class="panel" role="tabpanel" id="p-other" aria-labelledby="tab-other" hidden>
+      <p>Cualquier cliente MCP que acepte servidores por stdio. El comando es <code>node</code> y el argumento es la ruta a <code>dist/index.js</code>.</p>
+      <p class="note">Por ahora no hay versión hosteada: el MCP necesita tu sesión, y esa sesión no sale de tu compu. Por eso todavía no funciona desde el celular.</p>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <header>
+      <span class="eyebrow">Roadmap</span>
+      <h2>Lo que hay y lo que viene</h2>
+    </header>
+    <div class="road">
+      <div>
+        <span class="pill ok">FUNCIONA</span>
+        <h3>WebCampus e Inscripciones</h3>
+        <ul>
+          <li>Notas, asistencia y fechas de final por materia</li>
+          <li>Historial académico y promedio</li>
+          <li>Cronograma de exámenes previos</li>
+          <li>Ventanas de inscripción y oferta de clases</li>
+          <li>Equipo docente y cuenta corriente</li>
+          <li>Carga del historial en Plan UADE</li>
+        </ul>
+      </div>
+      <div>
+        <span class="pill soon">PRÓXIMO</span>
+        <h3>Más WebCampus y PIA</h3>
+        <ul>
+          <li>Calendario académico y cronogramas en PDF</li>
+          <li>Novedades de cada curso</li>
+          <li>Inscribirte en PIA, con permiso y confirmación</li>
+          <li>Consultas a las áreas de UADE, con confirmación</li>
+          <li>Publicarlo en npm</li>
+        </ul>
+      </div>
+      <div>
+        <span class="pill no">EN EVALUACIÓN</span>
+        <h3>Microsoft 365</h3>
+        <ul>
+          <li>Tareas y entregas de Teams</li>
+          <li>Mail institucional</li>
+          <li>Depende de que UADE permita a los alumnos autorizar apps propias</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <header>
+      <span class="eyebrow">Preguntas</span>
+      <h2>Antes de instalarlo</h2>
+    </header>
+    <div>
+      <details><summary>¿Es oficial de UADE?</summary><p>No. Es un proyecto de estudiantes, sin afiliación con la universidad. Usa las mismas páginas que ves vos cuando entrás a WebCampus.</p></details>
+      <details><summary>¿Ustedes ven mis notas o mi contraseña?</summary><p>No. No hay servidor nuestro: todo pasa entre tu compu y UADE. La contraseña la escribís en la página de Microsoft y el MCP nunca la ve.</p></details>
+      <details><summary>¿Y la empresa del agente que uso?</summary><p>Lo que el MCP le devuelve al agente (por ejemplo, tus notas cuando las pedís) pasa por ese agente como cualquier otra conversación. Si eso te preocupa, preguntá solo lo que quieras compartir.</p></details>
+      <details><summary>¿Puede inscribirme o darme de baja solo?</summary><p>Hoy no escribe nada. Cuando se sume la inscripción en PIA va a necesitar un permiso que prendés vos y tu confirmación en cada alta. Las bajas no se van a sumar.</p></details>
+      <details><summary>¿Cada cuánto hay que iniciar sesión?</summary><p>Cuando vence la sesión de WebCampus. El agente te avisa y corrés <code>node dist/index.js login</code> de nuevo.</p></details>
+      <details><summary>¿Cómo borro todo?</summary><p>Corré <code>node dist/index.js logout</code> para sacar las sesiones del llavero, borrá la carpeta <code>~/.uade-mcp</code> y sacá el servidor de tu cliente.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <span>uade·mcp · proyecto no oficial, sin afiliación con la Universidad Argentina de la Empresa.</span>
+    <span>Código MIT en <a href="https://github.com/malenitaa/uade-mcp">github.com/malenitaa/uade-mcp</a> · Hecho por estudiantes de UADE.</span>
+  </footer>
+</div>
+
+<script>
+// Pestañas de instalación (con flechas del teclado).
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function select(tab) {
+  for (const t of tabs) {
+    const on = t === tab;
+    t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+  }
+  tab.focus();
+}
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => select(t));
+  t.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') select(tabs[(i + 1) % tabs.length]);
+    if (e.key === 'ArrowLeft') select(tabs[(i - 1 + tabs.length) % tabs.length]);
+  });
+});
+
+// Botones de copiar: si el portapapeles no está disponible, se selecciona el texto.
+for (const btn of document.querySelectorAll('.copy')) {
+  btn.addEventListener('click', async () => {
+    const pre = btn.parentElement.querySelector('pre');
+    try {
+      await navigator.clipboard.writeText(pre.textContent);
+      btn.textContent = 'Copiado';
+      btn.dataset.done = '';
+    } catch {
+      const r = document.createRange();
+      r.selectNodeContents(pre);
+      const s = getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+      btn.textContent = 'Seleccionado';
+    }
+    setTimeout(() => { btn.textContent = 'Copiar'; delete btn.dataset.done; }, 1800);
+  });
+}
+</script>
