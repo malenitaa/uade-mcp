@@ -12,6 +12,7 @@ export interface SafeRequest {
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
   body?: string | URLSearchParams;
+  // Se manda solo al host del pedido original, nunca a un host al que se redirija.
   cookie?: string;
 }
 
@@ -19,6 +20,7 @@ export interface SafeResponse {
   status: number;
   url: URL;
   headers: Headers;
+  // Solo los Set-Cookie del host original.
   setCookies: string[];
   body: Uint8Array;
   text(): string;
@@ -26,13 +28,15 @@ export interface SafeResponse {
 
 export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Promise<SafeResponse> {
   let url = assertAllowed(rawUrl);
+  const originHost = url.host;
   let method = req.method ?? 'GET';
   let body = req.body;
   const setCookies: string[] = [];
+  let cookie = req.cookie;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const headers = new Headers(req.headers);
-    if (req.cookie) headers.set('cookie', req.cookie);
+    if (cookie && url.host === originHost) headers.set('cookie', cookie);
 
     const res = await fetch(url, {
       method,
@@ -41,7 +45,11 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    setCookies.push(...res.headers.getSetCookie());
+    if (url.host === originHost) {
+      const fresh = res.headers.getSetCookie();
+      setCookies.push(...fresh);
+      if (cookie !== undefined) cookie = mergeCookies(cookie, fresh);
+    }
 
     if (res.status >= 300 && res.status < 400 && res.headers.has('location')) {
       await res.body?.cancel();
@@ -85,4 +93,23 @@ async function readCapped(res: Response): Promise<Uint8Array> {
     off += c.byteLength;
   }
   return out;
+}
+
+// Aplica Set-Cookie (solo nombre=valor) sobre un header Cookie existente.
+export function mergeCookies(cookie: string, setCookies: string[]): string {
+  const jar = new Map<string, string>();
+  for (const part of cookie.split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) jar.set(part.slice(0, i).trim(), part.slice(i + 1).trim());
+  }
+  for (const sc of setCookies) {
+    const first = sc.split(';')[0] ?? '';
+    const i = first.indexOf('=');
+    if (i <= 0) continue;
+    const name = first.slice(0, i).trim();
+    const value = first.slice(i + 1).trim();
+    if (value === '' || /expires=thu, 01[- ]jan[- ]1970/i.test(sc) || /max-age=0\b/i.test(sc)) jar.delete(name);
+    else jar.set(name, value);
+  }
+  return [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
 }

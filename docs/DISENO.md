@@ -24,38 +24,43 @@ solo la estructura relevada el 2026-10-18.
 ## 2. Identidad y credenciales
 
 **La cuenta Microsoft de UADE (Entra ID, `@uade.edu.ar`) es la identidad base de todo**: WebCampus,
-Teams, inscripciones, mail y hasta el wifi. Hay dos formas de usarla:
+Teams, inscripciones, mail y hasta el wifi. **Todos los sitios hacen login con Microsoft (OIDC)**,
+incluido WebCampus: el botón "Entrar" de `Login.aspx` redirige al tenant de UADE (verificado el 2026-10-18).
 
-- **Inscripciones, PIA, Teams, mail y SharePoint** usan OAuth/OIDC con Microsoft. Usamos MSAL y el
-  agente nunca ve el token.
-- **WebCampus** pide esas mismas credenciales, pero en un formulario ASP.NET propio
-  (`Login.aspx`), no por OAuth. El MCP hace ese login una vez y se queda con la **cookie de sesión**.
-  - A investigar: si WebCampus acepta un SSO de Microsoft escondido (por ejemplo, desde
-    `inscripciones` → `MenuItemId=114`). Si existe, la contraseña no hace falta nunca.
+**Consecuencia: el MCP nunca maneja tu contraseña.**
 
-Como es **una sola credencial para todo**, el riesgo es mayor: si se filtra, se filtra tu cuenta entera
-de UADE. Por eso la regla por defecto es **no guardar la contraseña**.
+- `uade-mcp login` abre un navegador visible (Chrome, Edge, Brave o Chromium) con un **perfil temporal**.
+  Vos iniciás sesión en la página de Microsoft, con MFA. Cuando aparece tu WebCampus, el MCP guarda
+  solo las cookies de sesión de `www.webcampus.uade.edu.ar` (sin las de analytics) en el llavero y
+  cierra el navegador. No queda ni tu sesión de Microsoft ni el historial.
+- No usamos el `client_id` de UADE fuera del navegador, ni flujos OAuth "por atrás".
+- Para Teams y el mail (Graph) va a hacer falta una app propia con MSAL, si el tenant lo permite (§12).
+
+Como es **una sola identidad para todo**, si se filtra una sesión se compromete tu cuenta de UADE.
+Por eso las cookies van al llavero y nunca a disco.
 
 ### Almacenamiento
 
 | Qué | Dónde | Notas |
 |---|---|---|
-| Cookie de sesión WebCampus (`ASP.NET_SessionId` + auth) | Llavero de macOS / Credential Manager / libsecret | Nunca en un archivo plano ni en `.env` |
-| Tokens de Microsoft (PIA, y más adelante Teams/mail) | Llavero del sistema, vía MSAL con caché cifrada | Refresh token cifrado por el SO |
-| Contraseña de WebCampus | **No se guarda por defecto.** | Opt-in explícito: `uade-mcp login --recordar` la guarda en el llavero y avisa claramente qué implica |
-| Caché de datos (notas, historial) | `~/.uade-mcp/cache.db` cifrada con clave del llavero | Opcional; `uade-mcp purge` la borra entera |
+| Cookies de sesión de WebCampus (`ASP.NET_SessionId`, `sessionuade`, `WebCampusAADCookie`, `TS…`) | Llavero del sistema (`@napi-rs/keyring`) | Si el servidor las rota, se actualizan ahí mismo |
+| Tokens de Microsoft (fase Teams/mail) | Llavero del sistema, con MSAL | |
+| Contraseña | **Nunca.** | La escribís vos en Microsoft |
+| Permisos | `~/.uade-mcp/config.json` (modo 600) | Es el único archivo que escribe el MCP |
+| Caché de datos | Por ahora no hay | Si se suma: cifrada con una clave del llavero, y `uade-mcp purge` |
 
-- El login es un **comando que corrés vos** (`uade-mcp login`), no una herramienta que pueda llamar el agente.
-  Si la sesión vence, el MCP devuelve "sesión vencida, corré `uade-mcp login`". No reintenta solo.
-- Para Microsoft: device-code flow o el navegador del sistema. El agente nunca ve el token.
-- Nada se exporta a otro host. Si algún día hay sync entre compus, va a ser explícito y cifrado de punta a punta (E2E), con opt-in.
+- El login es un **comando que corrés vos**, no una tool. Si la sesión vence, la tool devuelve
+  "corré `uade-mcp login`" y no reintenta sola.
+- Las cookies **solo se mandan al host al que pertenecen**, ni siquiera a Microsoft si WebCampus redirige ahí (`src/net/http.ts`, con test).
+- No se exporta nada a otro host. Si algún día hay sync entre compus, va a ser opt-in y cifrado de punta a punta.
 
 ---
 
-## 3. Modelo de permisos (lo que te pasó con Slack, que no vuelva a pasar)
+## 3. Modelo de permisos
 
-**Problema:** "dale, conectate, hacé lo que sea" le dio al agente un permiso amplio, y el agente lo
-usó para algo que no esperabas (mandar mensajes con tu cuenta).
+**Problema que evitamos:** una autorización vaga ("dale, conectate, hacé lo que haga falta") termina
+dándole al agente un permiso amplio, y el agente lo usa para algo que el usuario no esperaba (por
+ejemplo, mandar mensajes con su cuenta).
 
 **Diseño:**
 
@@ -90,7 +95,7 @@ inscripcionespia.uade.edu.ar
 login.microsoftonline.com            (solo auth)
 graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
 api.github.com                       (opcional)
-(PlanUADE no: el MCP solo arma un link local, ver sección 9)
+(PlanUADE no: el MCP solo arma un link local, ver sección 8)
 ```
 
 Cualquier otro host se rechaza en el cliente HTTP. Hablamos HTTP directo, sin navegador, así que **no
@@ -157,11 +162,11 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
   "dónde está cada cosa" sin Graph.
 - Leer tareas, entregar y leer mail requiere Microsoft Graph (`EduAssignments.*`, `Mail.Read`, `Files.Read`).
   **Pendiente:** probar si el tenant deja que un alumno apruebe una app propia. Si no deja, se evalúa
-  otra cosa (ver sección 8).
+  otra cosa (ver sección 12).
 
 ---
 
-## 7. Herramientas v1 (todas de solo lectura)
+## 7. Herramientas
 
 | Tool | Devuelve |
 |---|---|
@@ -178,7 +183,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `pia_ventanas` | Inscripciones abiertas o próximas |
 | `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |
 | `pia_carrito` | Lo que tenés en el carrito o ya inscripto |
-| `planuade_link_importar` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 9) |
+| `planuade_link_importar` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 8) |
 
 **Escrituras (cada una con su permiso y confirmación por elicitation):**
 
@@ -192,7 +197,7 @@ GitHub: usamos el MCP oficial de GitHub en vez de reimplementarlo.
 
 ---
 
-## 9. PlanUADE: integración local-first
+## 8. PlanUADE: integración local-first
 
 PlanUADE (`malenitaa/facultades`) guarda el progreso en `localStorage` (`uademap::state::<carrera>`),
 y opcionalmente lo sincroniza en `/api/sync` usando el legajo. Los ids de materia son los mismos códigos
@@ -218,7 +223,7 @@ https://planuade.ar/fain#importar=<base64url(JSON firmado con hash de integridad
 
 ---
 
-## 10. ¿Por qué no ScrapingBee (ni ningún servicio de scraping)?
+## 9. ¿Por qué no ScrapingBee (ni ningún servicio de scraping)?
 
 - Para hacer el scraping, el servicio necesitaría **tu cookie de sesión de UADE**. Es decir, un tercero
   vería tus notas, tu cuenta corriente y tus datos personales. Eso choca con el principio 1 y con el 2.
@@ -230,7 +235,7 @@ https://planuade.ar/fain#importar=<base64url(JSON firmado con hash de integridad
 
 ---
 
-## 11. Cumplimiento (a validar)
+## 10. Cumplimiento (a validar)
 
 Cuando el código esté, se valida contra: **OWASP ASVS 4/5** (nivel 2), **OWASP Top 10 for LLM
 Applications** (sobre todo LLM01 prompt injection, LLM06 excessive agency y LLM02 fuga de datos
@@ -240,11 +245,32 @@ sensibles), **NIST SSDF (SP 800-218)** para el proceso de desarrollo, **NIST AI 
 
 ---
 
-## 8. Pendientes / a evaluar
+## 11. Distribución: antipatrones que no vamos a repetir
 
-- [ ] **PlanUADE:** implementar `#importar=` en `facultades` (sección 9) y arreglar el IDOR de `/api/sync`.
+Salen de ver cómo se distribuyen otros MCP y herramientas para agentes:
+
+| Antipatrón | Qué hacemos nosotros |
+|---|---|
+| Un instalador que, además del MCP, mete skills, hooks, agentes y `CLAUDE.md` en la config del usuario | El paquete es **un servidor con tools y nada más**. Cualquier extra se ofrece aparte y el usuario lo elige |
+| Escribir en `~/.claude*`, en la config de Claude Desktop o de otras apps, y "restaurarla" si el usuario la cambia | **Cero escritura en configuración ajena.** Se instala con una línea que corrés vos: `claude mcp add uade -- npx -y uade-mcp` (o el equivalente de tu cliente) |
+| Hooks que suben el registro de **todas** las sesiones del agente, o telemetría con detalle de tools y archivos | **Sin telemetría.** Ni opt-in por ahora. Si algún día existe, será opt-in, limitada a llamadas a este MCP y explicada en la hoja de datos |
+| Tokens en texto plano en JSON de configuración | Llavero del sistema |
+| Cabeceras propietarias que obligan a usar un instalador | Protocolo MCP estándar (stdio). Si hay modo remoto, OAuth estándar |
+| Auto-update prendido por defecto | **Sin auto-update.** Fijás la versión (`npx uade-mcp@x.y.z`) y actualizás cuando quieras |
+| App nativa o daemon para algo que es solo un servidor | Proceso stdio que arranca y termina con el cliente |
+
+**Hoja de datos pública** (pendiente, antes de abrir el repo): qué hace cada tool, qué guarda y dónde,
+a qué hosts se conecta, qué no hace nunca y cómo borrar todo (`uade-mcp logout` + borrar `~/.uade-mcp`).
+
+---
+
+## 12. Pendientes / a evaluar
+
+- [ ] **PlanUADE:** implementar `#importar=` en `facultades` (sección 8) y arreglar el IDOR de `/api/sync`.
 - [ ] **Graph:** registrar una app de prueba y ver si el tenant UADE permite consentimiento de usuario.
 - [ ] **PIA:** volver a mapear cuando abra una inscripción.
 - [ ] **Stack:** propuesta TypeScript + `@modelcontextprotocol/sdk` + `undici` (HTTP con allowlist) + `cheerio` (parseo) + `keytar`/`@napi-rs/keyring` (llavero) + `@azure/msal-node`.
 - [ ] **Tests:** fixtures HTML **anonimizados**. Nunca commitear HTML real con datos personales.
 - [ ] Revisar normativa UADE sobre acceso automatizado (`MenuItemId=280`).
+- [ ] Hoja de datos pública (§11) y publicar en npm con versión fija.
+- [ ] Duración de la sesión de WebCampus: medir cuánto dura la cookie antes de pedir login otra vez.
