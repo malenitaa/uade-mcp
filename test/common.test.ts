@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assertPlanUadeUrl, openInBrowser } from '../src/net/open-browser.js';
+import { assertOpenableUrl, assertPlanUadeUrl, openInBrowser } from '../src/net/open-browser.js';
+import { buildDraftUrl } from '../src/sources/mail/draft.js';
 import { toArgentineDates } from '../src/tools/common.js';
 
 describe('fechas en formato argentino', () => {
@@ -24,5 +25,28 @@ describe('abrir el navegador', () => {
     const [, args] = exec.mock.calls[0]!;
     expect(args.at(-1)).toBe('https://planuade.ar/fain#importar=a;rm%20-rf%20~&b');
     expect(args).toHaveLength(process.platform === 'win32' ? 2 : 1);
+  });
+});
+
+describe('borradores de mail', () => {
+  it('arma el link de Outlook web con destinatario, asunto y cuerpo codificados', () => {
+    const url = new URL(buildDraftUrl({ to: ['Docente.Ficticia@uade.edu.ar'], subject: 'Consulta parcial', body: 'Hola profe,\nno voy a poder ir el 10/12 & aviso.' }));
+    expect(url.origin + url.pathname).toBe('https://outlook.office.com/mail/deeplink/compose');
+    expect(url.searchParams.get('to')).toBe('docente.ficticia@uade.edu.ar');
+    expect(url.searchParams.get('subject')).toBe('Consulta parcial');
+    expect(url.searchParams.get('body')).toBe('Hola profe,\nno voy a poder ir el 10/12 & aviso.');
+    expect(url.href).not.toContain('+');
+  });
+
+  it('solo deja escribir a direcciones @uade.edu.ar', () => {
+    expect(() => buildDraftUrl({ to: ['alguien@gmail.com'], subject: 'x', body: 'y' })).toThrow('@uade.edu.ar');
+    expect(() => buildDraftUrl({ to: ['a@uade.edu.ar'], cc: ['b@evil.com'], subject: 'x', body: 'y' })).toThrow('@uade.edu.ar');
+    expect(() => buildDraftUrl({ to: ['a@uade.edu.ar.evil.com'], subject: 'x', body: 'y' })).toThrow();
+  });
+
+  it('el navegador solo abre Plan UADE y Outlook web', () => {
+    expect(() => assertOpenableUrl('https://outlook.office.com/mail/deeplink/compose?to=a')).not.toThrow();
+    expect(() => assertOpenableUrl('https://outlook.live.com/mail/0/deeplink/compose')).toThrow();
+    expect(() => assertPlanUadeUrl('https://outlook.office.com/mail')).toThrow();
   });
 });

@@ -83,7 +83,9 @@ export class WebCampus {
 
   // Busca la novedad de "Exámenes Previos" y lee su Excel. Sin filtros devuelve los exámenes de
   // las materias con final pendiente o que estás cursando.
-  async examenesPrevios(consulta?: string): Promise<{ archivo: string; filtro: string; examenes: ExamenPrevio[] }> {
+  async examenesPrevios(
+    consulta?: string,
+  ): Promise<{ archivo: string; filtro: string; examenes: (ExamenPrevio & { tuSituacion?: string })[] }> {
     const ids = new Set<string>();
     for (const p of ['/HomeWC.aspx', '/MiContenido/Novedades.aspx?EsDC=False']) {
       parseLinksNovedades((await this.client.get(p)).html).forEach((id) => ids.add(id));
@@ -95,14 +97,25 @@ export class WebCampus {
     }
     if (!archivo) throw new Error('No encontré una novedad con el cronograma de exámenes previos publicado.');
     const todos = await parsePreviosXlsx((await this.client.get(archivo)).bytes);
-
-    if (consulta) return { archivo, filtro: consulta, examenes: todos.filter((e) => coincide(e, consulta)) };
     const h = await this.historial();
+    const situacion = (e: ExamenPrevio) => h.materias.find((m) => coincide(e, m.codigo))?.situacion;
+
+    if (consulta) {
+      const encontrados = todos.filter((e) => coincide(e, consulta));
+      // Por nombre hay homónimos de otras carreras ("Gestión de las Personas…"): primero los de tu plan.
+      const deTuPlan = encontrados.filter((e) => situacion(e));
+      const examenes = (deTuPlan.length ? deTuPlan : encontrados).map((e) => ({ ...e, tuSituacion: situacion(e) }));
+      return {
+        archivo,
+        filtro: deTuPlan.length ? `${consulta} (solo materias de tu plan)` : `${consulta} (ninguna es de tu plan; se muestran todas)`,
+        examenes,
+      };
+    }
     const mias = h.materias.filter((m) => m.situacion === 'final_pendiente' || m.situacion === 'cursando');
     return {
       archivo,
       filtro: `tus materias con final pendiente o cursando: ${mias.map((m) => m.codigo).join(', ')}`,
-      examenes: todos.filter((e) => mias.some((m) => coincide(e, m.codigo))),
+      examenes: todos.filter((e) => mias.some((m) => coincide(e, m.codigo))).map((e) => ({ ...e, tuSituacion: situacion(e) })),
     };
   }
 }

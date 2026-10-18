@@ -183,6 +183,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `uade_enrollment_windows` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
 | `webcampus_offered_subjects` / `webcampus_class_offering` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
 | `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
+| `email_compose_draft` (✅) | Borrador en Outlook web (deeplink de redacción) abierto en el navegador. No envía, no usa Graph, solo destinatarios @uade.edu.ar |
 | `webcampus_teachers` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
 | `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |
 | `pia_carrito` | Lo que tenés en el carrito o ya inscripto |

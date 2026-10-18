@@ -36,6 +36,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
 | `webcampus_offered_subjects` / `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
+| `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |
 | `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) en tu navegador con tus aprobadas, finales pendientes y cursadas; confirmás ahí |
 
 Los nombres y descripciones de las tools están en inglés (así los entienden mejor todos los agentes),

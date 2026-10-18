@@ -31,6 +31,11 @@ describe('exámenes previos', () => {
     const ex = await parsePreviosXlsx(await excelFicticio());
     expect(ex.filter((e) => coincide(e, '9.9.102')).map((e) => e.clase)).toEqual(['20002']);
     expect(ex.filter((e) => coincide(e, 'oferta')).length).toBe(2);
+    // por palabras, sin artículos ni orden
+    const g = { sede: '', codigo: '3.4.131', materia: 'GESTIÓN DE PERSONAS EN ORGANIZACIONES DE TECNOLOGÍA', fecha: null, hora: null, aula: null, clase: null, docentes: [] };
+    expect(coincide(g, 'gestion de las personas')).toBe(true);
+    expect(coincide(g, 'personas tecnologia')).toBe(true);
+    expect(coincide(g, 'gestion de proyectos')).toBe(false);
   });
 
   it('encuentra la novedad y su adjunto, y rechaza rutas raras', () => {

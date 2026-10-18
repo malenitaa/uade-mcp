@@ -76,9 +76,16 @@ export async function parsePreviosXlsx(bytes: Uint8Array): Promise<ExamenPrevio[
   return out;
 }
 
-// Coincide por código (con o sin prefijo de variante, "V1.1.083" ~ "1.1.083") o por nombre.
+const STOP = new Set(['DE', 'DEL', 'LA', 'LAS', 'EL', 'LOS', 'EN', 'Y', 'E', 'A', 'AL', 'PARA', 'CON', 'POR', 'O', 'U']);
+const palabras = (s: string) => norm(s).replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter((w) => w && !STOP.has(w));
+
+// Coincide por código (con o sin prefijo de variante, "V1.1.083" ~ "1.1.083") o por nombre:
+// todas las palabras de la consulta tienen que estar en el nombre, sin importar artículos,
+// tildes ni el orden ("gestión de las personas" ~ "Gestión de Personas en Organizaciones…").
 export function coincide(e: ExamenPrevio, consulta: string): boolean {
   const q = consulta.trim();
   if (/^[A-Z]?\d+(\.\d+)+$/i.test(q)) return e.codigo.replace(/^[A-Z]/i, '') === q.replace(/^[A-Z]/i, '');
-  return norm(e.materia).includes(norm(q));
+  const nombre = palabras(e.materia);
+  const buscadas = palabras(q);
+  return buscadas.length > 0 && buscadas.every((w) => nombre.some((n) => n === w || (w.length >= 4 && n.startsWith(w))));
 }
