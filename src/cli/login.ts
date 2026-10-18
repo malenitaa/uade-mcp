@@ -9,7 +9,7 @@ import { saveSession } from '../auth/store.js';
 import { INSCRIPCIONES, INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SESSION_ACCOUNT, WEBCAMPUS } from '../sources/webcampus/client.js';
 
-const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
+const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Cookies de analytics que no hacen falta para la sesión y no guardamos.
 const TRACKING = /^(_ga|_gid|_hj|__utm|_fbp|_gcl|ai_user|ai_session)/;
@@ -49,7 +49,7 @@ export async function login(): Promise<void> {
   console.log(
     [
       '',
-      'Se va a abrir una ventana del navegador en WebCampus.',
+      `Se va a abrir una ventana de ${executablePath.split('/').pop()?.replace(/\.exe$/i, '')} en WebCampus (si no la ves, buscala en el Dock o detrás de otras ventanas).`,
       '  1. Iniciá sesión con tu cuenta de UADE (lo escribís vos, en la página de Microsoft).',
       '  2. Cuando veas tu WebCampus, la ventana se cierra sola.',
       '',
@@ -64,9 +64,17 @@ export async function login(): Promise<void> {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto(`${WEBCAMPUS}/Login.aspx`);
+    await page.bringToFront().catch(() => {});
     // El botón "Entrar" solo redirige al login de Microsoft; no manda credenciales.
     await page.click('#ctl00_ContentPlaceHolderMain_btnEntrar').catch(() => {});
-    await page.waitForURL((u) => u.origin === WEBCAMPUS && /\/homewc\.aspx$/i.test(u.pathname), { timeout: LOGIN_TIMEOUT_MS });
+    try {
+      await page.waitForURL((u) => u.origin === WEBCAMPUS && /\/homewc\.aspx$/i.test(u.pathname), { timeout: LOGIN_TIMEOUT_MS });
+    } catch {
+      throw new Error(
+        'Pasaron 10 minutos sin que termine el login, así que se cerró la ventana y no se guardó nada. ' +
+          'Volvé a correr el mismo comando y completá el login de Microsoft en la ventana que se abre.',
+      );
+    }
 
     const cookies = (await context.cookies(WEBCAMPUS)).filter((c) => !TRACKING.test(c.name));
     if (!cookies.some((c) => c.name === '.ASPXAUTH' || c.name === 'sessionuade')) {
