@@ -27,16 +27,21 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 
 | Tool | Qué devuelve |
 |---|---|
-| `webcampus_periodos` | Tus cuatrimestres |
-| `webcampus_cursada` | Materias con día, horario, aula y sede, notas, fecha de final, links a Teams y apuntes |
-| `webcampus_asistencia` | Presentes, inasistencias y detalle por clase |
-| `webcampus_historial` | Todas las materias del plan con situación, nota y fecha, y el promedio |
-| `webcampus_cuenta` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
-| `webcampus_examenes_previos` | Fecha, hora, sede, clase y docentes de los finales (por defecto, de tus materias pendientes) |
-| `webcampus_docentes` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
-| `uade_inscripciones` | Ventanas de inscripción con apertura, cierre y si están abiertas |
-| `webcampus_oferta_materias` / `webcampus_oferta` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
-| `planuade_link_importar` | Un link de [Plan UADE](https://planuade.ar) con tus aprobadas, finales pendientes y cursadas. Lo abrís vos y confirmás ahí |
+| `webcampus_terms` | Tus cuatrimestres |
+| `webcampus_current_courses` | Materias con día, horario, aula y sede, notas, fecha de final, links a Teams y apuntes |
+| `webcampus_attendance` | Presentes, inasistencias y detalle por clase |
+| `webcampus_transcript` | Todas las materias del plan con situación, nota y fecha, y el promedio |
+| `webcampus_account_balance` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
+| `webcampus_exam_schedule` | Fecha, hora, sede, clase y docentes de los finales (por defecto, de tus materias pendientes) |
+| `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
+| `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
+| `webcampus_offered_subjects` / `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
+| `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) en tu navegador con tus aprobadas, finales pendientes y cursadas; confirmás ahí |
+
+Los nombres y descripciones de las tools están en inglés (así los entienden mejor todos los agentes),
+pero el servidor le indica al agente que **te responda en castellano rioplatense, con fechas dd/mm/aaaa y
+hora de 24 h**. Todo se lee en vivo desde UADE: no hay fechas cargadas a mano, así que se actualiza solo
+cada cuatrimestre.
 
 ## Cómo trata tus datos
 

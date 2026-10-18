@@ -1,0 +1,37 @@
+// Shared helpers for tools: permission check, error handling and Argentine date format.
+import { requirePermission, type Permission } from '../auth/permissions.js';
+
+export const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+
+export type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
+
+const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}:\d{2}))?$/;
+
+// UADE is an Argentine university: every date shown to the user is dd/mm/aaaa (24 h times).
+// Parsers keep ISO internally so dates can be compared; this converts them on the way out.
+export function toArgentineDates<T>(value: T): T {
+  if (typeof value === 'string') {
+    const m = value.match(ISO);
+    return (m ? `${m[3]}/${m[2]}/${m[1]}${m[4] ? ` ${m[4]}` : ''}` : value) as T;
+  }
+  if (Array.isArray(value)) return value.map(toArgentineDates) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, toArgentineDates(v)])) as T;
+  }
+  return value;
+}
+
+export async function run(
+  granted: ReadonlySet<Permission>,
+  permission: Permission,
+  fn: () => Promise<unknown>,
+): Promise<ToolResult> {
+  try {
+    requirePermission(granted, permission);
+    const data = toArgentineDates(await fn());
+    return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] };
+  } catch (err) {
+    // Error messages are already in Spanish: they are meant to be relayed to the student as is.
+    return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
+  }
+}

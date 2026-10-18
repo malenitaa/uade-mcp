@@ -170,23 +170,23 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 
 | Tool | Devuelve |
 |---|---|
-| `webcampus_periodos` | Cuatrimestres disponibles |
+| `webcampus_terms` | Cuatrimestres disponibles |
 | `webcampus_notas(periodo?)` | Notas por materia y evaluación, y condición final |
 | `webcampus_aulas(periodo?)` | Aulas, con links a Teams y SharePoint |
-| `webcampus_asistencia(aula)` | Resumen de asistencia |
+| `webcampus_attendance(aula)` | Resumen de asistencia |
 | `webcampus_semana(aula)` | Planificación |
 | `webcampus_novedades(aula?)` | Novedades (marcadas como no confiables) |
-| `webcampus_historial` | Materias aprobadas, con nota y fecha |
+| `webcampus_transcript` | Materias aprobadas, con nota y fecha |
 | `webcampus_correlativas` | Qué te habilita cada materia |
-| `webcampus_cuenta` | Deuda vencida, próximos vencimientos, pagos. **Sin pagar** |
+| `webcampus_account_balance` | Deuda vencida, próximos vencimientos, pagos. **Sin pagar** |
 | `webcampus_fechas_examen` | Lo que sale de novedades y PDFs |
-| `uade_inscripciones` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
-| `webcampus_oferta_materias` / `webcampus_oferta` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
-| `webcampus_examenes_previos` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
-| `webcampus_docentes` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
+| `uade_enrollment_windows` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
+| `webcampus_offered_subjects` / `webcampus_class_offering` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
+| `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
+| `webcampus_teachers` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
 | `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |
 | `pia_carrito` | Lo que tenés en el carrito o ya inscripto |
-| `planuade_link_importar` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 8) |
+| `planuade_import_transcript` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 8) |
 
 **Escrituras (cada una con su permiso y confirmación por elicitation):**
 

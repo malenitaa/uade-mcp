@@ -1,92 +1,98 @@
-// Tools de solo lectura de WebCampus. Todas exigen el permiso webcampus.leer.
+// Read-only WebCampus tools. All of them require the webcampus.leer permission.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { requirePermission, type Permission } from '../auth/permissions.js';
+import type { Permission } from '../auth/permissions.js';
 import { WebCampus } from '../sources/webcampus/index.js';
-
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
-
-type Result = { content: { type: 'text'; text: string }[]; isError?: boolean };
-
-async function run(granted: ReadonlySet<Permission>, fn: () => Promise<unknown>): Promise<Result> {
-  try {
-    requirePermission(granted, 'webcampus.leer');
-    return { content: [{ type: 'text', text: JSON.stringify(await fn(), null, 2) }] };
-  } catch (err) {
-    return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
-  }
-}
+import { READ_ONLY, run } from './common.js';
 
 export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<Permission>, wc = new WebCampus()): void {
+  const read = (fn: () => Promise<unknown>) => run(granted, 'webcampus.leer', fn);
+
   server.registerTool(
-    'webcampus_periodos',
+    'webcampus_terms',
     {
-      title: 'Períodos de cursada',
-      description: 'Lista los cuatrimestres/períodos del alumno en WebCampus (id y nombre). Solo lectura.',
+      title: 'Academic terms',
+      description: "The student's terms (cuatrimestres) in WebCampus, with id and name. Read-only.",
       annotations: READ_ONLY,
     },
-    () => run(granted, () => wc.periodos()),
+    () => read(() => wc.periodos()),
   );
 
   server.registerTool(
-    'webcampus_cursada',
+    'webcampus_current_courses',
     {
-      title: 'Materias del cuatrimestre',
+      title: 'Courses of the term',
       description:
-        'Materias del período con día, horario, aula y sede, fechas de cursada, fecha de examen final, ' +
-        'notas de cada evaluación y condición final, más links a Teams y apuntes. Sin período, usa el más reciente. Solo lectura.',
-      inputSchema: { periodo: z.string().regex(/^\d+$/).optional().describe('id de webcampus_periodos') },
+        'Courses the student is taking in a term: weekday, time, room and campus, course dates, final exam date, ' +
+        'grade of each assessment and final status, plus links to the Teams team and course notes. ' +
+        'Without a term, uses the most recent one. Read-only.',
+      inputSchema: { term: z.string().regex(/^\d+$/).optional().describe('term id from webcampus_terms') },
       annotations: READ_ONLY,
     },
-    ({ periodo }) => run(granted, () => wc.cursada(periodo)),
+    ({ term }) => read(() => wc.cursada(term)),
   );
 
   server.registerTool(
-    'webcampus_asistencia',
+    'webcampus_attendance',
     {
-      title: 'Asistencia de una materia',
-      description: 'Resumen de asistencia (presentes, inasistencias, sin cargar) y detalle por clase de un aula. Solo lectura.',
-      inputSchema: { idAula: z.string().regex(/^\d+$/).describe('idAula de webcampus_cursada') },
+      title: 'Attendance of a course',
+      description: 'Attendance summary (present, absent, not yet recorded) and per-class detail for one course. Read-only.',
+      inputSchema: { idAula: z.string().regex(/^\d+$/).describe('idAula from webcampus_current_courses') },
       annotations: READ_ONLY,
     },
-    ({ idAula }) => run(granted, () => wc.asistencia(idAula)),
+    ({ idAula }) => read(() => wc.asistencia(idAula)),
   );
 
   server.registerTool(
-    'webcampus_historial',
+    'webcampus_transcript',
     {
-      title: 'Historial académico',
+      title: 'Academic transcript',
       description:
-        'Todas las materias del plan con su situación (aprobada, final pendiente, cursando, equivalencia, sin cursar), ' +
-        'nota, año y fecha de aprobación, más el promedio. Sin plan, usa la carrera activa. Solo lectura.',
-      inputSchema: { plan: z.string().regex(/^\d+$/).optional().describe('código de plan, si tenés más de una carrera') },
+        "Every subject of the student's degree plan with its status (aprobada, final_pendiente, cursando, " +
+        'equivalencia, sin_cursar), grade, year and approval date, plus the grade average. ' +
+        'Without a plan, uses the active degree. Read-only.',
+      inputSchema: { plan: z.string().regex(/^\d+$/).optional().describe('plan code, only if the student has more than one degree') },
       annotations: READ_ONLY,
     },
-    ({ plan }) => run(granted, () => wc.historial(plan)),
+    ({ plan }) => read(() => wc.historial(plan)),
   );
 
   server.registerTool(
-    'webcampus_cuenta',
+    'webcampus_account_balance',
     {
-      title: 'Cuenta corriente',
+      title: 'Tuition account',
       description:
-        'Deuda vencida, próximos vencimientos y pagos realizados. Solo lectura: este MCP no puede pagar ni generar cupones.',
+        'Overdue debt, upcoming due dates and payments made. Read-only: this server cannot pay or generate payment slips.',
       annotations: READ_ONLY,
     },
-    () => run(granted, () => wc.cuenta()),
+    () => read(() => wc.cuenta()),
   );
 
   server.registerTool(
-    'webcampus_examenes_previos',
+    'webcampus_exam_schedule',
     {
-      title: 'Cronograma de exámenes previos',
+      title: 'Final exam schedule',
       description:
-        'Fechas, horario, aula, clase y docentes de los exámenes previos (finales) publicados en WebCampus. ' +
-        'Sin consulta, muestra solo tus materias con final pendiente o que estás cursando. Con consulta, filtra por ' +
-        'código (3.4.071) o nombre. La inscripción a cada examen cierra 48 h antes a las 21 hs. Solo lectura.',
-      inputSchema: { consulta: z.string().min(2).max(80).optional().describe('código o parte del nombre de la materia') },
+        'Final exams (exámenes previos) published by UADE: date, time, campus, room, class number and examiners. ' +
+        'Found automatically in the WebCampus news, so it is always the latest schedule. Without a query, only the ' +
+        "student's subjects with a pending final or currently being taken. With a query, filters by subject code " +
+        '(e.g. 3.4.071) or name. Exam registration closes 48 h before the exam at 21:00. Read-only.',
+      inputSchema: { query: z.string().min(2).max(80).optional().describe('subject code or part of its name') },
       annotations: READ_ONLY,
     },
-    ({ consulta }) => run(granted, () => wc.examenesPrevios(consulta)),
+    ({ query }) => read(() => wc.examenesPrevios(query)),
+  );
+
+  server.registerTool(
+    'webcampus_teachers',
+    {
+      title: 'Teaching staff of a course',
+      description:
+        'Name and email of the teaching staff of a course the student is taking. Never returns classmates’ data. ' +
+        'Read-only: it does not send emails.',
+      inputSchema: { idAula: z.string().regex(/^\d+$/).describe('idAula from webcampus_current_courses') },
+      annotations: READ_ONLY,
+    },
+    ({ idAula }) => read(() => wc.docentes(idAula)),
   );
 }

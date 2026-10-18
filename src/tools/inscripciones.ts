@@ -1,22 +1,10 @@
-// Tools de solo lectura sobre inscripciones, oferta de clases y equipo docente.
+// Read-only tools for enrollment windows and the class offering.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { requirePermission, type Permission } from '../auth/permissions.js';
+import type { Permission } from '../auth/permissions.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
-
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
-
-type Result = { content: { type: 'text'; text: string }[]; isError?: boolean };
-
-async function run(granted: ReadonlySet<Permission>, perm: Permission, fn: () => Promise<unknown>): Promise<Result> {
-  try {
-    requirePermission(granted, perm);
-    return { content: [{ type: 'text', text: JSON.stringify(await fn(), null, 2) }] };
-  } catch (err) {
-    return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
-  }
-}
+import { READ_ONLY, run } from './common.js';
 
 export function registerInscripcionesTools(
   server: McpServer,
@@ -24,61 +12,51 @@ export function registerInscripcionesTools(
   wc = new WebCampus(),
   insc = new Inscripciones(),
 ): void {
+  const read = (fn: () => Promise<unknown>) => run(granted, 'pia.leer', fn);
+
   server.registerTool(
-    'uade_inscripciones',
+    'uade_enrollment_windows',
     {
-      title: 'Ventanas de inscripción',
+      title: 'Enrollment windows',
       description:
-        'Lista las inscripciones de UADE (cursada, MRI, verano, bajas, etc.) con fecha de apertura y cierre y si están ' +
-        'abiertas para vos. Solo lectura: no inscribe ni da de baja.',
+        'UADE enrollment windows (regular courses, intensive MRI, summer, withdrawals, etc.) with opening and closing ' +
+        'date and whether they are open for the student. Read live from the enrollment site. ' +
+        'Read-only: it does not enroll or withdraw.',
       annotations: READ_ONLY,
     },
-    () => run(granted, 'pia.leer', () => insc.ventanas()),
+    () => read(() => insc.ventanas()),
   );
 
   server.registerTool(
-    'webcampus_oferta_materias',
+    'webcampus_offered_subjects',
     {
-      title: 'Materias con clases programadas',
+      title: 'Subjects with scheduled classes',
       description:
-        'Materias de tu carrera que tienen clases programadas para el próximo período (código y nombre). ' +
-        'Usá el código en webcampus_oferta. Solo lectura.',
+        "Subjects of the student's degree that have classes scheduled for the next term (code and name). " +
+        'Use the code with webcampus_class_offering. Read-only.',
       annotations: READ_ONLY,
     },
-    () => run(granted, 'pia.leer', async () => wc.ofertaMaterias(await insc.linkProgramacion())),
+    () => read(async () => wc.ofertaMaterias(await insc.linkProgramacion())),
   );
 
   server.registerTool(
-    'webcampus_oferta',
+    'webcampus_class_offering',
     {
-      title: 'Clases ofrecidas de una materia',
+      title: 'Classes offered for a subject',
       description:
-        'Todas las clases programadas de una materia: sede, número de clase, turno, días, horario, fechas, idioma y ' +
-        'régimen de aprobación. Sirve para elegir antes de inscribirte. No muestra docentes (ver webcampus_examenes_previos ' +
-        'o webcampus_docentes). Solo lectura.',
+        'Every scheduled class of a subject: campus, class number, shift, weekdays, time, dates, language and how it is ' +
+        'passed (final exam, promotion, final project). Useful to choose before enrolling. It does not list teachers ' +
+        '(see webcampus_exam_schedule or webcampus_teachers). Read-only.',
       inputSchema: {
-        materia: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/).describe('código de materia, ej. 3.4.071 (de webcampus_oferta_materias)'),
-        turno: z.enum(['MAÑANA', 'TARDE', 'NOCHE']).optional(),
+        subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/).describe('subject code, e.g. 3.4.071 (from webcampus_offered_subjects)'),
+        shift: z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE']).optional(),
       },
       annotations: READ_ONLY,
     },
-    ({ materia, turno }) =>
-      run(granted, 'pia.leer', async () => {
-        const clases = await wc.oferta(await insc.linkProgramacion(), materia);
-        return turno ? clases.filter((c) => c.turno.toUpperCase().includes(turno)) : clases;
+    ({ subject, shift }) =>
+      read(async () => {
+        const clases = await wc.oferta(await insc.linkProgramacion(), subject);
+        return shift ? clases.filter((c) => c.turno.toUpperCase().includes(shift)) : clases;
       }),
-  );
-
-  server.registerTool(
-    'webcampus_docentes',
-    {
-      title: 'Equipo docente de una materia',
-      description:
-        'Nombre y mail del equipo docente de un aula que estás cursando (idAula de webcampus_cursada). ' +
-        'No devuelve datos de tus compañeros. Solo lectura: no envía mails.',
-      inputSchema: { idAula: z.string().regex(/^\d+$/) },
-      annotations: READ_ONLY,
-    },
-    ({ idAula }) => run(granted, 'webcampus.leer', () => wc.docentes(idAula)),
   );
 }
