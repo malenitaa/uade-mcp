@@ -2,6 +2,8 @@
 import { WebCampusClient } from './client.js';
 import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
+  parsePlanificacion,
+  type Planificacion,
   parseDocentes,
   parseOferta,
   type ClaseOfertada,
@@ -51,6 +53,18 @@ export class WebCampus {
 
   async cuenta(): Promise<Cuenta> {
     return parseCuenta((await this.client.get('/Contenidos/CuentaCorrientes.aspx')).html);
+  }
+
+  async planificacion(idAula: string): Promise<Planificacion> {
+    if (!ID.test(idAula)) throw new Error('idAula inválido');
+    return parsePlanificacion((await this.client.get(`/PlanificacionClases/MiSemana.aspx?IdAula=${idAula}`)).html);
+  }
+
+  // Planificación de todas las materias de cursada regular del período más reciente.
+  async planificaciones(): Promise<(Planificacion & { idAula: string })[]> {
+    const { aulas } = await this.cursada();
+    const regulares = aulas.filter((a) => /cursada regular/i.test(a.seccion));
+    return Promise.all(regulares.map(async (a) => ({ idAula: a.idAula, ...(await this.planificacion(a.idAula)), materia: a.materia })));
   }
 
   async docentes(idAula: string): Promise<Docente[]> {

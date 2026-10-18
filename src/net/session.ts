@@ -84,7 +84,10 @@ export class SessionClient {
         this.store.save(next);
       }
     }
-    if (res.url.origin !== this.site.origin || this.site.esLogin(res.url) || res.status === 401) {
+    // Vencida = terminó en el login (del sitio o de Microsoft) o 401. Terminar en otro sitio
+    // permitido (por ejemplo un PDF de dre.uade.edu.ar al que redirige el menú) no es estar vencida.
+    const enLoginMicrosoft = res.url.origin === 'https://login.microsoftonline.com';
+    if (enLoginMicrosoft || (res.url.origin === this.site.origin && this.site.esLogin(res.url)) || res.status === 401) {
       throw new SessionExpiredError(this.site.nombre);
     }
     if (res.status >= 400) throw new Error(`${this.site.nombre} respondió ${res.status}`);

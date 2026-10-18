@@ -471,3 +471,53 @@ export function parseOferta(html: string): Oferta {
 
   return { materias, clases, siguientePagina, form };
 }
+
+// ── Planificación de un aula (Mi Semana): cada clase con su fecha y actividad ─────
+// Ojo: acá las fechas vienen en día/mes/año (verificado: en 58 fechas reales el primer número pasa de 12).
+
+export type TipoActividad = 'cursada' | 'evaluacion' | 'recuperatorio' | 'examen_final' | 'otra';
+
+export interface ActividadClase {
+  fecha: string | null;
+  dia: string;
+  horario: string | null;
+  aula: string | null;
+  sede: string | null;
+  actividad: TipoActividad;
+  actividadTexto: string;
+}
+
+export interface Planificacion {
+  clase: string | null;
+  materia: string | null;
+  actividades: ActividadClase[];
+}
+
+const TIPO: Record<string, TipoActividad> = {
+  CURSADA: 'cursada',
+  EVALUACION: 'evaluacion',
+  RECUPERATORIO: 'recuperatorio',
+  'EXAMEN FINAL': 'examen_final',
+};
+
+export function parsePlanificacion(html: string): Planificacion {
+  const $ = cheerio.load(html);
+  const table = $('table.cursada_celdas').first();
+  const titulo = clean(table.find('tr.tr_ancho').first().text()).match(/^Clase:\s*(\d+)\s*-\s*(.+)$/i);
+  const actividades: ActividadClase[] = [];
+  table.find('tr.celda_cursada_desplegada').each((_, tr) => {
+    const td = $(tr).children('td').map((_, c) => clean($(c).text())).get();
+    const texto = td[7] ?? '';
+    const norm = texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    actividades.push({
+      fecha: parseFecha(td[0] ?? ''),
+      dia: td[1] ?? '',
+      horario: orNull(td[2] ?? ''),
+      aula: orNull(td[3] ?? ''),
+      sede: orNull(td[6] ?? ''),
+      actividad: TIPO[norm] ?? 'otra',
+      actividadTexto: texto,
+    });
+  });
+  return { clase: titulo?.[1] ?? null, materia: titulo?.[2] ?? null, actividades };
+}

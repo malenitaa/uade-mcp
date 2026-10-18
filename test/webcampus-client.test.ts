@@ -118,3 +118,19 @@ describe('relogin con el MCP abierto', () => {
     expect(calls.map((c) => c.cookie)).toEqual(['sessionuade=vieja', 'sessionuade=nueva']);
   });
 });
+
+describe('redirección a otro sitio permitido', () => {
+  it('un menú que lleva a un PDF de dre.uade.edu.ar no cuenta como sesión vencida', async () => {
+    const calls = stubFetch((u) =>
+      u.host === 'www.webcampus.uade.edu.ar' ? redirect('https://www.dre.uade.edu.ar/calendario/2/home_2.pdf') : new Response('%PDF-1.4'),
+    );
+    const page = await new WebCampusClient(memStore('a=1')).get('/Principal.aspx?MenuItemId=403');
+    expect(page.url.href).toBe('https://www.dre.uade.edu.ar/calendario/2/home_2.pdf');
+    expect(calls[1]?.cookie).toBeNull(); // la cookie de WebCampus no viaja a dre
+  });
+
+  it('terminar en el login de Microsoft sí es sesión vencida', async () => {
+    stubFetch((u) => (u.host === 'www.webcampus.uade.edu.ar' ? redirect('https://login.microsoftonline.com/x') : new Response('login')));
+    await expect(new WebCampusClient(memStore('a=1')).get('/HomeWC.aspx')).rejects.toBeInstanceOf(SessionExpiredError);
+  });
+});

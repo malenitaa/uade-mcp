@@ -6,6 +6,8 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'www.webcampus.uade.edu.ar',
   'inscripciones.uade.edu.ar',
   'inscripcionespia.uade.edu.ar',
+  'dre.uade.edu.ar', // PDFs públicos de UADE (calendario académico, cronogramas)
+  'www.dre.uade.edu.ar',
   'login.microsoftonline.com',
   'graph.microsoft.com',
 ]);

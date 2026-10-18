@@ -95,4 +95,29 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ idAula }) => read(() => wc.docentes(idAula)),
   );
+
+  server.registerTool(
+    'webcampus_course_calendar',
+    {
+      title: 'Midterm, make-up and final dates of my courses',
+      description:
+        "The student's own dates from each course's planning (WebCampus 'Mi Semana'): midterms (evaluacion), " +
+        'make-ups (recuperatorio) and final exam (examen_final), with weekday, time, room and campus. ' +
+        'Without idAula, all current courses. Set onlyAssessments=false to also list every regular class. ' +
+        'This is the best source for "when is my midterm". Read-only.',
+      inputSchema: {
+        idAula: z.string().regex(/^\d+$/).optional().describe('idAula from webcampus_current_courses; omit for all courses'),
+        onlyAssessments: z.boolean().default(true),
+      },
+      annotations: READ_ONLY,
+    },
+    ({ idAula, onlyAssessments }) =>
+      read(async () => {
+        const planes = idAula ? [{ idAula, ...(await wc.planificacion(idAula)) }] : await wc.planificaciones();
+        return planes.map((p) => ({
+          ...p,
+          actividades: onlyAssessments ? p.actividades.filter((a) => a.actividad !== 'cursada') : p.actividades,
+        }));
+      }),
+  );
 }

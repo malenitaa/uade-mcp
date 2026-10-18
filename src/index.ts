@@ -6,6 +6,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadGranted, PERMISSIONS } from './auth/permissions.js';
 import { runCli } from './cli/index.js';
 import { loginCommand } from './net/session.js';
+import { registerCalendarioTools } from './tools/calendario.js';
 import { registerInscripcionesTools } from './tools/inscripciones.js';
 import { registerMailTools } from './tools/mail.js';
 import { registerPlanUadeTools } from './tools/planuade.js';
@@ -57,6 +58,7 @@ if (args.length) {
   registerPlanUadeTools(server, granted);
   registerInscripcionesTools(server, granted);
   registerMailTools(server, granted);
+  registerCalendarioTools(server, granted);
 
   await server.connect(new StdioServerTransport());
 }

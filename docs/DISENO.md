@@ -93,6 +93,7 @@ www.webcampus.uade.edu.ar
 inscripciones.uade.edu.ar
 inscripcionespia.uade.edu.ar
 login.microsoftonline.com            (solo auth)
+dre.uade.edu.ar, www.dre.uade.edu.ar (PDFs públicos: calendario académico, cronogramas)
 graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
 api.github.com                       (opcional)
 (PlanUADE no: el MCP solo arma un link local, ver sección 8)
@@ -183,6 +184,8 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `uade_enrollment_windows` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
 | `webcampus_offered_subjects` / `webcampus_class_offering` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
 | `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
+| `webcampus_course_calendar` (✅) | Planificación de cada aula (`/PlanificacionClases/MiSemana.aspx?IdAula=`): parciales, recuperatorio y final con fecha (día/mes/año). El "Mi Semana" general del menú (`Misemanasel.aspx`) falla en UADE y no se usa |
+| `uade_academic_calendar` (✅) | Menú 403/428 → `dre.uade.edu.ar/calendario.pdf` y `cronogramasUADE.pdf` → PDFs de detalle (2 niveles, máx. 20, caché 1 h). Algunos PDFs son solo imagen y no tienen texto |
 | `email_compose_draft` (✅) | Borrador en Outlook web (deeplink de redacción) abierto en el navegador. No envía, no usa Graph, solo destinatarios @uade.edu.ar |
 | `webcampus_teachers` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
 | `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |

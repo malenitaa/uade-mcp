@@ -8,6 +8,8 @@ describe('allowlist de hosts', () => {
     'https://www.webcampus.uade.edu.ar/Contenidos/CuentaCorrientes.aspx',
     'https://inscripciones.uade.edu.ar/Home/ObtenerInscripciones',
     'https://inscripcionespia.uade.edu.ar/InscripcionClaseBuscar.aspx?param=x',
+    'https://dre.uade.edu.ar/calendario.pdf',
+    'https://www.dre.uade.edu.ar/calendario/2/3sedes_2.pdf',
   ])('permite %s', (u) => {
     expect(() => assertAllowed(u)).not.toThrow();
   });

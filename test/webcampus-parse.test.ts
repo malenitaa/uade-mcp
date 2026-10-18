@@ -8,6 +8,7 @@ import {
   parseMoney,
   parsePeriodos,
   parsePlanes,
+  parsePlanificacion,
 } from '../src/sources/webcampus/parse.js';
 
 const fx = (name: string) => readFileSync(new URL(`./fixtures/webcampus/${name}`, import.meta.url), 'utf8');
@@ -121,5 +122,20 @@ describe('WebCampus', () => {
       { 'Fecha Pago': '2030-10-10', 'Nro. Recibo': 'RC-0000-00000001', Medio: 'Medio Ficticio 1', Total: 111111.11 },
       { 'Fecha Pago': '2030-09-10', 'Nro. Recibo': 'RC-0000-00000002', Medio: 'Medio Ficticio 2', Total: 22222.22 },
     ]);
+  });
+});
+
+describe('planificación (Mi Semana)', () => {
+  it('clases con fecha día/mes/año, aula, sede y tipo de actividad', () => {
+    const p = parsePlanificacion(fx('misemana.html'));
+    expect(p.clase).toBe('2222');
+    expect(p.materia).toBe('MATERIA DE PRUEBA UNO');
+    expect(p.actividades.filter((a) => a.actividad !== 'cursada')).toEqual([
+      { fecha: '2030-09-15', dia: 'LUNES', horario: '08:00 - 11:00', aula: 'Z101', sede: 'SEDE FICTICIA', actividad: 'evaluacion', actividadTexto: 'EVALUACION' },
+      { fecha: '2030-11-10', dia: 'LUNES', horario: '08:00 - 11:00', aula: 'Z101', sede: 'SEDE FICTICIA', actividad: 'evaluacion', actividadTexto: 'EVALUACION' },
+      { fecha: '2030-11-24', dia: 'LUNES', horario: '08:00 - 11:00', aula: 'Z101', sede: 'SEDE FICTICIA', actividad: 'recuperatorio', actividadTexto: 'RECUPERATORIO' },
+      { fecha: '2030-12-09', dia: 'MARTES', horario: '08:00 - 11:00', aula: 'Z102', sede: 'SEDE FICTICIA', actividad: 'examen_final', actividadTexto: 'EXAMEN FINAL' },
+    ]);
+    expect(p.actividades.find((a) => a.fecha === '2030-09-22')).toMatchObject({ aula: null, sede: 'MS TEAMS' });
   });
 });

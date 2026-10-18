@@ -32,6 +32,8 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_attendance` | Presentes, inasistencias y detalle por clase |
 | `webcampus_transcript` | Todas las materias del plan con situación, nota y fecha, y el promedio |
 | `webcampus_account_balance` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
+| `webcampus_course_calendar` | **Tus** fechas de parciales, recuperatorio y final de cada materia (de su planificación), con día, hora y aula |
+| `uade_academic_calendar` | Calendario académico y cronogramas oficiales (PDFs de UADE, encontrados desde el menú de WebCampus): semanas de parciales por turno y sede, feriados, inscripciones |
 | `webcampus_exam_schedule` | Fecha, hora, sede, clase y docentes de los finales (por defecto, de tus materias pendientes) |
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
