@@ -75,4 +75,18 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     () => run(granted, () => wc.cuenta()),
   );
+
+  server.registerTool(
+    'webcampus_examenes_previos',
+    {
+      title: 'Cronograma de exámenes previos',
+      description:
+        'Fechas, horario, aula, clase y docentes de los exámenes previos (finales) publicados en WebCampus. ' +
+        'Sin consulta, muestra solo tus materias con final pendiente o que estás cursando. Con consulta, filtra por ' +
+        'código (3.4.071) o nombre. La inscripción a cada examen cierra 48 h antes a las 21 hs. Solo lectura.',
+      inputSchema: { consulta: z.string().min(2).max(80).optional().describe('código o parte del nombre de la materia') },
+      annotations: READ_ONLY,
+    },
+    ({ consulta }) => run(granted, () => wc.examenesPrevios(consulta)),
+  );
 }

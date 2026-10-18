@@ -5,6 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadGranted, PERMISSIONS } from './auth/permissions.js';
 import { runCli } from './cli/index.js';
+import { registerInscripcionesTools } from './tools/inscripciones.js';
 import { registerPlanUadeTools } from './tools/planuade.js';
 import { registerWebCampusTools } from './tools/webcampus.js';
 
@@ -37,6 +38,7 @@ if (args.length) {
   );
   registerWebCampusTools(server, granted);
   registerPlanUadeTools(server, granted);
+  registerInscripcionesTools(server, granted);
 
   await server.connect(new StdioServerTransport());
 }

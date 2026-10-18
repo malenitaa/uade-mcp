@@ -1,6 +1,11 @@
 // "Nuestra API" de WebCampus: funciones de alto nivel que devuelven JSON tipado.
 import { WebCampusClient } from './client.js';
+import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
+  parseDocentes,
+  parseOferta,
+  type ClaseOfertada,
+  type Docente,
   parseAsistencia,
   parseCuenta,
   parseCursada,
@@ -46,5 +51,58 @@ export class WebCampus {
 
   async cuenta(): Promise<Cuenta> {
     return parseCuenta((await this.client.get('/Contenidos/CuentaCorrientes.aspx')).html);
+  }
+
+  async docentes(idAula: string): Promise<Docente[]> {
+    if (!ID.test(idAula)) throw new Error('idAula inválido');
+    return parseDocentes((await this.client.get(`/Integrantes/Integrantes.aspx?IdAula=${idAula}`)).html);
+  }
+
+  // linkProgramacion: path con IdUsuario que da el sitio de inscripciones.
+  async ofertaMaterias(linkProgramacion: string): Promise<{ codigo: string; nombre: string }[]> {
+    return parseOferta((await this.client.get(linkProgramacion)).html).materias;
+  }
+
+  async oferta(linkProgramacion: string, materia: string): Promise<ClaseOfertada[]> {
+    const inicial = parseOferta((await this.client.get(linkProgramacion)).html);
+    if (!inicial.materias.some((m) => m.codigo === materia)) {
+      throw new Error(`La materia ${materia} no está en la programación de tu carrera para este cuatrimestre.`);
+    }
+    const ddl = Object.keys(inicial.form).find((k) => k.endsWith('$ddlMateria'));
+    if (!ddl) throw new Error('No encontré el filtro de materia en la Programación de Clases.');
+    let page = parseOferta(
+      (await this.client.postback(linkProgramacion, { ...inicial.form, [ddl]: materia }, ddl)).html,
+    );
+    const clases = [...page.clases];
+    for (let i = 0; i < 10 && page.siguientePagina; i++) {
+      page = parseOferta((await this.client.postback(linkProgramacion, page.form, page.siguientePagina)).html);
+      clases.push(...page.clases);
+    }
+    return clases.filter((c) => c.codigo === materia || c.codigo.replace(/^[A-Z]/, '') === materia);
+  }
+
+  // Busca la novedad de "Exámenes Previos" y lee su Excel. Sin filtros devuelve los exámenes de
+  // las materias con final pendiente o que estás cursando.
+  async examenesPrevios(consulta?: string): Promise<{ archivo: string; filtro: string; examenes: ExamenPrevio[] }> {
+    const ids = new Set<string>();
+    for (const p of ['/HomeWC.aspx', '/MiContenido/Novedades.aspx?EsDC=False']) {
+      parseLinksNovedades((await this.client.get(p)).html).forEach((id) => ids.add(id));
+    }
+    let archivo: string | null = null;
+    for (const id of ids) {
+      archivo = parseAdjuntoPrevios((await this.client.get(`/MiContenido/Novedades.aspx?Id=${id}&EsDC=False`)).html);
+      if (archivo) break;
+    }
+    if (!archivo) throw new Error('No encontré una novedad con el cronograma de exámenes previos publicado.');
+    const todos = await parsePreviosXlsx((await this.client.get(archivo)).bytes);
+
+    if (consulta) return { archivo, filtro: consulta, examenes: todos.filter((e) => coincide(e, consulta)) };
+    const h = await this.historial();
+    const mias = h.materias.filter((m) => m.situacion === 'final_pendiente' || m.situacion === 'cursando');
+    return {
+      archivo,
+      filtro: `tus materias con final pendiente o cursando: ${mias.map((m) => m.codigo).join(', ')}`,
+      examenes: todos.filter((e) => mias.some((m) => coincide(e, m.codigo))),
+    };
   }
 }

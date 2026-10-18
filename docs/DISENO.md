@@ -180,7 +180,10 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `webcampus_correlativas` | Qué te habilita cada materia |
 | `webcampus_cuenta` | Deuda vencida, próximos vencimientos, pagos. **Sin pagar** |
 | `webcampus_fechas_examen` | Lo que sale de novedades y PDFs |
-| `pia_ventanas` | Inscripciones abiertas o próximas |
+| `uade_inscripciones` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
+| `webcampus_oferta_materias` / `webcampus_oferta` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
+| `webcampus_examenes_previos` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
+| `webcampus_docentes` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
 | `pia_buscar_asignaturas(texto?, sede?, turno?)` | Clases: docente, sede, horario, cupo |
 | `pia_carrito` | Lo que tenés en el carrito o ya inscripto |
 | `planuade_link_importar` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 8) |

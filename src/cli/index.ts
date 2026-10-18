@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { configDir, loadGranted, PERMISSIONS, type Permission } from '../auth/permissions.js';
 import { deleteSession, loadSession } from '../auth/store.js';
+import { INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
 import { login } from './login.js';
 
@@ -47,13 +48,17 @@ export async function runCli(args: string[]): Promise<void> {
     case 'login':
       return login();
 
-    case 'logout':
-      console.log(deleteSession(SESSION_ACCOUNT) ? 'Sesión borrada del llavero.' : 'No había sesión guardada.');
+    case 'logout': {
+      const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT].filter((a) => deleteSession(a));
+      console.log(borradas.length ? `Sesiones borradas del llavero: ${borradas.join(', ')}.` : 'No había sesiones guardadas.');
       return;
+    }
 
     case 'estado': {
       const s = loadSession(SESSION_ACCOUNT);
       console.log(s ? `Sesión de WebCampus guardada el ${s.savedAt}.` : 'Sin sesión de WebCampus. Corré: uade-mcp login');
+      const si = loadSession(INSCRIPCIONES_ACCOUNT);
+      console.log(si ? `Sesión de Inscripciones guardada el ${si.savedAt}.` : 'Sin sesión de Inscripciones. Corré: uade-mcp login');
       const granted = await loadGranted();
       for (const [p, d] of Object.entries(PERMISSIONS)) console.log(`${granted.has(p as Permission) ? '✅' : '⛔'} ${p}: ${d}`);
       return;

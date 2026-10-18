@@ -350,3 +350,108 @@ export function parseCuenta(html: string): Cuenta {
     pagos: parseTablaCuenta($, 'TablePagosRealizados'),
   };
 }
+
+// ── Equipo docente de un aula (Integrantes) ───────────────────────────────────
+// Solo se devuelven docentes: los datos de los compañeros (mail, legajo) son de terceros.
+
+export interface Docente {
+  nombre: string;
+  email: string | null;
+}
+
+export function parseDocentes(html: string): Docente[] {
+  const $ = cheerio.load(html);
+  const table = $('#tableintegrantes');
+  const headers = table.find('thead th').map((_, th) => clean($(th).text()).toLowerCase()).get();
+  const col = (name: string) => headers.indexOf(name);
+  const [iNombre, iEmail, iRol] = [col('nombre'), col('email'), col('rol')];
+  const out: Docente[] = [];
+  table.find('tbody tr').each((_, tr) => {
+    const td = $(tr).children('td').map((_, c) => clean($(c).text())).get();
+    if (iRol < 0 || /alumn/i.test(td[iRol] ?? '') || !(td[iRol] ?? '')) return;
+    const email = td[iEmail] ?? '';
+    out.push({ nombre: td[iNombre] ?? '', email: /^[^@\s]+@[^@\s]+$/.test(email) ? email : null });
+  });
+  return out;
+}
+
+// ── Programación de Clases (oferta) ───────────────────────────────────────────
+
+export interface ClaseOfertada {
+  codigo: string;
+  materia: string;
+  sede: string;
+  clase: string;
+  regimen: string;
+  idioma: string;
+  turno: string;
+  anio: string;
+  dias: string[];
+  horario: string | null;
+  desde: string | null;
+  hasta: string | null;
+  regimenAprobacion: string | null;
+}
+
+export interface Oferta {
+  materias: { codigo: string; nombre: string }[];
+  clases: ClaseOfertada[];
+  siguientePagina: string | null; // __EVENTTARGET del pager, si hay más
+  form: FormState;
+}
+
+const DIAS = ['L', 'M', 'MI', 'J', 'V', 'S', 'D'];
+
+export function parseOferta(html: string): Oferta {
+  const $ = cheerio.load(html);
+  const form: FormState = {};
+  $('form input[type=hidden]').each((_, i) => {
+    const name = $(i).attr('name');
+    if (name) form[name] = $(i).attr('value') ?? '';
+  });
+  $('form select').each((_, s) => {
+    const name = $(s).attr('name');
+    if (!name) return;
+    const sel = $(s).find('option[selected]').first();
+    form[name] = (sel.length ? sel : $(s).find('option').first()).attr('value') ?? '';
+  });
+
+  const materias = $('select[name$="ddlMateria"] option')
+    .map((_, o) => ({ codigo: $(o).attr('value') ?? '', nombre: clean($(o).text()).replace(/\s*\([^)]*\)\s*$/, '') }))
+    .get()
+    .filter((m) => /^[\w.]+$/.test(m.codigo) && m.codigo !== '0');
+
+  const headers = $('#ctl00_ContentPlaceHolderMain_RadGrid1_ctl00_Header th, #ctl00_ContentPlaceHolderMain_RadGrid1_ctl00 > thead th')
+    .map((_, th) => clean($(th).text()))
+    .get();
+  const idx = (h: string) => headers.indexOf(h);
+  const clases: ClaseOfertada[] = [];
+  $('#ctl00_ContentPlaceHolderMain_RadGrid1_ctl00 > tbody > tr').each((_, tr) => {
+    const tds = $(tr).children('td');
+    const txt = (h: string) => clean(tds.eq(idx(h)).text());
+    if (idx('Cod. Mat.') < 0 || !txt('Cod. Mat.')) return;
+    const fechas = txt('Fecha').match(/(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}\/\d{1,2}\/\d{4})/);
+    const horas = txt('Horario').match(/(\d{1,2}:\d{2})\s*-?\s*(\d{1,2}:\d{2})/);
+    clases.push({
+      codigo: txt('Cod. Mat.'),
+      materia: txt('Materia'),
+      sede: txt('Sede'),
+      clase: txt('Clase'),
+      regimen: txt('Régimen'),
+      idioma: txt('Idioma'),
+      turno: txt('Turno'),
+      anio: txt('Año Académico'),
+      dias: DIAS.filter((d) => /background-color\s*:\s*lightgrey/i.test(tds.eq(idx(d)).attr('style') ?? '')),
+      horario: horas ? `${horas[1]} - ${horas[2]}` : orNull(txt('Horario')),
+      desde: fechas ? parseFecha(fechas[1]!) : null,
+      hasta: fechas ? parseFecha(fechas[2]!) : null,
+      regimenAprobacion: orNull(txt('Regimen Aprobacion')),
+    });
+  });
+
+  const current = Number(clean($('.rgNumPart a.rgCurrentPage').text())) || 1;
+  const next = $('.rgNumPart a').filter((_, a) => clean($(a).text()) === String(current + 1)).first();
+  const siguientePagina = (next.attr('href') ?? '').match(/__doPostBack\('([^']+)'/)?.[1] ?? null;
+
+  return { materias, clases, siguientePagina, form };
+}

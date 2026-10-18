@@ -1,11 +1,12 @@
 // `uade-mcp login`: abre un navegador visible, vos iniciás sesión con tu cuenta Microsoft de UADE
-// (contraseña y MFA los escribís vos, en la página de Microsoft), y nos quedamos solo con la
-// cookie de sesión de WebCampus, que va al llavero. Este código nunca ve tu contraseña.
+// (contraseña y MFA los escribís vos, en la página de Microsoft), y nos quedamos solo con las
+// cookies de sesión de WebCampus e Inscripciones, que van al llavero. Este código nunca ve tu contraseña.
 //
 // Usa un perfil temporal: al cerrar no queda nada en disco (ni la sesión de Microsoft).
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 import { saveSession } from '../auth/store.js';
+import { INSCRIPCIONES, INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SESSION_ACCOUNT, WEBCAMPUS } from '../sources/webcampus/client.js';
 
 const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
@@ -52,7 +53,7 @@ export async function login(): Promise<void> {
       '  1. Iniciá sesión con tu cuenta de UADE (lo escribís vos, en la página de Microsoft).',
       '  2. Cuando veas tu WebCampus, la ventana se cierra sola.',
       '',
-      'Qué se guarda: solo la cookie de sesión de WebCampus, en el llavero de tu sistema.',
+      'Qué se guarda: solo las cookies de sesión de WebCampus y de Inscripciones, en el llavero de tu sistema.',
       'Qué NO se guarda: tu contraseña, tu sesión de Microsoft ni el historial del navegador.',
       '',
     ].join('\n'),
@@ -73,6 +74,20 @@ export async function login(): Promise<void> {
     }
     saveSession(SESSION_ACCOUNT, cookies.map((c) => `${c.name}=${c.value}`).join('; '));
     console.log(`Listo: sesión de WebCampus guardada en el llavero (${cookies.length} cookies: ${cookies.map((c) => c.name).join(', ')}).`);
+
+    // Inscripciones usa el mismo login de Microsoft: con la sesión recién abierta entra solo.
+    await page.goto(`${INSCRIPCIONES}/`);
+    try {
+      await page.waitForURL((u) => u.origin === INSCRIPCIONES && !/^\/account\//i.test(u.pathname), { timeout: 60_000 });
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+      const ins = (await context.cookies(INSCRIPCIONES)).filter((c) => !TRACKING.test(c.name));
+      if (ins.length) {
+        saveSession(INSCRIPCIONES_ACCOUNT, ins.map((c) => `${c.name}=${c.value}`).join('; '));
+        console.log(`Listo: sesión de Inscripciones guardada (${ins.length} cookies: ${ins.map((c) => c.name).join(', ')}).`);
+      }
+    } catch {
+      console.log('No se pudo abrir Inscripciones (WebCampus quedó guardado igual). Las tools de inscripciones van a pedir login.');
+    }
   } finally {
     await browser.close();
   }

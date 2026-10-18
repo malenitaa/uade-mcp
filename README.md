@@ -8,7 +8,8 @@ Proyecto hecho por estudiantes, sin afiliación con la universidad.
 
 > **Estado: v0, en construcción.** Funciona la lectura de WebCampus: períodos, materias del cuatrimestre
 > (horario, sede, notas, fecha de final), asistencia, historial académico y cuenta corriente.
-> PIA, Teams y mail vienen después.
+> También exámenes previos, docentes, ventanas de inscripción y oferta de clases.
+> Inscribirse en PIA, Teams y mail vienen después.
 
 ## Uso
 
@@ -31,6 +32,10 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_asistencia` | Presentes, inasistencias y detalle por clase |
 | `webcampus_historial` | Todas las materias del plan con situación, nota y fecha, y el promedio |
 | `webcampus_cuenta` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
+| `webcampus_examenes_previos` | Fecha, hora, sede, clase y docentes de los finales (por defecto, de tus materias pendientes) |
+| `webcampus_docentes` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
+| `uade_inscripciones` | Ventanas de inscripción con apertura, cierre y si están abiertas |
+| `webcampus_oferta_materias` / `webcampus_oferta` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
 | `planuade_link_importar` | Un link de [Plan UADE](https://planuade.ar) con tus aprobadas, finales pendientes y cursadas. Lo abrís vos y confirmás ahí |
 
 ## Cómo trata tus datos
