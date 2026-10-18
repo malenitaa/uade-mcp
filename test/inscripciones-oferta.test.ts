@@ -37,6 +37,14 @@ describe('oferta de clases', () => {
     ]);
   });
 
+  it('después de la página 10 sigue por el "..."', () => {
+    const html = fx('webcampus/oferta.html').replace(
+      /<div class="rgNumPart">[\s\S]*?<\/div>/,
+      '<div class="rgNumPart"><a href="javascript:__doPostBack(\'p9\',\'\')"><span>9</span></a><a class="rgCurrentPage" href="javascript:__doPostBack(\'p10\',\'\')"><span>10</span></a><a href="javascript:__doPostBack(\'mas\',\'\')"><span>...</span></a></div>',
+    );
+    expect(parseOferta(html).siguientePagina).toBe('mas');
+  });
+
   it('paginado y estado del formulario para el postback', () => {
     expect(o.siguientePagina).toBe('ctl00$ContentPlaceHolderMain$RadGrid1$ctl00$ctl03$ctl01$ctl05');
     expect(o.form['ctl00$ContentPlaceHolderMain$ddlCuatri']).toBe('111||2030');

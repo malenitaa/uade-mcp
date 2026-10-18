@@ -74,7 +74,7 @@ export class WebCampus {
       (await this.client.postback(linkProgramacion, { ...inicial.form, [ddl]: materia }, ddl)).html,
     );
     const clases = [...page.clases];
-    for (let i = 0; i < 10 && page.siguientePagina; i++) {
+    for (let i = 0; i < 30 && page.siguientePagina; i++) {
       page = parseOferta((await this.client.postback(linkProgramacion, page.form, page.siguientePagina)).html);
       clases.push(...page.clases);
     }

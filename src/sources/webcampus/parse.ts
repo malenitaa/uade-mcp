@@ -460,9 +460,14 @@ export function parseOferta(html: string): Oferta {
     });
   });
 
-  const current = Number(clean($('.rgNumPart a.rgCurrentPage').text())) || 1;
-  const next = $('.rgNumPart a').filter((_, a) => clean($(a).text()) === String(current + 1)).first();
-  const siguientePagina = (next.attr('href') ?? '').match(/__doPostBack\('([^']+)'/)?.[1] ?? null;
+  // El pager muestra 10 números y después "...": si el siguiente no está a la vista, se sigue por el "..." de la derecha.
+  const links = $('.rgNumPart a').toArray();
+  const curIdx = links.findIndex((a) => $(a).hasClass('rgCurrentPage'));
+  const current = Number(clean($(links[curIdx]).text())) || 1;
+  const byNum = links.find((a) => clean($(a).text()) === String(current + 1));
+  const byDots = links.slice(curIdx + 1).find((a) => clean($(a).text()) === '...');
+  const nextEl = byNum ?? byDots;
+  const siguientePagina = nextEl ? (($(nextEl).attr('href') ?? '').match(/__doPostBack\('([^']+)'/)?.[1] ?? null) : null;
 
   return { materias, clases, siguientePagina, form };
 }

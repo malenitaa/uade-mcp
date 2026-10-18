@@ -12,7 +12,7 @@ import { SESSION_ACCOUNT, WEBCAMPUS } from '../sources/webcampus/client.js';
 const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
 
 // Cookies de analytics que no hacen falta para la sesión y no guardamos.
-const TRACKING = /^(_ga|_gid|_hj|__utm|_fbp|_gcl)/;
+const TRACKING = /^(_ga|_gid|_hj|__utm|_fbp|_gcl|ai_user|ai_session)/;
 
 const CANDIDATES: Record<string, string[]> = {
   darwin: [
