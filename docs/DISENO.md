@@ -275,7 +275,12 @@ a qué hosts se conecta, qué no hace nunca y cómo borrar todo (`uade-mcp logou
 ## 12. Pendientes / a evaluar
 
 - [x] **PlanUADE:** `#importar=` en `facultades` (sección 8; formato en `facultades/docs/IMPORTAR.md`).
-- [ ] **Graph:** registrar una app de prueba y ver si el tenant UADE permite consentimiento de usuario.
+- [ ] **Graph (postergado por decisión de la autora, 18/10/2026).** Resultados hasta ahora:
+  - Graph Explorer (app de Microsoft, editor verificado) puede leer el mail con `Mail.Read`: ✅.
+  - Registrar una app propia dentro del tenant de UADE: ❌ (el portal de Entra está restringido para alumnos).
+  - Una app propia multi-tenant registrada afuera (cuenta de Azure personal): sin probar. Es la prueba que decide;
+    si UADE pide "aprobación del administrador", la única vía es que Sistemas de UADE apruebe la app.
+  - Mientras tanto: borradores por deeplink de Outlook y adjuntos mostrados en Finder.
 - [ ] **PIA:** volver a mapear cuando abra una inscripción.
 - [ ] **Stack:** propuesta TypeScript + `@modelcontextprotocol/sdk` + `undici` (HTTP con allowlist) + `cheerio` (parseo) + `keytar`/`@napi-rs/keyring` (llavero) + `@azure/msal-node`.
 - [ ] **Tests:** fixtures HTML **anonimizados**. Nunca commitear HTML real con datos personales.
