@@ -41,7 +41,10 @@ export function openInBrowser(raw: string, exec: typeof execFile = execFile): Pr
 export function assertRevealablePath(raw: string, home = homedir()): string {
   const p = resolve(raw.replace(/^~(?=$|\/)/, home));
   if (!p.startsWith(home + sep)) throw new Error(`Solo se pueden mostrar archivos de tu carpeta personal: ${raw}`);
-  if (p.slice(home.length).split(sep).some((part) => part.startsWith('.'))) throw new Error(`No muestro archivos en carpetas ocultas: ${raw}`);
+  // Carpetas ocultas (.ssh, .config…) y, en Windows, AppData (perfiles de navegador, credenciales).
+  if (p.slice(home.length).split(/[\\/]/).some((part) => part.startsWith('.') || /^appdata$/i.test(part))) {
+    throw new Error(`No muestro archivos en carpetas ocultas o de sistema: ${raw}`);
+  }
   if (!existsSync(p) || !statSync(p).isFile()) throw new Error(`No encontré el archivo: ${raw}`);
   return p;
 }

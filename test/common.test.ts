@@ -59,12 +59,14 @@ describe('adjuntos para mostrar en Finder', () => {
   const home = mkdtempSync(join(tmpdir(), 'home-'));
   mkdirSync(join(home, 'Downloads')); writeFileSync(join(home, 'Downloads', 'caso.xls'), 'x');
   mkdirSync(join(home, '.ssh')); writeFileSync(join(home, '.ssh', 'id_rsa'), 'secreto');
+  mkdirSync(join(home, 'AppData')); writeFileSync(join(home, 'AppData', 'Login Data'), 'secreto');
 
   it('acepta archivos de la carpeta personal', () => {
     expect(assertRevealablePath(join(home, 'Downloads', 'caso.xls'), home)).toBe(join(home, 'Downloads', 'caso.xls'));
   });
   it.each([
     ['carpeta oculta', () => join(home, '.ssh', 'id_rsa')],
+    ['AppData de Windows', () => join(home, 'AppData', 'Login Data')],
     ['fuera de la carpeta personal', () => '/etc/hosts'],
     ['subir con ..', () => join(home, 'Downloads', '..', '..', 'etc', 'hosts')],
     ['no existe', () => join(home, 'Downloads', 'no.xls')],
