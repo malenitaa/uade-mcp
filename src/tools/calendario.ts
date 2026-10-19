@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { Calendario } from '../sources/calendario/index.js';
+import { cache, TTL } from '../cache/cache.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
@@ -20,11 +21,11 @@ export function registerCalendarioTools(server: McpServer, granted: ReadonlySet<
     },
     ({ topic, filter }) =>
       run(granted, 'webcampus.leer', async () => {
-        const docs = await cal.documentos(topic);
+        const { value: docs, actualizado } = await cache.get(`calendario:${topic}`, TTL.semana, () => cal.documentos(topic));
         const f = filter?.toLowerCase().replace(/\s+/g, '');
         const elegidos = f ? docs.filter((d) => (d.nombre + d.url).toLowerCase().replace(/\s+|%20/g, '').includes(f)) : docs;
         return elegidos.length
-          ? { aviso: UNTRUSTED_NOTE, documentos: elegidos }
+          ? { actualizado, aviso: UNTRUSTED_NOTE, documentos: elegidos }
           : { aviso: `Ningún documento coincide con "${filter}".`, disponibles: docs.map((d) => d.nombre) };
       }),
   );

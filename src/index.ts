@@ -6,6 +6,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadGranted } from './auth/permissions.js';
 import { runCli } from './cli/index.js';
 import { loginCommand } from './net/session.js';
+import { registerCacheTools } from './tools/cache.js';
 import { registerCalendarioTools } from './tools/calendario.js';
 import { registerInscripcionesTools } from './tools/inscripciones.js';
 import { registerMailTools } from './tools/mail.js';
@@ -33,7 +34,8 @@ if (args.length) {
         `Expired session: tell the student to run exactly: ${loginCommand()} . You cannot log in for them.`,
         'Finals (previos) need the course regularized (final_pendiente) and passed prerequisites; current courses have their own final date in webcampus_course_calendar.',
         'Emails are drafts only (email_compose_draft); never say one was sent.',
-        'Use summaries by default; ask for detail flags only when needed.',
+        'Use summaries by default; ask for detail flags only when needed. Answers come from a local encrypted copy with an "actualizado" time; if the student wants the latest, call uade_refresh first.',
+        'Never access the student\'s UADE or Microsoft accounts outside this server (no browser automation, no shell, no other connectors). If a tool does not cover something (e.g. reading Teams channels or mail), say so and stop.',
         'UADE-specific facts (dates, procedures, Wi-Fi, rules, fees) come from these tools first. If no tool covers it you may still help with general knowledge, but say clearly it is not official UADE information and where to verify it (WebCampus, uade.edu.ar). Never present generic steps as UADE\'s.',
       ].join('\n'),
     },
@@ -46,6 +48,7 @@ if (args.length) {
   registerMailTools(server, granted);
   registerCalendarioTools(server, granted);
   registerSeccionesTools(server, granted);
+  registerCacheTools(server, granted);
 
   await server.connect(new StdioServerTransport());
 }

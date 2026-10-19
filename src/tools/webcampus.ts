@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { MateriaHistorial } from '../sources/webcampus/parse.js';
+import { cache, TTL } from '../cache/cache.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
@@ -31,7 +32,10 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
   server.registerTool(
     'webcampus_terms',
     { title: 'Terms', description: "Student's terms (id, name).", annotations: READ_ONLY },
-    () => read(() => wc.periodos()),
+    () => read(async () => {
+      const r = await cache.get('periodos', TTL.dia, () => wc.periodos());
+      return { actualizado: r.actualizado, periodos: r.value };
+    }),
   );
 
   server.registerTool(
@@ -47,8 +51,8 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ term, includeLinks }) =>
       read(async () => {
-        const r = await wc.cursada(term);
-        return { periodo: r.periodo.nombre, aulas: r.aulas.map((a) => (includeLinks ? a : { ...a, links: undefined })) };
+        const { value: r, actualizado } = await cache.get(`cursada:${term ?? ''}`, TTL.corto, () => wc.cursada(term));
+        return { actualizado, periodo: r.periodo.nombre, aulas: r.aulas.map((a) => (includeLinks ? a : { ...a, links: undefined })) };
       }),
   );
 
@@ -62,8 +66,8 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ idAula: id, detail }) =>
       read(async () => {
-        const a = await wc.asistencia(id);
-        return detail ? a : { resumen: a.resumen, faltas: a.clases.filter((c) => c.estado === 'ausente' || c.estado === 'media_falta'), aviso: a.aviso };
+        const { value: a, actualizado } = await cache.get(`asistencia:${id}`, TTL.corto, () => wc.asistencia(id));
+        return detail ? { actualizado, ...a } : { actualizado, resumen: a.resumen, faltas: a.clases.filter((c) => c.estado === 'ausente' || c.estado === 'media_falta'), aviso: a.aviso };
       }),
   );
 
@@ -77,8 +81,8 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ plan, detail }) =>
       read(async () => {
-        const h = await wc.historial(plan);
-        return detail ? h : { carrera: h.carrera, plan: h.plan, promedio: h.promedio, ...resumirHistorial(h.materias) };
+        const { value: h, actualizado } = await cache.get(`historial:${plan ?? ''}`, TTL.dia, () => wc.historial(plan));
+        return detail ? { actualizado, ...h } : { actualizado, carrera: h.carrera, plan: h.plan, promedio: h.promedio, ...resumirHistorial(h.materias) };
       }),
   );
 
@@ -92,10 +96,10 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ allPayments }) =>
       read(async () => {
-        const c = await wc.cuenta();
+        const { value: c, actualizado } = await cache.get('cuenta', TTL.corto, () => wc.cuenta());
         return allPayments
-          ? c
-          : { ...c, pagos: c.pagos.slice(0, 5), pagosTotales: c.pagos.length, pagosConRecargo: c.pagos.filter((p) => p.conRecargo).length };
+          ? { actualizado, ...c }
+          : { actualizado, ...c, pagos: c.pagos.slice(0, 5), pagosTotales: c.pagos.length, pagosConRecargo: c.pagos.filter((p) => p.conRecargo).length };
       }),
   );
 
@@ -109,8 +113,8 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ query }) =>
       read(async () => {
-        const r = await wc.examenesPrevios(query);
-        return { aviso: UNTRUSTED_NOTE, filtro: r.filtro, examenes: r.examenes.map((e) => ({ ...e, aula: e.aula === 'A/C' ? 'a confirmar' : e.aula })) };
+        const { value: r, actualizado } = await cache.get(`previos:${query ?? ''}`, TTL.medio, () => wc.examenesPrevios(query));
+        return { actualizado, aviso: UNTRUSTED_NOTE, filtro: r.filtro, examenes: r.examenes.map((e) => ({ ...e, aula: e.aula === 'A/C' ? 'a confirmar' : e.aula })) };
       }),
   );
 
@@ -124,20 +128,26 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     },
     ({ idAula: id, allClasses }) =>
       read(async () => {
-        const planes = id ? [{ idAula: id, ...(await wc.planificacion(id)) }] : await wc.planificaciones();
-        return planes.map((p) => ({
+        const { value: planes, actualizado } = await cache.get(`planificacion:${id ?? 'todas'}`, TTL.medio, async () =>
+          id ? [{ idAula: id, ...(await wc.planificacion(id)) }] : await wc.planificaciones(),
+        );
+        return { actualizado, materias: planes.map((p) => ({
           materia: p.materia,
           idAula: p.idAula,
           actividades: (allClasses ? p.actividades : p.actividades.filter((a) => a.actividad !== 'cursada')).map((a) => ({
             fecha: a.fecha, dia: a.dia, horario: a.horario, actividad: a.actividad, aula: a.aula, sede: a.sede,
           })),
-        }));
+        })) };
       }),
   );
 
   server.registerTool(
     'webcampus_teachers',
     { title: 'Teaching staff', description: "Name and email of a course's teachers (never classmates).", inputSchema: { idAula }, annotations: READ_ONLY },
-    ({ idAula: id }) => read(() => wc.docentes(id)),
+    ({ idAula: id }) =>
+      read(async () => {
+        const r = await cache.get(`docentes:${id}`, TTL.dia, () => wc.docentes(id));
+        return { actualizado: r.actualizado, docentes: r.value };
+      }),
   );
 }

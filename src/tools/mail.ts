@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { assertRevealablePath, openInBrowser, revealInFileManager } from '../net/open-browser.js';
 import { buildDraftUrl } from '../sources/mail/draft.js';
+import { cache, TTL } from '../cache/cache.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { run } from './common.js';
 
@@ -17,9 +18,12 @@ export function registerMailTools(
   // Mails de los equipos docentes de tus materias: cualquier otro destinatario se marca para revisar.
   async function docentesDeMisMaterias(): Promise<Set<string>> {
     try {
-      const { aulas } = await wc.cursada();
-      const listas = await Promise.all(aulas.map((a) => wc.docentes(a.idAula).catch(() => [])));
-      return new Set(listas.flat().map((d) => d.email?.toLowerCase()).filter((e): e is string => !!e));
+      const { value } = await cache.get('docentes-mis-materias', TTL.dia, async () => {
+        const { aulas } = await wc.cursada();
+        const listas = await Promise.all(aulas.map((a) => wc.docentes(a.idAula).catch(() => [])));
+        return listas.flat().map((d) => d.email?.toLowerCase()).filter((e): e is string => !!e);
+      });
+      return new Set(value);
     } catch {
       return new Set();
     }

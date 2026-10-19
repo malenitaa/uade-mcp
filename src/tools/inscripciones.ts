@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
+import { cache, TTL } from '../cache/cache.js';
 import { READ_ONLY, run } from './common.js';
 
 export function registerInscripcionesTools(
@@ -21,7 +22,10 @@ export function registerInscripcionesTools(
       description: 'Enrollment windows (courses, MRI, summer, withdrawals) with open/close dates and whether open. Cannot enroll.',
       annotations: READ_ONLY,
     },
-    () => read(() => insc.ventanas()),
+    () => read(async () => {
+      const r = await cache.get('ventanas', TTL.corto, () => insc.ventanas());
+      return { actualizado: r.actualizado, ventanas: r.value };
+    }),
   );
 
   server.registerTool(
@@ -37,10 +41,12 @@ export function registerInscripcionesTools(
     },
     ({ subject, shift }) =>
       read(async () => {
-        const link = await insc.linkProgramacion();
-        if (!subject) return { materias: (await wc.ofertaMaterias(link)).map((m) => `${m.codigo} ${m.nombre}`) };
-        const clases = await wc.oferta(link, subject);
-        return shift ? clases.filter((c) => c.turno.toUpperCase().includes(shift)) : clases;
+        if (!subject) {
+          const r = await cache.get('oferta-materias', TTL.medio, async () => wc.ofertaMaterias(await insc.linkProgramacion()));
+          return { actualizado: r.actualizado, materias: r.value.map((m) => `${m.codigo} ${m.nombre}`) };
+        }
+        const r = await cache.get(`oferta:${subject}`, TTL.medio, async () => wc.oferta(await insc.linkProgramacion(), subject));
+        return { actualizado: r.actualizado, clases: shift ? r.value.filter((c) => c.turno.toUpperCase().includes(shift)) : r.value };
       }),
   );
 }

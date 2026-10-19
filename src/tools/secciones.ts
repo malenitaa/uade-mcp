@@ -2,7 +2,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
-import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
+import { cache, TTL } from '../cache/cache.js';
+import { fragmentos, SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
@@ -16,6 +17,13 @@ export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<P
       inputSchema: { section: z.enum(nombres), query: z.string().min(3).max(80).optional() },
       annotations: READ_ONLY,
     },
-    ({ section, query }) => run(granted, 'webcampus.leer', async () => ({ aviso: UNTRUSTED_NOTE, ...(await sec.consultar(section, query)) })),
+    ({ section, query }) =>
+      run(granted, 'webcampus.leer', async () => {
+        const { value: d, actualizado } = await cache.get(`seccion:${section}`, TTL.semana, () => sec.consultar(section));
+        if (!query) return { actualizado, aviso: UNTRUSTED_NOTE, ...d };
+        const texto = 'texto' in d ? d.texto : '';
+        const f = fragmentos(texto, query);
+        return { actualizado, aviso: UNTRUSTED_NOTE, seccion: section, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${query}" en esta sección.`] };
+      }),
   );
 }

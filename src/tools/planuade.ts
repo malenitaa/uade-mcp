@@ -8,6 +8,7 @@ import { openInBrowser } from '../net/open-browser.js';
 import { buildImportLink } from '../sources/planuade/link.js';
 import { FACULTADES } from '../sources/planuade/planes.js';
 import { WebCampus } from '../sources/webcampus/index.js';
+import { cache, TTL } from '../cache/cache.js';
 import { run } from './common.js';
 
 export function registerPlanUadeTools(
@@ -30,7 +31,7 @@ export function registerPlanUadeTools(
     },
     ({ plan, faculty, open: abrir }) =>
       run(granted, 'webcampus.leer', async () => {
-        const h = await wc.historial(plan);
+        const { value: h } = await cache.get(`historial:${plan ?? ''}`, TTL.dia, () => wc.historial(plan));
         const link = buildImportLink(h, faculty);
         const r = link.resumen;
         let abierto = false;
