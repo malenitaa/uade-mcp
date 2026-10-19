@@ -7,6 +7,7 @@ import { WebCampus } from '../sources/webcampus/index.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
 import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
 import { SessionExpiredError } from '../net/session.js';
+import { Teams, teamsProfileExists } from '../sources/teams/index.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
 interface Resultado {
@@ -108,6 +109,14 @@ export async function doctor(): Promise<void> {
     if (!m.length) return ['aviso', 'sin materias programadas'];
     const clases = await wc.oferta(link, m[0]!.codigo);
     return [clases.length ? 'ok' : 'aviso', `${m.length} materias; la primera tiene ${clases.length} clases`];
+  });
+  await push('Teams (novedades del canal)', async () => {
+    if (!teamsProfileExists()) return ['aviso', 'sin configurar: corré login-teams para leer canales de Teams'];
+    const { aulas } = await wc.cursada();
+    const conTeams = aulas.find((a) => a.links.teams);
+    if (!conTeams) return ['aviso', 'ninguna materia tiene equipo de Teams'];
+    const posts = await new Teams().novedades(conTeams.links.teams!, 3);
+    return [posts.length ? 'ok' : 'aviso', posts.length ? `${posts.length} mensajes leídos de una materia` : 'canal vacío o Teams cambió su interfaz'];
   });
   for (const tema of ['calendario', 'inscripciones'] as const) {
     await push(`calendario: ${tema}`, async () => {

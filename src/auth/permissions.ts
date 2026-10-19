@@ -11,6 +11,7 @@ export const PERMISSIONS = {
   'pia.inscribir':
     'Inscribirte (alta) en clases de PIA en tu nombre. Cada alta igual te pide confirmación. No permite bajas ni cambios.',
   'teams.leer_tareas': 'Leer tareas y consignas de Teams.',
+  'teams.leer_novedades': 'Leer las novedades del canal General de tus materias en Teams (con el navegador propio del MCP).',
   'teams.entregar':
     'Subir archivos como entrega en tareas de Teams en tu nombre. Cada entrega igual te pide confirmación. No permite mandar mensajes.',
   'mail.leer': 'Leer tu mail institucional.',
@@ -20,7 +21,7 @@ export const PERMISSIONS = {
 export type Permission = keyof typeof PERMISSIONS;
 
 // Lectura habilitada por defecto; toda escritura arranca apagada.
-const DEFAULT_GRANTED: readonly Permission[] = ['webcampus.leer', 'pia.leer'];
+const DEFAULT_GRANTED: readonly Permission[] = ['webcampus.leer', 'pia.leer', 'teams.leer_novedades'];
 
 const ConfigSchema = z
   .object({

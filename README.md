@@ -18,6 +18,7 @@ npm install && npm run build
 node dist/index.js login      # se abre el navegador; iniciás sesión vos con tu cuenta de UADE
 node dist/index.js estado     # sesión y permisos
 node dist/index.js doctor     # prueba todo contra tu cuenta, sin mostrar datos personales
+node dist/index.js login-teams  # (opcional) iniciás sesión en Teams para leer novedades de los canales
 ```
 
 Para sumarlo a Claude Code (lo corrés vos; el MCP nunca toca la configuración de tu cliente):
@@ -39,6 +40,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
+| `teams_channel_news` | Novedades del canal General de una materia en Teams (lo último que posteó el docente). Experimental: usa un navegador propio; se activa con `login-teams` |
 | `webcampus_section` | Cualquier sección informativa del menú (aranceles, MRI, normativa, guía, becas, optativas, minors, comprobantes, marcaciones, códigos…), con búsqueda dentro del texto |
 | `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |
 | `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) en tu navegador con tus aprobadas, finales pendientes y cursadas; confirmás ahí |

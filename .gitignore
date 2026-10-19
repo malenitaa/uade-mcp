@@ -11,3 +11,4 @@ capturas/
 
 # Config local de Claude Code para probar el MCP solo en esta carpeta (tiene rutas de tu compu)
 .mcp.json
+teams-profile/

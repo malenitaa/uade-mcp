@@ -95,6 +95,7 @@ inscripcionespia.uade.edu.ar
 login.microsoftonline.com            (solo auth)
 dre.uade.edu.ar, www.dre.uade.edu.ar (PDFs públicos: calendario académico, cronogramas)
 graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
+teams.microsoft.com, teams.cloud.microsoft, *.office.net … (Teams web, dentro del navegador propio del MCP)
 api.github.com                       (opcional)
 (PlanUADE no: el MCP solo arma un link local, ver sección 8)
 ```

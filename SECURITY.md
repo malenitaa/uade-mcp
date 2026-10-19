@@ -20,6 +20,14 @@ Por favor, no abras un issue público para temas de seguridad.
 | Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por Excel | varios | `test/previos.test.ts` |
 | Sin telemetría; dependencias en versiones exactas | `package.json` | — |
 
+| Teams: perfil de navegador propio y aislado (`<config>/teams-profile`), headless, solo para leer canales; `logout` lo borra | `src/sources/teams/index.ts`, `src/cli/index.ts` | doctor |
+
+> **Sobre Teams.** Leer los canales necesita correr el Teams web real en un navegador (no se puede
+> con `fetch`, y la API oficial de Microsoft está bloqueada para alumnos). Ese navegador contacta los
+> dominios de Microsoft, como si abrieras Teams vos. El perfil (con la sesión de Microsoft) queda en
+> `<config>/teams-profile`; es la sesión más poderosa que guarda el MCP y por eso es opt-in (`login-teams`)
+> y `logout` la borra. Es la parte más frágil: si Teams cambia su interfaz, deja de leer y lo avisa.
+
 La auditoría completa, con cada hallazgo, los controles OWASP/NIST/ISO y los riesgos aceptados,
 está en [docs/AUDITORIA.md](docs/AUDITORIA.md).
 

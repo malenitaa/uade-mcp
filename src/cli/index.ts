@@ -10,13 +10,16 @@ import { INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
 import { doctor } from './doctor.js';
+import { rmSync } from 'node:fs';
 import { login } from './login.js';
+import { loginTeams, teamsProfileDir } from '../sources/teams/index.js';
 
 const USO = `uade-mcp — MCP no oficial de UADE
 
 Uso:
   uade-mcp                     arranca el servidor MCP (stdio). Esto lo usa tu cliente MCP.
   uade-mcp login               iniciás sesión en WebCampus con tu cuenta de UADE
+  uade-mcp login-teams         iniciás sesión en Teams (solo si querés leer novedades de los canales)
   uade-mcp logout              borra la sesión guardada del llavero
   uade-mcp estado              muestra sesión y permisos
   uade-mcp doctor              prueba todas las capacidades contra tu cuenta (sin mostrar datos personales)
@@ -52,6 +55,9 @@ export async function runCli(args: string[]): Promise<void> {
     case 'login':
       return login();
 
+    case 'login-teams':
+      return loginTeams();
+
     case 'doctor':
       return doctor();
 
@@ -59,7 +65,8 @@ export async function runCli(args: string[]): Promise<void> {
       const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT, SHAREPOINT_ACCOUNT].filter((a) => deleteSession(a));
       console.log(borradas.length ? `Sesiones borradas del llavero: ${borradas.join(', ')}.` : 'No había sesiones guardadas.');
       cache.destroy();
-      console.log('Copia local (caché) y su clave borradas.');
+      rmSync(teamsProfileDir(), { recursive: true, force: true });
+      console.log('Copia local (caché), su clave y el perfil de Teams borrados.');
       return;
     }
 

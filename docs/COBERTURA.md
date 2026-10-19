@@ -17,7 +17,8 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Mi Semana por materia (parciales, recuperatorio, final) | ✅ | `webcampus_course_calendar` |
 | Mi Semana general (`Misemanasel.aspx`) | ⛔ | Falla del lado de UADE; se usa la de cada materia |
 | Integrantes: equipo docente | ✅ | `webcampus_teachers` (nunca compañeros) |
-| Novedades de cada curso | ⏳ | |
+| Novedades del canal General de cada materia (Teams) | ✅ | `teams_channel_news` (experimental; navegador propio, `login-teams`) |
+| Novedades de cada curso (WebCampus) | ⏳ | |
 | Novedades y agenda generales | 🟡 | Solo se usa la de exámenes previos |
 | Clases de consulta (`MenuItemId=333`) | ⏳ | |
 | Encuestas | ⛔ | Escritura |
