@@ -50,6 +50,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 |---|---|---|
 | Ventanas de inscripción con fechas | ✅ | `uade_enrollment_windows` |
 | Programación / disponibilidad de clases | ✅ | `webcampus_class_offering` |
+| Armar la semana sin solapamientos | ✅ | `webcampus_schedule_planner` (combinaciones de hasta 6 materias, filtros, conflictos). Sin docentes: la programación no los publica |
 | Cronograma (imagen) | ⛔ | Es una imagen; las mismas fechas salen de los PDFs de cronogramas |
 | Alta de inscripción en PIA | 🟡 | `pia_prepare_enrollment` (resumen y borrador, solo lectura) y `pia_confirm_enrollment` (permiso `pia.inscribir` + diálogo). El envío real a PIA no está conectado: PIA sigue sin mapear y nunca se hace un alta de prueba |
 | Bajas y cambios | ⛔ | Decisión de producto |

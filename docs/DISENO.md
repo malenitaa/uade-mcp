@@ -184,6 +184,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `webcampus_fechas_examen` | Lo que sale de novedades y PDFs |
 | `uade_enrollment_windows` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
 | `webcampus_class_offering` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
+| `webcampus_schedule_planner` (✅) | Puro sobre la oferta cacheada (`src/sources/planificador`): backtracking con poda, choque = mismo día + horario pisado + cursadas que coinciden en fechas; tope de 500.000 nodos explorados; puntaje = días×3 + horas de hueco + (sedes−1)×2 |
 | `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
 | `webcampus_course_calendar` (✅) | Planificación de cada aula (`/PlanificacionClases/MiSemana.aspx?IdAula=`): parciales, recuperatorio y final con fecha (día/mes/año). El "Mi Semana" general del menú (`Misemanasel.aspx`) falla en UADE y no se usa |
 | `uade_academic_calendar` (✅) | Menú 403/428 → `dre.uade.edu.ar/calendario.pdf` y `cronogramasUADE.pdf` → PDFs de detalle (2 niveles, máx. 20, caché 1 h). Algunos PDFs son solo imagen y no tienen texto |

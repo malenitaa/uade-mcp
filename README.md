@@ -40,6 +40,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
+| `webcampus_schedule_planner` | Planificador de cursada: hasta 6 materias, combina una clase por materia sin solapamientos (filtros por turno, días y sede), ordenadas por menos días, menos huecos y menos sedes. Si no hay combinación, dice qué materias chocan |
 | `webcampus_course_materials` | Lista y lee los apuntes que el docente comparte en Teams ("Materiales de clase": Casos, Material Teórico…), por la API de SharePoint. Lee PDF, Word (.docx y .doc), Excel (.xlsx y .xls) y PowerPoint, o los baja a Descargas |
 | `pia_prepare_enrollment` | Solo lectura: arma el resumen exacto de un alta (clase, sede, horario, fechas, cierre de ventana, cargo, cupo, no reversible) y un borrador de 5 minutos. No inscribe |
 | `pia_confirm_enrollment` | Escritura: exige el permiso `pia.inscribir` (lo prendés vos en la terminal) y tu confirmación en un diálogo que el agente no puede contestar. **El envío real a PIA todavía no está conectado** (falla cerrado, nunca simula): hoy el alta se hace en inscripciones.uade.edu.ar |
