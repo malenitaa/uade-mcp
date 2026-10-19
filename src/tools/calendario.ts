@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { Calendario } from '../sources/calendario/index.js';
+import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
 export function registerCalendarioTools(server: McpServer, granted: ReadonlySet<Permission>, cal = new Calendario()): void {
@@ -22,7 +23,9 @@ export function registerCalendarioTools(server: McpServer, granted: ReadonlySet<
         const docs = await cal.documentos(topic);
         const f = filter?.toLowerCase().replace(/\s+/g, '');
         const elegidos = f ? docs.filter((d) => (d.nombre + d.url).toLowerCase().replace(/\s+|%20/g, '').includes(f)) : docs;
-        return elegidos.length ? elegidos : { aviso: `Ningún documento coincide con "${filter}".`, disponibles: docs.map((d) => d.nombre) };
+        return elegidos.length
+          ? { aviso: UNTRUSTED_NOTE, documentos: elegidos }
+          : { aviso: `Ningún documento coincide con "${filter}".`, disponibles: docs.map((d) => d.nombre) };
       }),
   );
 }

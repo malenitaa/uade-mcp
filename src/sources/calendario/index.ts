@@ -28,7 +28,9 @@ interface PdfLeido {
 }
 
 export async function leerPdf(bytes: Uint8Array): Promise<PdfLeido> {
-  const pdf = await getDocumentProxy(new Uint8Array(bytes), { verbosity: 0 }); // sin warnings de fuentes en la terminal
+  // unpdf trae pdf.js 6.x: CVE-2024-4367 (ejecución de código con fuentes armadas) se corrigió en 4.2.67
+  // quitando ese camino, así que no hace falta isEvalSupported. verbosity: 0 = sin warnings en la terminal.
+  const pdf = await getDocumentProxy(new Uint8Array(bytes), { verbosity: 0 });
   const links: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     for (const a of await (await pdf.getPage(i)).getAnnotations()) {

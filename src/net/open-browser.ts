@@ -1,7 +1,7 @@
 // Opens a URL in the student's default browser. Only a short list of sites (Plan UADE and
 // Outlook web), only https, and without a shell (execFile), so a crafted URL cannot run commands.
 import { execFile } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve, sep } from 'node:path';
 
@@ -39,7 +39,11 @@ export function openInBrowser(raw: string, exec: typeof execFile = execFile): Pr
 // arrastrarlos a un borrador. No sube ni lee el archivo. Solo archivos comunes dentro de tu
 // carpeta personal y fuera de carpetas ocultas (.ssh, .config, …).
 export function assertRevealablePath(raw: string, home = homedir()): string {
-  const p = resolve(raw.replace(/^~(?=$|\/)/, home));
+  const pedido = resolve(raw.replace(/^~(?=$|\/)/, home));
+  if (!existsSync(pedido)) throw new Error(`No encontré el archivo: ${raw}`);
+  // Se resuelven los atajos (symlinks): un atajo en Descargas no puede apuntar a ~/.ssh.
+  const p = realpathSync(pedido);
+  home = realpathSync(home);
   if (!p.startsWith(home + sep)) throw new Error(`Solo se pueden mostrar archivos de tu carpeta personal: ${raw}`);
   // Carpetas ocultas (.ssh, .config…) y, en Windows, AppData (perfiles de navegador, credenciales).
   if (p.slice(home.length).split(/[\\/]/).some((part) => part.startsWith('.') || /^appdata$/i.test(part))) {

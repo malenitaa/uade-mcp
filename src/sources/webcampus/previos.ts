@@ -1,6 +1,7 @@
 // Cronograma de exámenes previos: WebCampus lo publica como un Excel adjunto a una novedad
 // ("Exámenes Previos (noviembre - diciembre)…" → /DocsDownload/Novedades/<id>_<n>_previos….xlsx).
 import * as cheerio from 'cheerio';
+import { unzipSync } from 'fflate';
 import { readSheet } from 'read-excel-file/node';
 import { parseFecha } from './parse.js';
 
@@ -45,7 +46,27 @@ function fecha(v: unknown): string | null {
   return parseFecha(clean(v));
 }
 
+const MAX_DESCOMPRIMIDO = 60 * 1024 * 1024;
+
+// Un .xlsx es un zip: antes de abrirlo se suma el tamaño descomprimido declarado de cada parte,
+// para que un archivo armado ("zip bomb") no agote la memoria.
+export function assertXlsxRazonable(bytes: Uint8Array): void {
+  let total = 0;
+  try {
+    unzipSync(bytes, {
+      filter: (f) => {
+        total += f.originalSize;
+        if (total > MAX_DESCOMPRIMIDO) throw new Error('demasiado grande');
+        return false; // no descomprime nada: solo mira el índice
+      },
+    });
+  } catch {
+    throw new Error('El Excel de exámenes previos no es válido o es sospechosamente grande; no se abrió.');
+  }
+}
+
 export async function parsePreviosXlsx(bytes: Uint8Array): Promise<ExamenPrevio[]> {
+  assertXlsxRazonable(bytes);
   // Siempre Buffer: a read-excel-file un string le indica una ruta de archivo.
   const rows = await readSheet(Buffer.from(bytes));
   const hdrIdx = rows.findIndex((r) => {

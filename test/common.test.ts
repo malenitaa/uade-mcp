@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { assertOpenableUrl, assertPlanUadeUrl, assertRevealablePath, openInBrowser } from '../src/net/open-browser.js';
@@ -62,7 +62,7 @@ describe('adjuntos para mostrar en Finder', () => {
   mkdirSync(join(home, 'AppData')); writeFileSync(join(home, 'AppData', 'Login Data'), 'secreto');
 
   it('acepta archivos de la carpeta personal', () => {
-    expect(assertRevealablePath(join(home, 'Downloads', 'caso.xls'), home)).toBe(join(home, 'Downloads', 'caso.xls'));
+    expect(assertRevealablePath(join(home, 'Downloads', 'caso.xls'), home)).toBe(realpathSync(join(home, 'Downloads', 'caso.xls')));
   });
   it.each([
     ['carpeta oculta', () => join(home, '.ssh', 'id_rsa')],
@@ -73,5 +73,16 @@ describe('adjuntos para mostrar en Finder', () => {
     ['es una carpeta', () => join(home, 'Downloads')],
   ])('rechaza %s', (_, path) => {
     expect(() => assertRevealablePath(path(), home)).toThrow();
+  });
+});
+
+describe('adjuntos: atajos (symlinks)', () => {
+  it('un atajo en Descargas que apunta a una carpeta oculta se rechaza', async () => {
+    const { symlinkSync } = await import('node:fs');
+    const home = mkdtempSync(join(tmpdir(), 'home2-'));
+    mkdirSync(join(home, '.ssh')); writeFileSync(join(home, '.ssh', 'id_rsa'), 'secreto');
+    mkdirSync(join(home, 'Downloads'));
+    symlinkSync(join(home, '.ssh', 'id_rsa'), join(home, 'Downloads', 'tp.pdf'));
+    expect(() => assertRevealablePath(join(home, 'Downloads', 'tp.pdf'), home)).toThrow();
   });
 });

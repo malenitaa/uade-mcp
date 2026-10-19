@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
+import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
 export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<Permission>, sec = new Secciones()): void {
@@ -15,6 +16,6 @@ export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<P
       inputSchema: { section: z.enum(nombres), query: z.string().min(3).max(80).optional() },
       annotations: READ_ONLY,
     },
-    ({ section, query }) => run(granted, 'webcampus.leer', () => sec.consultar(section, query)),
+    ({ section, query }) => run(granted, 'webcampus.leer', async () => ({ aviso: UNTRUSTED_NOTE, ...(await sec.consultar(section, query)) })),
   );
 }

@@ -46,3 +46,14 @@ describe('exámenes previos', () => {
     expect(parseAdjuntoPrevios('<a href="/DocsDownload/../Login.aspx?previos.xlsx">Previos</a>')).toBeNull();
   });
 });
+
+describe('Excel sospechoso', () => {
+  it('rechaza un zip que se descomprime a algo enorme o que no es un zip', async () => {
+    const { zipSync } = await import('fflate');
+    const { assertXlsxRazonable } = await import('../src/sources/webcampus/previos.js');
+    const bomba = zipSync({ 'xl/worksheets/sheet1.xml': new Uint8Array(70 * 1024 * 1024) }, { level: 9 });
+    expect(bomba.length).toBeLessThan(1024 * 1024); // chico comprimido…
+    expect(() => assertXlsxRazonable(bomba)).toThrow('sospechosamente grande'); // …enorme al abrirlo
+    expect(() => assertXlsxRazonable(new Uint8Array([1, 2, 3]))).toThrow();
+  });
+});
