@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assertOpenableUrl, assertPlanUadeUrl, openInBrowser } from '../src/net/open-browser.js';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { assertOpenableUrl, assertPlanUadeUrl, assertRevealablePath, openInBrowser } from '../src/net/open-browser.js';
 import { buildDraftUrl } from '../src/sources/mail/draft.js';
 import { toArgentineDates } from '../src/tools/common.js';
 
@@ -31,7 +34,7 @@ describe('abrir el navegador', () => {
 describe('borradores de mail', () => {
   it('arma el link de Outlook web con destinatario, asunto y cuerpo codificados', () => {
     const url = new URL(buildDraftUrl({ to: ['Docente.Ficticia@uade.edu.ar'], subject: 'Consulta parcial', body: 'Hola profe,\nno voy a poder ir el 10/12 & aviso.' }));
-    expect(url.origin + url.pathname).toBe('https://outlook.office.com/mail/deeplink/compose');
+    expect(url.origin + url.pathname).toBe('https://outlook.cloud.microsoft/mail/deeplink/compose');
     expect(url.searchParams.get('to')).toBe('docente.ficticia@uade.edu.ar');
     expect(url.searchParams.get('subject')).toBe('Consulta parcial');
     expect(url.searchParams.get('body')).toBe('Hola profe,\nno voy a poder ir el 10/12 & aviso.');
@@ -45,8 +48,28 @@ describe('borradores de mail', () => {
   });
 
   it('el navegador solo abre Plan UADE y Outlook web', () => {
-    expect(() => assertOpenableUrl('https://outlook.office.com/mail/deeplink/compose?to=a')).not.toThrow();
+    expect(() => assertOpenableUrl('https://outlook.cloud.microsoft/mail/deeplink/compose?to=a')).not.toThrow();
+    expect(() => assertOpenableUrl('https://outlook.office.com/mail/deeplink/compose?to=a')).toThrow();
     expect(() => assertOpenableUrl('https://outlook.live.com/mail/0/deeplink/compose')).toThrow();
-    expect(() => assertPlanUadeUrl('https://outlook.office.com/mail')).toThrow();
+    expect(() => assertPlanUadeUrl('https://outlook.cloud.microsoft/mail')).toThrow();
+  });
+});
+
+describe('adjuntos para mostrar en Finder', () => {
+  const home = mkdtempSync(join(tmpdir(), 'home-'));
+  mkdirSync(join(home, 'Downloads')); writeFileSync(join(home, 'Downloads', 'caso.xls'), 'x');
+  mkdirSync(join(home, '.ssh')); writeFileSync(join(home, '.ssh', 'id_rsa'), 'secreto');
+
+  it('acepta archivos de la carpeta personal', () => {
+    expect(assertRevealablePath(join(home, 'Downloads', 'caso.xls'), home)).toBe(join(home, 'Downloads', 'caso.xls'));
+  });
+  it.each([
+    ['carpeta oculta', () => join(home, '.ssh', 'id_rsa')],
+    ['fuera de la carpeta personal', () => '/etc/hosts'],
+    ['subir con ..', () => join(home, 'Downloads', '..', '..', 'etc', 'hosts')],
+    ['no existe', () => join(home, 'Downloads', 'no.xls')],
+    ['es una carpeta', () => join(home, 'Downloads')],
+  ])('rechaza %s', (_, path) => {
+    expect(() => assertRevealablePath(path(), home)).toThrow();
   });
 });

@@ -3,7 +3,9 @@
 // Send (or closes it). Recipients are limited to @uade.edu.ar so a prompt injection cannot get the
 // agent to put the student's data in an email to an outside address.
 
-export const COMPOSE_URL = 'https://outlook.office.com/mail/deeplink/compose';
+// outlook.cloud.microsoft es el dominio actual de Outlook web; con outlook.office.com Microsoft
+// pide iniciar sesión de nuevo aunque ya estés adentro en la otra dirección.
+export const COMPOSE_URL = 'https://outlook.cloud.microsoft/mail/deeplink/compose';
 const ALLOWED_DOMAIN = /@uade\.edu\.ar$/i;
 const EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 const MAX_URL = 7000; // margen holgado para navegadores y Outlook
