@@ -3,10 +3,13 @@
 // lista de espera MRI) ni nada de la lista negra (pagos, datos personales, trámites).
 import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
+import { WEBCAMPUS } from './client.js';
 import { WebCampusClient } from './client.js';
 import { PageChangedError } from './parse.js';
 
+// Número = ítem del menú (Principal.aspx?MenuItemId=N); texto = ruta directa en WebCampus.
 export const SECCIONES = {
+  wifi: '/MiContenido/Wifi.aspx',
   aranceles: 160,
   materias_intensivas_mri: 173,
   carreras: 83,
@@ -32,6 +35,17 @@ export const SECCIONES = {
 export type Seccion = keyof typeof SECCIONES;
 
 const MAX_TEXTO = 8000;
+const MAX_GUIAS = 6;
+// Guías en PDF que una página de WebCampus enlaza (por ejemplo, las de Wi-Fi por sistema operativo).
+export function guiasEnlazadas(html: string): string[] {
+  const $ = cheerio.load(html);
+  const urls = $('a[href]')
+    .map((_, a) => new URL($(a).attr('href')!, WEBCAMPUS))
+    .get()
+    .filter((u) => u.origin === WEBCAMPUS && /^\/Docs\/[^/]+\.pdf$/i.test(u.pathname))
+    .map((u) => u.pathname);
+  return [...new Set(urls)].slice(0, MAX_GUIAS);
+}
 const CACHE_MS = 60 * 60 * 1000;
 
 export interface TextoSeccion {
@@ -81,9 +95,20 @@ export class Secciones {
   private async leer(seccion: Seccion): Promise<Omit<TextoSeccion, 'recortado'>> {
     const hit = this.cache.get(seccion);
     if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
-    const r = await this.client.get(`/Principal.aspx?MenuItemId=${SECCIONES[seccion]}`);
+    const destino = SECCIONES[seccion];
+    const r = await this.client.get(typeof destino === 'number' ? `/Principal.aspx?MenuItemId=${destino}` : destino);
     const esPdf = r.bytes[0] === 0x25 && r.bytes[1] === 0x50; // "%P"
-    const texto = esPdf ? (await leerPdf(r.bytes)).texto : textoPagina(r.html);
+    let texto = esPdf ? (await leerPdf(r.bytes)).texto : textoPagina(r.html);
+    if (!esPdf) {
+      for (const guia of guiasEnlazadas(r.html)) {
+        try {
+          const g = await this.client.get(guia);
+          texto += `\n\n[Guía: ${decodeURIComponent(guia.split('/').pop()!)}] ${(await leerPdf(g.bytes)).texto}`;
+        } catch {
+          texto += `\n\n[Guía: ${guia}] (no se pudo leer)`;
+        }
+      }
+    }
     const data = { seccion, fuente: r.url.href, texto };
     this.cache.set(seccion, { at: Date.now(), data });
     return data;
@@ -96,6 +121,6 @@ export class Secciones {
       return { seccion, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${consulta}" en esta sección.`] };
     }
     if (!d.texto) return { ...d, texto: '(la sección no tiene texto: puede ser un PDF escaneado o una página que se completa con filtros)' };
-    return d.texto.length > MAX_TEXTO ? { ...d, texto: d.texto.slice(0, MAX_TEXTO), recortado: true } : d;
+    return d.texto.length > MAX_TEXTO ? { ...d, texto: d.texto.slice(0, MAX_TEXTO) + ' … (recortado: pasá query para buscar una parte)', recortado: true } : d;
   }
 }

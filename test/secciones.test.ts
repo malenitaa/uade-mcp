@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fragmentos, textoPagina } from '../src/sources/webcampus/secciones.js';
+import { fragmentos, guiasEnlazadas, textoPagina } from '../src/sources/webcampus/secciones.js';
 import { PageChangedError } from '../src/sources/webcampus/parse.js';
 
 describe('secciones de WebCampus', () => {
@@ -15,5 +15,12 @@ describe('secciones de WebCampus', () => {
     expect(f).toHaveLength(1);
     expect(f[0]).toContain('inasistencia justificada requiere certificado médico');
     expect(fragmentos(texto, 'aranceles')).toEqual([]);
+  });
+});
+
+describe('guías enlazadas', () => {
+  it('toma solo los PDF de /Docs/ de WebCampus', () => {
+    const html = '<a href="https://www.webcampus.uade.edu.ar/Docs/Configuracion_WiFi_UADE_OSX.pdf">mac</a><a href="/Docs/Configuracion_WiFi_UADE_iOS.pdf">ios</a><a href="https://dre.uade.edu.ar/emergencia.pdf">x</a><a href="https://evil.com/Docs/a.pdf">y</a>';
+    expect(guiasEnlazadas(html)).toEqual(['/Docs/Configuracion_WiFi_UADE_OSX.pdf', '/Docs/Configuracion_WiFi_UADE_iOS.pdf']);
   });
 });

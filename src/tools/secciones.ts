@@ -11,7 +11,7 @@ export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<P
     'webcampus_section',
     {
       title: 'WebCampus section',
-      description: 'Text of an informational WebCampus section (page or official PDF): fees, MRI, rules, student guide, scholarships, minors, electives, honors, invoices, building entries, codes of conduct… Pass query to get only the relevant passages (saves tokens on long PDFs).',
+      description: 'Text of an informational WebCampus section (page or official PDF, plus the PDF guides it links): Wi-Fi setup per OS, fees, MRI, rules, student guide, scholarships, minors, electives, honors, invoices, building entries, codes of conduct… Pass query (e.g. "macOS") to get only the relevant passages.',
       inputSchema: { section: z.enum(nombres), query: z.string().min(3).max(80).optional() },
       annotations: READ_ONLY,
     },

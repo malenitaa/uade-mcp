@@ -61,6 +61,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Mis comprobantes | ✅ | `webcampus_section` |
 | Marcaciones (ingresos al edificio) | ✅ | `webcampus_section` |
 | Becas, Ayuda al estudiante, Deportes, Housing | ✅ | `webcampus_section` |
+| Wi-Fi (página y guías por sistema operativo) | ✅ | `webcampus_section` (wifi) |
 | Códigos de conducta y vestimenta, Compromiso UADE, Protocolo | ✅ | `webcampus_section` |
 | Números ante emergencias | 🟡 | El PDF es una imagen escaneada, sin texto |
 | Certificado de alumno regular | ⏳ | Evaluar: puede generar un documento |
