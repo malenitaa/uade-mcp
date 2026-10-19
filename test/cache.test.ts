@@ -26,6 +26,21 @@ describe('caché local cifrada', () => {
     t = 150; expect((await c.get('x', 100, fn)).value).toBe(2);
   });
 
+  it('si UADE falla pero hay copia vieja, la devuelve avisando; sin copia, el error sigue', async () => {
+    let t = 0;
+    const c = new Cache(join(mkdtempSync(join(tmpdir(), 'c-')), 'cache.enc'), memKeys(), true, () => t);
+    const vencida = Object.assign(new Error('No hay sesión'), { name: 'SessionExpiredError' });
+    await expect(c.get('x', 100, async () => { throw vencida; })).rejects.toThrow('No hay sesión');
+    await c.get('x', 100, async () => 'dato');
+    t = 500;
+    const r = await c.get('x', 100, async () => { throw vencida; });
+    expect(r.value).toBe('dato');
+    expect(r.actualizado).toMatch(/^1970-01-01T00:00:00.000Z \(copia guardada, no se pudo actualizar: sesión vencida\)$/);
+    t = 100 + 31 * 24 * 60 * 60 * 1000; // pasados 30 días del vencimiento, la copia se descarta
+    await c.get('otra', 100, async () => 1);
+    await expect(c.get('x', 100, async () => { throw vencida; })).rejects.toThrow('No hay sesión');
+  });
+
   it('con otra clave no se puede leer (y arranca vacía)', async () => {
     const file = join(mkdtempSync(join(tmpdir(), 'c-')), 'cache.enc');
     await new Cache(file, memKeys(), true).get('x', 10_000, async () => 'dato');

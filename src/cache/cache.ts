@@ -88,12 +88,22 @@ export class Cache {
       const hit = this.load()[key];
       if (hit && this.now() - hit.at < hit.ttl) return { value: hit.value as T, actualizado: new Date(hit.at).toISOString() };
     }
-    const value = await fn();
+    let value: T;
+    try {
+      value = await fn();
+    } catch (err) {
+      // Si UADE no responde (sesión vencida, caída) pero hay una copia vieja, se devuelve esa y se
+      // avisa en `actualizado` por qué no se pudo refrescar. Mejor una respuesta fechada que ninguna.
+      const viejo = this.enabled ? this.load()[key] : undefined;
+      if (!viejo) throw err;
+      const motivo = err instanceof Error && err.name === 'SessionExpiredError' ? 'sesión vencida' : 'UADE no respondió';
+      return { value: viejo.value as T, actualizado: `${new Date(viejo.at).toISOString()} (copia guardada, no se pudo actualizar: ${motivo})` };
+    }
     const at = this.now();
     if (this.enabled) {
       this.load()[key] = { at, ttl, value };
-      // Se descarta lo vencido para que el archivo no crezca.
-      for (const [k, v] of Object.entries(this.data!)) if (at - v.at >= v.ttl) delete this.data![k];
+      // Lo vencido se conserva hasta 30 días como copia de respaldo; después se descarta.
+      for (const [k, v] of Object.entries(this.data!)) if (at - v.at >= v.ttl + 30 * 24 * HORA) delete this.data![k];
       this.save();
     }
     return { value, actualizado: new Date(at).toISOString() };

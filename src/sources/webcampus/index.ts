@@ -42,6 +42,12 @@ export class WebCampus {
     return parseAsistencia((await this.client.get(`/AsistenciaAlumnos.aspx?IdAula=${idAula}`)).html);
   }
 
+  // Carreras/planes de la persona (una sola lectura, sin el historial completo).
+  async carreras(): Promise<{ carrera: string; plan: string; estado: string }[]> {
+    const { planes } = parsePlanes((await this.client.get('/HistorialAcademico/Plan_Acedemico.aspx')).html);
+    return planes.map(({ carrera, plan, estado }) => ({ carrera, plan, estado }));
+  }
+
   async historial(plan?: string): Promise<Historial & { carrera: string; plan: string }> {
     const path = '/HistorialAcademico/Plan_Acedemico.aspx';
     const { planes, form } = parsePlanes((await this.client.get(path)).html);

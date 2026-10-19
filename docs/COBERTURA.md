@@ -49,6 +49,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Sección | Estado | Tool |
 |---|---|---|
 | Ventanas de inscripción con fechas | ✅ | `uade_enrollment_windows` |
+| Aranceles por carrera y turno | ✅ | `uade_tuition` (tabla parseada del PDF oficial; `webcampus_section aranceles_pdf` para el texto) |
 | Programación / disponibilidad de clases | ✅ | `webcampus_class_offering` |
 | Armar la semana sin solapamientos | ✅ | `webcampus_schedule_planner` (combinaciones de hasta 6 materias, filtros, conflictos). Sin docentes: la programación no los publica |
 | Cronograma (imagen) | ⛔ | Es una imagen; las mismas fechas salen de los PDFs de cronogramas |

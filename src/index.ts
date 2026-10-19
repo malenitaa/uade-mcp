@@ -40,6 +40,7 @@ if (args.length) {
         'Use summaries by default; ask for detail flags only when needed. Answers come from a local encrypted copy with an "actualizado" time; if the student wants the latest, call uade_refresh first.',
         'Never access the student\'s UADE or Microsoft accounts outside this server (no browser automation, no shell, no other connectors). If a tool does not cover something (e.g. reading Teams channels or mail), say so and stop.',
         'UADE-specific facts (dates, procedures, Wi-Fi, rules, fees) come from these tools first. If no tool covers it you may still help with general knowledge, but say clearly it is not official UADE information and where to verify it (WebCampus, uade.edu.ar). Never present generic steps as UADE\'s.',
+        'Fees and prices (cuota, matrícula, arancel, cuánto sale una carrera o turno): call uade_tuition (official fee PDF, per degree and shift) and webcampus_account_balance for what this student is charged. Never web-search a UADE fact that a tool covers; if one tool fails because the session expired, the informational tools (uade_tuition, webcampus_section, uade_academic_calendar) still work from the local copy: try them before giving up.',
       ].join('\n'),
     },
   );

@@ -126,6 +126,12 @@ export class Secciones {
     return data;
   }
 
+  // Texto entero de una sección (sin recortar), para parsers propios.
+  async textoCompleto(seccion: Seccion): Promise<{ fuente: string; texto: string }> {
+    const d = await this.leer(seccion);
+    return { fuente: d.fuente, texto: d.texto };
+  }
+
   async consultar(seccion: Seccion, consulta?: string): Promise<TextoSeccion | (Omit<TextoSeccion, 'texto'> & { fragmentos: string[] })> {
     const d = await this.leer(seccion);
     if (consulta) {

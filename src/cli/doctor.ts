@@ -5,6 +5,7 @@ import { Calendario } from '../sources/calendario/index.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
+import { MIN_CARRERAS_ARANCEL, parseAranceles } from '../sources/webcampus/aranceles.js';
 import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
 import { SessionExpiredError } from '../net/session.js';
 import { Teams, teamsProfileExists } from '../sources/teams/index.js';
@@ -98,6 +99,12 @@ export async function doctor(): Promise<void> {
       if (/No encontré una novedad/.test((err as Error).message)) return ['aviso', 'UADE no tiene publicado un cronograma de previos ahora'];
       throw err;
     }
+  });
+  await push('tabla de aranceles (PDF)', async () => {
+    const a = parseAranceles((await sec.textoCompleto('aranceles_pdf')).texto);
+    const completas = a.carreras.filter((c) => c.cuotaMensualPorMateria).length;
+    if (a.carreras.length < MIN_CARRERAS_ARANCEL || !a.vigenciaDesde) return ['error', `el PDF cambió de formato: ${a.carreras.length} carreras, vigencia ${a.vigenciaDesde ?? 'no encontrada'}`];
+    return ['ok', `${a.carreras.length} carreras (${completas} con los tres valores), vigente desde ${a.vigenciaDesde}`];
   });
   await push('ventanas de inscripción', async () => {
     const v = await insc.ventanas();
