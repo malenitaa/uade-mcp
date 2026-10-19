@@ -8,6 +8,7 @@ import { PageChangedError } from '../sources/webcampus/parse.js';
 import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
 import { SessionExpiredError } from '../net/session.js';
 import { Teams, teamsProfileExists } from '../sources/teams/index.js';
+import { SharePointClient } from '../sources/sharepoint/index.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
 interface Resultado {
@@ -109,6 +110,19 @@ export async function doctor(): Promise<void> {
     if (!m.length) return ['aviso', 'sin materias programadas'];
     const clases = await wc.oferta(link, m[0]!.codigo);
     return [clases.length ? 'ok' : 'aviso', `${m.length} materias; la primera tiene ${clases.length} clases`];
+  });
+  await push('materiales (Teams/SharePoint)', async () => {
+    const { aulas } = await wc.cursada();
+    const aula = aulas.find((a) => a.links.apuntesTeams || a.links.apuntesMateria);
+    if (!aula) return ['aviso', 'ninguna materia tiene apuntes de Teams enlazados'];
+    const link = aula.links.apuntesTeams ?? aula.links.apuntesMateria!;
+    const site = new URL(link).pathname.match(/^(\/sites\/[^/]+)/)?.[1];
+    if (!site) return ['aviso', 'no pude resolver el sitio de SharePoint'];
+    const sp = new SharePointClient();
+    for (const lib of ['Materiales de clase', 'Class Materials']) {
+      try { const e = await sp.listar(`${site}/${lib}`); return [e.length ? 'ok' : 'aviso', `${e.length} items en "${lib}"`]; } catch { /* probar otro */ }
+    }
+    return ['aviso', 'no encontré la carpeta de materiales (quizá la sesión de SharePoint venció: corré login)'];
   });
   await push('Teams (novedades del canal)', async () => {
     if (!teamsProfileExists()) return ['aviso', 'sin configurar: corré login-teams para leer canales de Teams'];

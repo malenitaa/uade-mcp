@@ -1,23 +1,70 @@
 // SharePoint de UADE (uadeeduar.sharepoint.com), con la sesión que deja el mismo login de Microsoft.
-// Solo se descargan archivos a los que WebCampus enlaza (por ejemplo, el PDF de aranceles). Solo lectura.
+// Solo lectura, y solo en sitios habilitados: el PDF de aranceles y la biblioteca "Materiales de clase"
+// de cada materia (los apuntes que comparte el docente en Teams). La sesión de SharePoint (rtFa) abre
+// todo Microsoft 365, por eso se acota a esos sitios a conciencia.
 import { keychainStore, SessionClient, type SessionStore } from '../../net/session.js';
 
 export const SHAREPOINT = 'https://uadeeduar.sharepoint.com';
 export const SHAREPOINT_ACCOUNT = 'sharepoint';
-// La sesión de SharePoint (rtFa) abre todo Microsoft 365 del alumno: se usa solo en estos sitios.
-// Para sumar otro (por ejemplo, apuntes de una materia), agregarlo acá a conciencia.
-export const SITIOS_PERMITIDOS = [/^\/:[a-z]:\/s\/ArchivosAranceles\//i, /^\/sites\/ArchivosAranceles\//i];
+export const SITIOS_PERMITIDOS = [
+  /^\/:[a-z]:\/s\/ArchivosAranceles\//i,
+  /^\/sites\/ArchivosAranceles\//i,
+  // Apuntes de una materia: la carpeta "Materiales de clase" (o "Class Materials") del equipo.
+  /\/sites\/[^/]+\/(Materiales de clase|Class Materials)(\/|$)/i,
+];
+
+export interface EntradaSP {
+  nombre: string;
+  tipo: 'carpeta' | 'archivo';
+  ruta: string; // server-relative
+  tamanoKB?: number;
+  modificado?: string;
+}
+
+const permitido = (serverRelativePath: string): boolean => SITIOS_PERMITIDOS.some((r) => r.test(serverRelativePath));
+const siteDe = (serverRelativePath: string): string => serverRelativePath.match(/^(\/sites\/[^/]+)/i)?.[1] ?? '';
+const quote = (p: string): string => `decodedurl='${p.replace(/'/g, "''")}'`;
 
 export class SharePointClient extends SessionClient {
   constructor(store: SessionStore = keychainStore(SHAREPOINT_ACCOUNT)) {
     super({ nombre: 'SharePoint de UADE', origin: SHAREPOINT, esLogin: (u) => /^\/_forms\//i.test(u.pathname) }, store);
   }
 
-  // Descarga un archivo compartido. A los links de "compartir" (/:b:/s/…) se les pide la descarga directa.
+  private async api(serverRelativePath: string, kind: 'Files' | 'Folders'): Promise<EntradaSP[]> {
+    const site = siteDe(serverRelativePath);
+    const sel = kind === 'Files' ? 'Name,ServerRelativeUrl,Length,TimeLastModified' : 'Name,ServerRelativeUrl,TimeLastModified';
+    const path = `${site}/_api/web/GetFolderByServerRelativePath(${quote(serverRelativePath)})/${kind}?$select=${sel}`;
+    const page = await this.get(path, { accept: 'application/json;odata=nometadata' });
+    const value = (JSON.parse(page.html).value ?? []) as { Name: string; ServerRelativeUrl: string; Length?: string; TimeLastModified?: string }[];
+    return value
+      .filter((e) => kind === 'Folders' && e.Name === 'Forms' ? false : true)
+      .map((e) => ({
+        nombre: e.Name,
+        tipo: kind === 'Files' ? 'archivo' : 'carpeta',
+        ruta: e.ServerRelativeUrl,
+        tamanoKB: e.Length ? Math.round(Number(e.Length) / 1024) : undefined,
+        modificado: e.TimeLastModified?.slice(0, 10),
+      }));
+  }
+
+  async listar(serverRelativePath: string): Promise<EntradaSP[]> {
+    if (!permitido(serverRelativePath)) throw new Error('Esa carpeta de SharePoint no está habilitada en el MCP.');
+    const [carpetas, archivos] = await Promise.all([this.api(serverRelativePath, 'Folders'), this.api(serverRelativePath, 'Files')]);
+    return [...carpetas, ...archivos];
+  }
+
+  async bajarArchivo(serverRelativeUrl: string): Promise<Uint8Array> {
+    if (!permitido(serverRelativeUrl)) throw new Error('Ese archivo de SharePoint no está habilitado en el MCP.');
+    const site = siteDe(serverRelativeUrl);
+    const page = await this.get(`${site}/_api/web/GetFileByServerRelativePath(${quote(serverRelativeUrl)})/$value`);
+    return page.bytes;
+  }
+
+  // Descarga un archivo por su link de "compartir" (usado por el PDF de aranceles).
   async descargar(link: string): Promise<Uint8Array> {
     const u = new URL(link, SHAREPOINT);
     if (u.origin !== SHAREPOINT) throw new Error('Solo se descargan archivos del SharePoint de UADE.');
-    if (!SITIOS_PERMITIDOS.some((r) => r.test(u.pathname))) throw new Error('Ese sitio de SharePoint no está habilitado en el MCP.');
+    if (!permitido(u.pathname)) throw new Error('Ese sitio de SharePoint no está habilitado en el MCP.');
     u.searchParams.set('download', '1');
     const page = await this.get(u.pathname + u.search);
     if (!(page.bytes[0] === 0x25 && page.bytes[1] === 0x50)) {

@@ -54,8 +54,8 @@ export class SessionClient {
     this.cookie = store.load();
   }
 
-  get(path: string): Promise<Page> {
-    return this.request(path, { method: 'GET' });
+  get(path: string, headers?: Record<string, string>): Promise<Page> {
+    return this.request(path, { method: 'GET', headers });
   }
 
   // Postback de ASP.NET WebForms: reenvía el estado del formulario y el control que lo dispara.

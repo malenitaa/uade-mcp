@@ -25,7 +25,9 @@ export function registerTeamsTools(
     },
     ({ idAula, limit }) =>
       run(granted, 'teams.leer_novedades', async () => {
-        const { value: aulas } = await cache.get('cursada:', TTL.corto, async () => (await wc.cursada()).aulas);
+        // Misma clave y mismo valor que webcampus_current_courses: el objeto cursada entero.
+        const { value: cursada } = await cache.get('cursada:', TTL.corto, () => wc.cursada());
+        const aulas = cursada.aulas;
         const aula = aulas.find((a) => a.idAula === idAula);
         if (!aula) throw new Error(`No encontré el aula ${idAula} en tus cursos.`);
         if (!aula.links.teams) throw new Error(`La materia "${aula.materia}" no tiene un equipo de Teams enlazado en WebCampus.`);

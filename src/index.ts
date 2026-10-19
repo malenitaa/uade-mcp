@@ -12,6 +12,7 @@ import { registerInscripcionesTools } from './tools/inscripciones.js';
 import { registerMailTools } from './tools/mail.js';
 import { registerPlanUadeTools } from './tools/planuade.js';
 import { registerSeccionesTools } from './tools/secciones.js';
+import { registerMaterialesTools } from './tools/materiales.js';
 import { registerTeamsTools } from './tools/teams.js';
 import { registerWebCampusTools } from './tools/webcampus.js';
 
@@ -51,6 +52,7 @@ if (args.length) {
   registerSeccionesTools(server, granted);
   registerCacheTools(server, granted);
   registerTeamsTools(server, granted);
+  registerMaterialesTools(server, granted);
 
   await server.connect(new StdioServerTransport());
 }
