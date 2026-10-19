@@ -197,7 +197,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 
 | Tool | Permiso |
 |---|---|
-| `pia_preparar_alta` → `pia_confirmar_alta` | `pia.inscribir` |
+| `pia_prepare_enrollment` → `pia_confirm_enrollment` | `pia.inscribir` · hecho el circuito completo (borrador de un solo uso, 5 min, elicitation, falla cerrado sin diálogo); el envío real a PIA es un ejecutor no conectado que falla cerrado |
 | `teams_preparar_entrega` → `teams_confirmar_entrega` | `teams.entregar` (si Graph se puede usar) |
 | `mail_preparar` → `mail_confirmar_envio` | `mail.enviar` (si Graph se puede usar) |
 
