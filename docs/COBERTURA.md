@@ -49,6 +49,8 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Sección | Estado | Tool |
 |---|---|---|
 | Ventanas de inscripción con fechas | ✅ | `uade_enrollment_windows` |
+| Novedades, banners y agenda del home | ✅ | `webcampus_news` (+ lectura de lo enlazado) |
+| Sesión vencida (cada ~3 h) | ✅ | renovación automática sin ventana desde el perfil del navegador; `uade_login` / `/uade:login` si Microsoft pide algo |
 | Aranceles por carrera y turno | ✅ | `uade_tuition` (tabla parseada del PDF oficial; `webcampus_section aranceles_pdf` para el texto) |
 | Programación / disponibilidad de clases | ✅ | `webcampus_class_offering` |
 | Armar la semana sin solapamientos | ✅ | `webcampus_schedule_planner` (combinaciones de hasta 6 materias, filtros, conflictos). Sin docentes: la programación no los publica |

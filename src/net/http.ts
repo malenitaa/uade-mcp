@@ -14,6 +14,8 @@ export interface SafeRequest {
   body?: string | URLSearchParams;
   // Se manda solo al host del pedido original, nunca a un host al que se redirija.
   cookie?: string;
+  // Qué hacer si una redirección va a un host que no es del MCP: error (default) o devolver el destino sin contactarlo.
+  redireccionAfuera?: 'error' | 'devolver';
 }
 
 export interface SafeResponse {
@@ -24,6 +26,8 @@ export interface SafeResponse {
   setCookies: string[];
   body: Uint8Array;
   text(): string;
+  // true si la respuesta es una redirección a un sitio fuera del MCP que no se siguió (ver redireccionAfuera).
+  fueraDelMcp?: boolean;
 }
 
 export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Promise<SafeResponse> {
@@ -58,6 +62,11 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
       // Algunos menús de UADE redirigen a http://: si el host está permitido se pasa a https
       // en vez de viajar sin cifrar (y en vez de fallar).
       if (next.protocol === 'http:' && ALLOWED_HOSTS.has(next.hostname.toLowerCase())) next.protocol = 'https:';
+      // Con `redireccionAfuera: 'devolver'`, una redirección a un sitio que no es del MCP no se sigue:
+      // se devuelve el destino (para decir "esto está afuera") sin contactarlo.
+      if (req.redireccionAfuera === 'devolver' && !ALLOWED_HOSTS.has(next.hostname.toLowerCase())) {
+        return { status: res.status, url: next, headers: res.headers, setCookies, body: new Uint8Array(), fueraDelMcp: true, text: () => '' };
+      }
       url = assertAllowed(next);
       if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST') || url.host !== originHost) {
         method = 'GET';

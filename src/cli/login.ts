@@ -1,88 +1,18 @@
-// `uade-mcp login`: abre un navegador visible, vos iniciás sesión con tu cuenta Microsoft de UADE
-// (contraseña y MFA los escribís vos, en la página de Microsoft), y nos quedamos solo con las
-// cookies de sesión de WebCampus e Inscripciones, que van al llavero. Este código nunca ve tu contraseña.
-//
-// Usa un perfil temporal: al cerrar no queda nada en disco (ni la sesión de Microsoft).
-import { existsSync } from 'node:fs';
-import { chromium } from 'playwright-core';
-import { saveSession } from '../auth/store.js';
-import { INSCRIPCIONES, INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
-import { SHAREPOINT, SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
+// `uade-mcp login`: la misma ventana que abre la tool uade_login, desde la terminal.
+import { browserProfileExists, iniciarSesion, mensajeVentana } from '../auth/login.js';
 import { findBrowser } from '../net/browser.js';
-import { SESSION_ACCOUNT, WEBCAMPUS } from '../sources/webcampus/client.js';
-
-const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
-
-// Cookies de analytics que no hacen falta para la sesión y no guardamos.
-const TRACKING = /^(_ga|_gid|_hj|__utm|_fbp|_gcl|ai_user|ai_session)/;
 
 export async function login(): Promise<void> {
-  const executablePath = findBrowser();
-  console.log(
-    [
-      '',
-      `Se va a abrir una ventana de ${executablePath.split('/').pop()?.replace(/\.exe$/i, '')} en WebCampus (si no la ves, buscala en el Dock o detrás de otras ventanas).`,
-      '  1. Iniciá sesión con tu cuenta de UADE (lo escribís vos, en la página de Microsoft).',
-      '  2. Cuando veas tu WebCampus, la ventana se cierra sola.',
-      '',
-      'Qué se guarda: solo las cookies de sesión de WebCampus, Inscripciones y SharePoint de UADE, en el llavero de tu sistema.',
-      'Qué NO se guarda: tu contraseña, tu sesión de Microsoft ni el historial del navegador.',
-      '',
-    ].join('\n'),
-  );
-
-  const browser = await chromium.launch({ executablePath, headless: false, args: ['--no-first-run', '--no-default-browser-check'] });
-  try {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto(`${WEBCAMPUS}/Login.aspx`);
-    await page.bringToFront().catch(() => {});
-    // El botón "Entrar" solo redirige al login de Microsoft; no manda credenciales.
-    await page.click('#ctl00_ContentPlaceHolderMain_btnEntrar').catch(() => {});
-    try {
-      await page.waitForURL((u) => u.origin === WEBCAMPUS && /\/homewc\.aspx$/i.test(u.pathname), { timeout: LOGIN_TIMEOUT_MS });
-    } catch {
-      throw new Error(
-        'Pasaron 10 minutos sin que termine el login, así que se cerró la ventana y no se guardó nada. ' +
-          'Volvé a correr el mismo comando y completá el login de Microsoft en la ventana que se abre.',
-      );
-    }
-
-    const cookies = (await context.cookies(WEBCAMPUS)).filter((c) => !TRACKING.test(c.name));
-    if (!cookies.some((c) => c.name === '.ASPXAUTH' || c.name === 'sessionuade')) {
-      throw new Error('Se completó el login pero no apareció la cookie de sesión. No se guardó nada.');
-    }
-    saveSession(SESSION_ACCOUNT, cookies.map((c) => `${c.name}=${c.value}`).join('; '));
-    console.log(`Listo: sesión de WebCampus guardada en el llavero (${cookies.length} cookies: ${cookies.map((c) => c.name).join(', ')}).`);
-
-    // Inscripciones usa el mismo login de Microsoft: con la sesión recién abierta entra solo.
-    await page.goto(`${INSCRIPCIONES}/`);
-    try {
-      await page.waitForURL((u) => u.origin === INSCRIPCIONES && !/^\/account\//i.test(u.pathname), { timeout: 60_000 });
-      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
-      const ins = (await context.cookies(INSCRIPCIONES)).filter((c) => !TRACKING.test(c.name));
-      if (ins.length) {
-        saveSession(INSCRIPCIONES_ACCOUNT, ins.map((c) => `${c.name}=${c.value}`).join('; '));
-        console.log(`Listo: sesión de Inscripciones guardada (${ins.length} cookies: ${ins.map((c) => c.name).join(', ')}).`);
-      }
-    } catch {
-      console.log('No se pudo abrir Inscripciones (WebCampus quedó guardado igual). Las tools de inscripciones van a pedir login.');
-    }
-
-    // SharePoint de UADE (PDF de aranceles, apuntes): mismo login de Microsoft.
-    await page.goto(`${SHAREPOINT}/`);
-    try {
-      await page.waitForURL((u) => u.origin === SHAREPOINT, { timeout: 60_000 });
-      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
-      const sp = (await context.cookies(SHAREPOINT)).filter((c) => /^(FedAuth|rtFa)$/.test(c.name));
-      if (sp.length) {
-        saveSession(SHAREPOINT_ACCOUNT, sp.map((c) => `${c.name}=${c.value}`).join('; '));
-        console.log(`Listo: sesión de SharePoint guardada (${sp.map((c) => c.name).join(', ')}).`);
-      } else console.log('SharePoint no dejó sesión: el PDF de aranceles no va a estar disponible.');
-    } catch {
-      console.log('No se pudo abrir SharePoint (lo demás quedó guardado igual).');
-    }
-  } finally {
-    await browser.close();
+  const navegador = findBrowser().split('/').pop()?.replace(/\.exe$/i, '') ?? 'navegador';
+  // Primero sin ventana: si Microsoft todavía recuerda la sesión, alcanza.
+  if (browserProfileExists()) {
+    console.log('Probando renovar la sesión sin pedirte nada…');
+    const r = await iniciarSesion({ interactivo: false, log: console.log });
+    if (r.ok) return console.log(`Listo, sin ventana: ${r.guardadas.join(', ')}.`);
+    console.log(`No alcanzó (${r.motivo}).`);
   }
+  console.log('\n' + mensajeVentana(navegador) + '\n');
+  const r = await iniciarSesion({ interactivo: true, log: console.log });
+  if (!r.ok) throw new Error(`No se completó el login: ${r.motivo}. Volvé a correr el mismo comando.`);
+  console.log(`Listo: ${r.guardadas.join(', ')}.`);
 }

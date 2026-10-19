@@ -4,24 +4,23 @@
 // Teams. Corre el Teams web real, así que contacta los dominios de Microsoft, igual que si lo abrieras
 // vos; no manda nada a nadie más. Es lo más frágil del MCP: si Teams cambia su interfaz, puede dejar
 // de leer, y en ese caso avisa en vez de inventar.
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { chromium, type BrowserContext } from 'playwright-core';
 import { findBrowser } from '../../net/browser.js';
-import { configDir } from '../../auth/permissions.js';
+import { browserProfileDir, browserProfileExists } from '../../auth/login.js';
 
+// Mismo perfil que el login general: la sesión de Microsoft es una sola para WebCampus, Teams y el resto.
 export function teamsProfileDir(): string {
-  return join(configDir(), 'teams-profile');
+  return browserProfileDir();
 }
 
 export function teamsProfileExists(): boolean {
-  return existsSync(join(teamsProfileDir(), 'Default')) || existsSync(join(teamsProfileDir(), 'Default', 'Preferences'));
+  return browserProfileExists();
 }
 
 export class TeamsLoginError extends Error {
   constructor() {
-    super('No hay sesión de Teams, o venció. Corré en una terminal: node "' + process.argv[1] + '" login-teams (se abre Teams, iniciás sesión y listo).');
+    super('No hay sesión de Microsoft para Teams, o venció. Llamá la tool uade_login (o en una terminal: node "' + process.argv[1] + '" login) e intentá de nuevo.');
     this.name = 'TeamsLoginError';
   }
 }

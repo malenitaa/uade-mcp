@@ -11,6 +11,7 @@ import { SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
 import { doctor } from './doctor.js';
 import { rmSync } from 'node:fs';
+import { borrarPerfil } from '../auth/login.js';
 import { login } from './login.js';
 import { loginTeams, teamsProfileDir } from '../sources/teams/index.js';
 
@@ -66,7 +67,8 @@ export async function runCli(args: string[]): Promise<void> {
       console.log(borradas.length ? `Sesiones borradas del llavero: ${borradas.join(', ')}.` : 'No había sesiones guardadas.');
       cache.destroy();
       rmSync(teamsProfileDir(), { recursive: true, force: true });
-      console.log('Copia local (caché), su clave y el perfil de Teams borrados.');
+      borrarPerfil();
+      console.log('Copia local (caché), su clave, el perfil del navegador (sesión de Microsoft) y el perfil de Teams borrados.');
       return;
     }
 

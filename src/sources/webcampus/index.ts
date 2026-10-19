@@ -1,5 +1,6 @@
 // "Nuestra API" de WebCampus: funciones de alto nivel que devuelven JSON tipado.
-import { WebCampusClient } from './client.js';
+import { WebCampusClient, WEBCAMPUS } from './client.js';
+import { parseHome, parseNovedad, type Home, type Novedad } from './novedades.js';
 import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
   parsePlanificacion,
@@ -71,6 +72,24 @@ export class WebCampus {
     const { aulas } = await this.cursada();
     const regulares = aulas.filter((a) => /cursada regular/i.test(a.seccion));
     return Promise.all(regulares.map(async (a) => ({ idAula: a.idAula, ...(await this.planificacion(a.idAula)), materia: a.materia })));
+  }
+
+  // Home: banners, novedades y agenda. Y cada novedad con sus adjuntos.
+  async home(): Promise<Home> {
+    return parseHome((await this.client.get('/HomeWC.aspx')).html);
+  }
+
+  async novedad(id: string): Promise<Novedad> {
+    if (!ID.test(id)) throw new Error('id de novedad inválido');
+    return parseNovedad((await this.client.get(`/MiContenido/Novedades.aspx?Id=${id}&EsDC=False`)).html, id);
+  }
+
+  // Un archivo publicado en WebCampus (adjunto de una novedad): solo rutas del propio sitio.
+  async archivo(path: string): Promise<{ nombre: string; bytes: Uint8Array }> {
+    const u = new URL(path, WEBCAMPUS);
+    if (u.origin !== WEBCAMPUS || !/^\/DocsDownload\//i.test(u.pathname)) throw new Error('Solo se leen adjuntos publicados en WebCampus.');
+    const page = await this.client.get(u.pathname + u.search);
+    return { nombre: decodeURIComponent(u.pathname.split('/').pop() ?? 'archivo'), bytes: page.bytes };
   }
 
   async docentes(idAula: string): Promise<Docente[]> {

@@ -46,6 +46,8 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `pia_prepare_enrollment` | Solo lectura: arma el resumen exacto de un alta (clase, sede, horario, fechas, cierre de ventana, cargo, cupo, no reversible) y un borrador de 5 minutos. No inscribe |
 | `pia_confirm_enrollment` | Escritura: exige el permiso `pia.inscribir` (lo prendés vos en la terminal) y tu confirmación en un diálogo que el agente no puede contestar. **El envío real a PIA todavía no está conectado** (falla cerrado, nunca simula): hoy el alta se hace en inscripciones.uade.edu.ar |
 | `teams_channel_news` | Novedades del canal General de una materia en Teams (lo último que posteó el docente). Experimental: usa un navegador propio; se activa con `login-teams` |
+| `webcampus_news` | Lo que UADE comunica en el home de WebCampus: banners (parking, aulas silenciosas, campañas…), novedades con sus adjuntos y agenda; lee los documentos enlazados (PDF, SharePoint, adjuntos) |
+| `uade_login` | Renueva la sesión sola (perfil de navegador que recuerda la sesión de Microsoft) o abre la ventana para iniciar sesión; también como prompt `/uade:login`. Nunca ve la contraseña |
 | `uade_tuition` | Aranceles oficiales por carrera y turno (matrícula cuatrimestral, cuota mensual de referencia por 5 materias, cuota por materia, derecho de admisión, vigencia), del PDF que enlaza WebCampus; sin carrera, la propia |
 | `webcampus_section` | Cualquier sección informativa del menú (aranceles, MRI, normativa, guía, becas, optativas, minors, comprobantes, marcaciones, códigos…), con búsqueda dentro del texto |
 | `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |

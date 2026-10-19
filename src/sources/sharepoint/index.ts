@@ -60,6 +60,34 @@ export class SharePointClient extends SessionClient {
     return page.bytes;
   }
 
+  // Un archivo publicado por UADE con link de "compartir" (/:x:/s/<sitio>/…), como los que enlazan los
+  // banners y novedades de WebCampus. Solo descarga (nunca lista ni recorre el sitio) y devuelve el
+  // nombre que informa SharePoint para saber cómo leerlo.
+  async descargarCompartido(link: string): Promise<{ nombre: string; bytes: Uint8Array }> {
+    const u = new URL(link, SHAREPOINT);
+    if (u.origin !== SHAREPOINT) throw new Error('Solo se descargan archivos del SharePoint de UADE.');
+    if (!/^\/:[a-z]:\/s\/[^/]+\//i.test(u.pathname)) throw new Error('Ese link de SharePoint no es un archivo compartido.');
+    const page = await this.get(u.pathname + u.search);
+    const esDoc = (b: Uint8Array) => (b[0] === 0x25 && b[1] === 0x50) || (b[0] === 0x50 && b[1] === 0x4b);
+    if (esDoc(page.bytes)) return { nombre: decodeURIComponent(page.url.pathname.split('/').pop() ?? '') || 'archivo', bytes: page.bytes };
+    // Los links nuevos abren el visor de Office: la página trae la URL de descarga y el nombre del archivo.
+    const descarga = page.html.match(/"FileGetUrl":"([^"]+)"/)?.[1]?.replace(/\\u0026/g, '&');
+    const nombre = page.html.match(/"FileName":"([^"]+)"/)?.[1] ?? 'archivo';
+    if (!descarga) throw new Error('SharePoint no mostró el archivo compartido (puede que la sesión de SharePoint haya vencido: corré uade_login).');
+    const d = new URL(descarga);
+    if (d.origin !== SHAREPOINT || !/\/_layouts\/15\/download\.aspx$/i.test(d.pathname)) throw new Error('SharePoint devolvió una descarga inesperada.');
+    let file;
+    try {
+      file = await this.get(d.pathname + d.search);
+    } catch (err) {
+      // Compartido solo para ver en el visor (sin descarga): se respeta y se devuelve el link.
+      if (/403/.test((err as Error).message)) throw new Error(`"${nombre}" está compartido solo para verlo en el navegador, no para descargarlo. Abrilo vos: ${u.href}`);
+      throw err;
+    }
+    if (!esDoc(file.bytes)) throw new Error(`No pude descargar ${nombre} de SharePoint.`);
+    return { nombre, bytes: file.bytes };
+  }
+
   // Descarga un archivo por su link de "compartir" (usado por el PDF de aranceles).
   async descargar(link: string): Promise<Uint8Array> {
     const u = new URL(link, SHAREPOINT);

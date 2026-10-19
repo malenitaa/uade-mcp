@@ -9,6 +9,9 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'uadeeduar.sharepoint.com', // SharePoint de UADE (solo lectura): PDF de aranceles, apuntes enlazados desde WebCampus
   'dre.uade.edu.ar', // PDFs públicos de UADE (calendario académico, cronogramas)
   'www.dre.uade.edu.ar',
+  // Acortador de UADE Comunicación: los banners del home de WebCampus enlazan por acá. Solo se sigue
+  // la redirección (sin cookies: no es un origen de sesión) hasta un host permitido.
+  'comunicacion.short.gy',
   'login.microsoftonline.com',
   'graph.microsoft.com',
 ]);

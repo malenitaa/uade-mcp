@@ -14,8 +14,8 @@ export function loginCommand(entry: string | undefined = process.argv[1]): strin
 export class SessionExpiredError extends Error {
   constructor(sitio: string) {
     super(
-      `No hay sesión de ${sitio} o venció. Abrí una terminal y corré: ${loginCommand()} ` +
-        '(se abre el navegador, iniciás sesión con tu cuenta de UADE y listo).',
+      `No hay sesión de ${sitio} o venció. Llamá la tool uade_login (abre una ventana donde la persona inicia sesión con su cuenta de UADE; ` +
+        `o, en una terminal: ${loginCommand()}).`,
     );
     this.name = 'SessionExpiredError';
   }
@@ -53,6 +53,14 @@ export const memoryStore = (): SessionStore => {
   return { load: () => cookie, save: (c) => { cookie = c; } };
 };
 
+// Renovación automática: si una sesión venció, el servidor puede intentar renovarla (perfil de
+// navegador con la sesión de Microsoft, sin ventana) y el pedido se repite una vez. La registra
+// src/index.ts; sin registrar, la sesión vencida se informa como siempre.
+let renovador: (() => Promise<boolean>) | null = null;
+export function setRenovador(fn: (() => Promise<boolean>) | null): void {
+  renovador = fn;
+}
+
 export class SessionClient {
   private cookie: string | null;
 
@@ -82,6 +90,22 @@ export class SessionClient {
   }
 
   private async request(
+    path: string,
+    init: { method: 'GET' | 'POST'; body?: URLSearchParams; headers?: Record<string, string> },
+    reintento = false,
+  ): Promise<Page> {
+    try {
+      return await this.requestOnce(path, init);
+    } catch (err) {
+      // Sesión vencida: una renovación automática y un solo reintento (las de PIA no se renuevan así).
+      if (err instanceof SessionExpiredError && !reintento && renovador && !this.site.sesionPorUrl && (await renovador().catch(() => false))) {
+        return this.request(path, init, true);
+      }
+      throw err;
+    }
+  }
+
+  private async requestOnce(
     path: string,
     init: { method: 'GET' | 'POST'; body?: URLSearchParams; headers?: Record<string, string> },
   ): Promise<Page> {
