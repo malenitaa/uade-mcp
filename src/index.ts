@@ -34,7 +34,7 @@ if (args.length) {
         'Finals (previos) need the course regularized (final_pendiente) and passed prerequisites; current courses have their own final date in webcampus_course_calendar.',
         'Emails are drafts only (email_compose_draft); never say one was sent.',
         'Use summaries by default; ask for detail flags only when needed.',
-        'For anything about UADE (procedures, Wi-Fi, rules, dates, fees) answer only from these tools. If no tool covers it, say you have no UADE source for it; never give generic instructions as if they were UADE\'s.',
+        'UADE-specific facts (dates, procedures, Wi-Fi, rules, fees) come from these tools first. If no tool covers it you may still help with general knowledge, but say clearly it is not official UADE information and where to verify it (WebCampus, uade.edu.ar). Never present generic steps as UADE\'s.',
       ].join('\n'),
     },
   );
