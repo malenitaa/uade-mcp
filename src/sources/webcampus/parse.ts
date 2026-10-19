@@ -4,6 +4,22 @@ import * as cheerio from 'cheerio';
 import type { AnyNode } from 'domhandler';
 
 const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
+
+// Si falta un elemento que la página siempre tiene (aunque no haya datos), UADE cambió el HTML:
+// es mejor decirlo que devolver una lista vacía que parezca real.
+export class PageChangedError extends Error {
+  constructor(public readonly pagina: string) {
+    super(
+      `UADE cambió la página "${pagina}" y el MCP ya no la sabe leer. No es un problema de tu cuenta: ` +
+        'hay que actualizar el MCP. Podés confirmarlo corriendo el comando doctor.',
+    );
+    this.name = 'PageChangedError';
+  }
+}
+
+export function requireAnchor($: cheerio.CheerioAPI, selector: string, pagina: string): void {
+  if (!$(selector).length) throw new PageChangedError(pagina);
+}
 const orNull = (s: string): string | null => (s === '' || s === '-' ? null : s);
 
 // "$123.456,78" | "$111,111.11" | "1234" → número. null si no se puede.
@@ -51,6 +67,7 @@ export interface Periodo {
 
 export function parsePeriodos(html: string): Periodo[] {
   const $ = cheerio.load(html);
+  requireAnchor($, 'a[href*="Periodo="]', 'menú Mis Cursos');
   const out: Periodo[] = [];
   $('a[href*="Periodo="]').each((_, a) => {
     const id = new URLSearchParams(($(a).attr('href') ?? '').split('?')[1]).get('Periodo');
@@ -80,6 +97,7 @@ export interface Aula {
 
 export function parseCursada(html: string): Aula[] {
   const $ = cheerio.load(html);
+  requireAnchor($, '[id$="CtrlMaterias_tblMaterias"], [id$="tbl_Aulas"]', 'cursos del período');
   const aulas: Aula[] = [];
 
   $('[id$="tbl_Aulas"]').each((_, cont) => {
@@ -166,6 +184,7 @@ export interface Asistencia {
 
 export function parseAsistencia(html: string): Asistencia {
   const $ = cheerio.load(html);
+  requireAnchor($, '[id$="pnlAsistencia"]', 'asistencia');
   const num = (id: string) => {
     const n = Number(clean($(`[id$="ctrlAsist_${id}"]`).text()));
     return clean($(`[id$="ctrlAsist_${id}"]`).text()) === '' || !Number.isFinite(n) ? null : n;
@@ -219,6 +238,7 @@ export interface FormState {
 
 export function parsePlanes(html: string): { planes: PlanCarrera[]; form: FormState } {
   const $ = cheerio.load(html);
+  requireAnchor($, 'td.carrera a', 'carreras del historial');
   const form: FormState = {};
   $('form input[type=hidden]').each((_, i) => {
     const name = $(i).attr('name');
@@ -270,6 +290,7 @@ const SITUACION_POR_CLASE: Record<string, Situacion> = {
 
 export function parseHistorial(html: string): Historial {
   const $ = cheerio.load(html);
+  requireAnchor($, '#ctl00_ContentPlaceHolderMain_Table1 tr.anio', 'historial académico');
   const materias: MateriaHistorial[] = [];
   let anio = '';
 
@@ -355,6 +376,7 @@ function parseTablaCuenta($: cheerio.CheerioAPI, id: string): FilaCuenta[] {
 
 export function parseCuenta(html: string): Cuenta {
   const $ = cheerio.load(html);
+  requireAnchor($, '#ctl00_ContentPlaceHolderMain_TablePagosRealizados, #ctl00_ContentPlaceHolderMain_TableDeudaVencida', 'cuenta corriente');
   return {
     deudaVencida: parseTablaCuenta($, 'TableDeudaVencida'),
     proximosVencimientos: parseTablaCuenta($, 'TableProximosVenc'),
@@ -372,8 +394,10 @@ export interface Docente {
 
 export function parseDocentes(html: string): Docente[] {
   const $ = cheerio.load(html);
+  requireAnchor($, '#tableintegrantes', 'integrantes del curso');
   const table = $('#tableintegrantes');
   const headers = table.find('thead th').map((_, th) => clean($(th).text()).toLowerCase()).get();
+  if (!headers.includes('rol') || !headers.includes('email')) throw new PageChangedError('integrantes del curso');
   const col = (name: string) => headers.indexOf(name);
   const [iNombre, iEmail, iRol] = [col('nombre'), col('email'), col('rol')];
   const out: Docente[] = [];
@@ -415,6 +439,7 @@ const DIAS = ['L', 'M', 'MI', 'J', 'V', 'S', 'D'];
 
 export function parseOferta(html: string): Oferta {
   const $ = cheerio.load(html);
+  requireAnchor($, 'select[name$="ddlMateria"]', 'programación de clases');
   const form: FormState = {};
   $('form input[type=hidden]').each((_, i) => {
     const name = $(i).attr('name');
@@ -502,6 +527,12 @@ const TIPO: Record<string, TipoActividad> = {
 
 export function parsePlanificacion(html: string): Planificacion {
   const $ = cheerio.load(html);
+  // Sin tabla puede ser que el docente todavía no cargó la planificación; sin el título de la
+  // página, cambió la página.
+  if (!$('table.cursada_celdas').length) {
+    if (/Mi Semana/i.test($('body').text())) return { clase: null, materia: null, actividades: [] };
+    throw new PageChangedError('planificación del curso (Mi Semana)');
+  }
   const table = $('table.cursada_celdas').first();
   const titulo = clean(table.find('tr.tr_ancho').first().text()).match(/^Clase:\s*(\d+)\s*-\s*(.+)$/i);
   const actividades: ActividadClase[] = [];

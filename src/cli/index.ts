@@ -7,6 +7,7 @@ import { configDir, loadGranted, PERMISSIONS, type Permission } from '../auth/pe
 import { deleteSession, loadSession } from '../auth/store.js';
 import { INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
+import { doctor } from './doctor.js';
 import { login } from './login.js';
 
 const USO = `uade-mcp — MCP no oficial de UADE
@@ -16,6 +17,7 @@ Uso:
   uade-mcp login               iniciás sesión en WebCampus con tu cuenta de UADE
   uade-mcp logout              borra la sesión guardada del llavero
   uade-mcp estado              muestra sesión y permisos
+  uade-mcp doctor              prueba todas las capacidades contra tu cuenta (sin mostrar datos personales)
   uade-mcp permitir <permiso>  habilita un permiso (te explica qué permite y pide confirmación)
   uade-mcp revocar <permiso>   deshabilita un permiso
 
@@ -47,6 +49,9 @@ export async function runCli(args: string[]): Promise<void> {
   switch (cmd) {
     case 'login':
       return login();
+
+    case 'doctor':
+      return doctor();
 
     case 'logout': {
       const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT].filter((a) => deleteSession(a));

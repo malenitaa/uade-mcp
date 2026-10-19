@@ -17,6 +17,7 @@ Proyecto hecho por estudiantes, sin afiliación con la universidad. Página: [pl
 npm install && npm run build
 node dist/index.js login      # se abre el navegador; iniciás sesión vos con tu cuenta de UADE
 node dist/index.js estado     # sesión y permisos
+node dist/index.js doctor     # prueba todo contra tu cuenta, sin mostrar datos personales
 ```
 
 Para sumarlo a Claude Code (lo corrés vos; el MCP nunca toca la configuración de tu cliente):
@@ -38,6 +39,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
+| `webcampus_section` | Cualquier sección informativa del menú (aranceles, MRI, normativa, guía, becas, optativas, minors, comprobantes, marcaciones, códigos…), con búsqueda dentro del texto |
 | `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |
 | `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) en tu navegador con tus aprobadas, finales pendientes y cursadas; confirmás ahí |
 
@@ -55,7 +57,7 @@ cada cuatrimestre.
   vos desde la terminal y cada una te pide confirmación en un diálogo que el agente no puede contestar solo.
 - **Hay cosas que no hace nunca:** pagar, darse de baja, desvincularse de materias, tocar tus datos personales.
 
-El detalle completo está en [docs/DISENO.md](docs/DISENO.md) y [SECURITY.md](SECURITY.md).
+El detalle completo está en [docs/DISENO.md](docs/DISENO.md), [docs/COBERTURA.md](docs/COBERTURA.md) y [SECURITY.md](SECURITY.md).
 
 ## Desarrollo
 

@@ -2,7 +2,7 @@
 // el link a la Programación de Clases de WebCampus. Solo lectura: no abre PIA ni inscribe.
 import * as cheerio from 'cheerio';
 import { keychainStore, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
-import { parseFecha } from '../webcampus/parse.js';
+import { PageChangedError, parseFecha } from '../webcampus/parse.js';
 
 export const INSCRIPCIONES = 'https://inscripciones.uade.edu.ar';
 export const INSCRIPCIONES_ACCOUNT = 'inscripciones';
@@ -26,6 +26,10 @@ function fechaHora(raw: string): string | null {
 
 export function parseVentanas(html: string): VentanaInscripcion[] {
   const $ = cheerio.load(html);
+  // Con ventanas, hay .panel con .lbl-inscripciones; sin ventanas, UADE muestra igual el encabezado de sede.
+  if (!$('.lbl-inscripciones').length && !$('span').filter((_, s) => / - (Grado|Posgrado)/i.test($(s).text())).length) {
+    throw new PageChangedError('ventanas de inscripción');
+  }
   const sede = clean($('span').filter((_, s) => / - (Grado|Posgrado)/i.test($(s).text())).first().text()) || null;
   const out: VentanaInscripcion[] = [];
   $('.panel').each((_, p) => {

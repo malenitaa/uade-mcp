@@ -28,7 +28,7 @@ interface PdfLeido {
 }
 
 export async function leerPdf(bytes: Uint8Array): Promise<PdfLeido> {
-  const pdf = await getDocumentProxy(new Uint8Array(bytes));
+  const pdf = await getDocumentProxy(new Uint8Array(bytes), { verbosity: 0 }); // sin warnings de fuentes en la terminal
   const links: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     for (const a of await (await pdf.getPage(i)).getAnnotations()) {

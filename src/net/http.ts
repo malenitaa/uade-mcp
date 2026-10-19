@@ -2,7 +2,7 @@
 // - valida cada URL (y cada salto de redirección) contra la política de red;
 // - corta por tiempo y por tamaño de respuesta;
 // - no manda nada más que lo que pide la tool: sin telemetría, sin headers de rastreo.
-import { assertAllowed, PolicyError } from './policy.js';
+import { ALLOWED_HOSTS, assertAllowed, PolicyError } from './policy.js';
 
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 20_000;
@@ -53,7 +53,11 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
 
     if (res.status >= 300 && res.status < 400 && res.headers.has('location')) {
       await res.body?.cancel();
-      url = assertAllowed(new URL(res.headers.get('location')!, url));
+      const next = new URL(res.headers.get('location')!, url);
+      // Algunos menús de UADE redirigen a http://: si el host está permitido se pasa a https
+      // en vez de viajar sin cifrar (y en vez de fallar).
+      if (next.protocol === 'http:' && ALLOWED_HOSTS.has(next.hostname.toLowerCase())) next.protocol = 'https:';
+      url = assertAllowed(next);
       if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
         method = 'GET';
         body = undefined;
