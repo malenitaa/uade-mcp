@@ -1,0 +1,4 @@
+#!/bin/sh
+# Revisión de seguridad antes de cada commit. Instalá el hook una vez con:
+#   git config core.hooksPath .githooks
+exec node scripts/revisar.mjs
