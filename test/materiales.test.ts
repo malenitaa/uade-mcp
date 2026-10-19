@@ -38,9 +38,21 @@ describe('leer documentos', () => {
     expect(texto).toContain('Cuota');
   });
 
-  it('un .doc viejo no se puede leer (avisa que lo guarde)', async () => {
-    await expect(leerDocumento('caso.doc', new Uint8Array([1, 2, 3]))).rejects.toThrow('guardarlo en Descargas');
-    expect(tipoLegible('caso.doc')).toBe(false);
+  it('xls viejo: devuelve las celdas por hoja', async () => {
+    const { utils, write } = await import('xlsx');
+    const libro = utils.book_new();
+    utils.book_append_sheet(libro, utils.aoa_to_sheet([['Señal', 'Detalle'], [1, 'Equipo cuesta USD 1,1 millón']]), 'Datos Relevantes');
+    const bytes = new Uint8Array(write(libro, { type: 'array', bookType: 'xls' }));
+    const { texto } = await leerDocumento('caso.xls', bytes);
+    expect(texto).toContain('[Hoja Datos Relevantes]');
+    expect(texto).toContain('Equipo cuesta USD 1,1 millón');
+  });
+
+  it('.doc y .xls viejos cuentan como legibles; un formato no soportado avisa que lo guarde', async () => {
+    expect(tipoLegible('caso.doc')).toBe(true);
+    expect(tipoLegible('caso.xls')).toBe(true);
     expect(tipoLegible('t.pdf')).toBe(true);
+    expect(tipoLegible('nota.rtf')).toBe(false);
+    await expect(leerDocumento('nota.rtf', new Uint8Array([1, 2, 3]))).rejects.toThrow('guardarlo en Descargas');
   });
 });

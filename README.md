@@ -40,7 +40,7 @@ claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 | `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
 | `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
-| `webcampus_course_materials` | Lista y lee los apuntes que el docente comparte en Teams ("Materiales de clase": Casos, Material Teórico…), por la API de SharePoint. Lee PDF, Word, Excel y PowerPoint, o los baja a Descargas |
+| `webcampus_course_materials` | Lista y lee los apuntes que el docente comparte en Teams ("Materiales de clase": Casos, Material Teórico…), por la API de SharePoint. Lee PDF, Word (.docx y .doc), Excel (.xlsx y .xls) y PowerPoint, o los baja a Descargas |
 | `teams_channel_news` | Novedades del canal General de una materia en Teams (lo último que posteó el docente). Experimental: usa un navegador propio; se activa con `login-teams` |
 | `webcampus_section` | Cualquier sección informativa del menú (aranceles, MRI, normativa, guía, becas, optativas, minors, comprobantes, marcaciones, códigos…), con búsqueda dentro del texto |
 | `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |

@@ -1,14 +1,16 @@
-// Extrae el texto de un documento (PDF, Word, Excel, PowerPoint) ya descargado, para que el agente
-// lo lea sin que la persona lo suba. Todo en memoria, con las librerías que ya están. Los .doc/.xls
-// viejos (binarios) no se pueden leer: en ese caso se sugiere guardar el archivo.
+// Extrae el texto de un documento ya descargado (PDF, Word .docx/.doc, Excel .xlsx/.xls,
+// PowerPoint .pptx), para que el agente lo lea sin que la persona lo suba ni use la terminal.
+// Todo en memoria. Los Casos de UADE suelen venir en .doc/.xls viejos, por eso se soportan.
 import { Unzip, UnzipInflate } from 'fflate';
 import { readSheet } from 'read-excel-file/node';
+import WordExtractor from 'word-extractor';
+import { read as leerXls, utils as xlsUtils } from 'xlsx';
 import { leerPdf } from '../calendario/index.js';
 
 const MAX_TEXTO = 12000;
 
 export function tipoLegible(nombre: string): boolean {
-  return /\.(pdf|xlsx|docx|pptx|txt|csv|md)$/i.test(nombre);
+  return /\.(pdf|xlsx|xls|docx|doc|pptx|txt|csv|md)$/i.test(nombre);
 }
 
 // Lee archivos de un zip (docx/pptx/xlsx) cuyo nombre matchea `filtro`, concatenando su contenido.
@@ -57,8 +59,14 @@ export async function leerDocumento(nombre: string, bytes: Uint8Array): Promise<
   } else if (ext === 'xlsx') {
     const rows = await readSheet(Buffer.from(bytes));
     texto = rows.map((r) => r.map((c) => (c == null ? '' : String(c))).join('\t')).join('\n');
+  } else if (ext === 'doc') {
+    const doc = await new WordExtractor().extract(Buffer.from(bytes));
+    texto = doc.getBody();
+  } else if (ext === 'xls') {
+    const libro = leerXls(bytes, { type: 'array' });
+    texto = libro.SheetNames.map((n) => `[Hoja ${n}]\n${xlsUtils.sheet_to_csv(libro.Sheets[n]!, { FS: '\t' })}`).join('\n');
   } else {
-    throw new Error(`No puedo leer el texto de un ".${ext}" (formato viejo o binario). Pedí guardarlo en Descargas.`);
+    throw new Error(`No puedo leer el texto de un ".${ext}". Pedí guardarlo en Descargas.`);
   }
   texto = texto.replace(/\u0000/g, '').trim();
   return texto.length > MAX_TEXTO ? { texto: texto.slice(0, MAX_TEXTO), recortado: true } : { texto, recortado: false };
