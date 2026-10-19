@@ -199,6 +199,18 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | Tool | Permiso |
 |---|---|
 | `pia_prepare_enrollment` → `pia_confirm_enrollment` | `pia.inscribir` · hecho el circuito completo (borrador de un solo uso, 5 min, elicitation, falla cerrado sin diálogo); el envío real a PIA es un ejecutor no conectado que falla cerrado |
+
+### PIA (inscripcionespia.uade.edu.ar), mapeado del registro de red
+
+Flujo observado (WebForms + UpdatePanels; `src/sources/pia/parse.ts`):
+
+1. Entrada: `data-linkid` de la ventana abierta en inscripciones (`InscripcionClaseBuscar.aspx?param=<firmado>`, lleva la sesión). PIA no tiene login propio (`sesionPorUrl`, cookies en memoria). El link nunca sale al modelo.
+2. `btnSeleccionarMaterias` (postback completo) → tablas `gridViewMaterias` por año, con `chkSeleccionar` solo en las elegibles y el motivo en rojo en las otras.
+3. `btnBuscar` (como campo, sin `__EVENTTARGET`; el navegador lo manda asincrónico) → por materia una `grillaInscripcion` con clase, sede, modalidad, turno, idioma, días (hidden `LU..SA`), horario, fechas, **vacantes**, régimen y, en los hidden, `ClaseId`, `HashConsistencia` (firma del servidor sobre la fila) y `OfertaAmpliadaDescripcion` (condiciones que hay que aceptar: la aceptación es solo del lado del cliente, `abrirDialogConfirmacionOfertaAmpliada`).
+4. Alta: `btnCarritoAlta` de la fila → `btnConfirmarCarrito` (delta con `pageRedirect` a `InscripcionFinalizar.aspx?param=…`) → página con Pendiente Alta, **Resumen Arancelario** (importes y vencimientos reales), `chkTerminos`, `txtComentarios`, `btnFinalizar` / `btnVolver`. Quitar del carrito: `btnBorrar`. **`btnFinalizar` no está en el registro** y por eso el envío real sigue sin conectar.
+5. Respuestas asincrónicas: formato delta de MS AJAX (`largo|tipo|id|contenido|`), `parseDelta`/`htmlDe`.
+
+Pendiente: en vivo, PIA responde `401` con `WWW-Authenticate: Basic realm="uade.edu.ar"` al mismo link que en el navegador funciona; falta ver qué manda el navegador (cookie de dominio `.uade.edu.ar` o credencial Basic guardada).
 | `teams_preparar_entrega` → `teams_confirmar_entrega` | `teams.entregar` (si Graph se puede usar) |
 | `mail_preparar` → `mail_confirmar_envio` | `mail.enviar` (si Graph se puede usar) |
 

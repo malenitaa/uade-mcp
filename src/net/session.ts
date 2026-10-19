@@ -42,7 +42,16 @@ export interface SiteConfig {
   origin: string;
   // true si la respuesta es la página de login (sesión vencida)
   esLogin(url: URL): boolean;
+  // Sitios sin login propio (PIA): la sesión la crea el servidor en la primera visita a un link
+  // firmado que da otro sitio, así que se arranca sin cookies y se guardan las que vengan.
+  sesionPorUrl?: boolean;
 }
+
+// Cookies solo en memoria (duran lo que el proceso). Para sitios con `sesionPorUrl`.
+export const memoryStore = (): SessionStore => {
+  let cookie = '';
+  return { load: () => cookie, save: (c) => { cookie = c; } };
+};
 
 export class SessionClient {
   private cookie: string | null;
@@ -79,14 +88,14 @@ export class SessionClient {
     // El llavero es la fuente de verdad: si la persona volvió a iniciar sesión con el MCP abierto
     // se toma la sesión nueva, y si hizo logout no queda nada en memoria que la resucite.
     this.cookie = this.store.load();
-    if (!this.cookie) throw new SessionExpiredError(this.site.nombre);
+    if (!this.cookie && !this.site.sesionPorUrl) throw new SessionExpiredError(this.site.nombre);
     // Un path como "//otro-host/x" resolvería fuera del sitio y le mandaría estas cookies a otro host.
     const target = new URL(path, this.site.origin);
     if (target.origin !== this.site.origin) throw new PolicyError(`dirección fuera de ${this.site.nombre}`);
-    const res = await safeFetch(target, { ...init, cookie: this.cookie });
+    const res = await safeFetch(target, { ...init, cookie: this.cookie ?? '' });
 
     if (res.setCookies.length) {
-      const next = mergeCookies(this.cookie, res.setCookies);
+      const next = mergeCookies(this.cookie ?? '', res.setCookies);
       if (next !== this.cookie) {
         this.cookie = next;
         this.store.save(next);
@@ -96,6 +105,8 @@ export class SessionClient {
     // permitido (por ejemplo un PDF de dre.uade.edu.ar al que redirige el menú) no es estar vencida.
     const enLoginMicrosoft = res.url.origin === 'https://login.microsoftonline.com';
     if (enLoginMicrosoft || (res.url.origin === this.site.origin && this.site.esLogin(res.url)) || res.status === 401) {
+      // Un sitio sin login propio no se arregla con `login`: el link que nos dieron no alcanzó.
+      if (this.site.sesionPorUrl) throw new Error(`${this.site.nombre} rechazó el acceso (${res.status}). El link de la ventana de inscripción no alcanzó para entrar.`);
       throw new SessionExpiredError(this.site.nombre);
     }
     if (res.status >= 400) throw new Error(`${this.site.nombre} respondió ${res.status}`);

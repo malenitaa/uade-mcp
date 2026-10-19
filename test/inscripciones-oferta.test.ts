@@ -8,7 +8,7 @@ const fx = (p: string) => readFileSync(new URL(`./fixtures/${p}`, import.meta.ur
 describe('inscripciones', () => {
   it('ventanas con fechas, tipo y si están abiertas', () => {
     expect(parseVentanas(fx('inscripciones/obtener.html'))).toEqual([
-      { sede: 'Buenos Aires - Grado', nombre: 'Cursos Regulares Intensivos (MRI) 2do Cuatrimestre 2030', tipo: 'inscripcion', abierta: true, desde: '2030-08-03T12:00', hasta: '2030-12-03' },
+      { sede: 'Buenos Aires - Grado', nombre: 'Cursos Regulares Intensivos (MRI) 2do Cuatrimestre 2030', tipo: 'inscripcion', abierta: true, desde: '2030-08-03T12:00', hasta: '2030-12-03', link: 'https://inscripcionespia.uade.edu.ar/InscripcionClaseBuscar.aspx?param=ficticio' },
       { sede: 'Buenos Aires - Grado', nombre: 'Bajas 2do Cuatrimestre 2030', tipo: 'bajas_o_cambios', abierta: true, desde: '2030-08-01T00:00', hasta: '2030-10-31' },
       { sede: 'Buenos Aires - Grado', nombre: 'Asignaturas Verano 2031', tipo: 'otro', abierta: false, desde: '2030-10-05T12:00', hasta: '2031-02-28' },
     ]);

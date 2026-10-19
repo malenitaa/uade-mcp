@@ -3,8 +3,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Elicit } from '../auth/confirm.js';
 import type { Permission } from '../auth/permissions.js';
+import { cache, TTL } from '../cache/cache.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { confirmarAlta, prepararAlta } from '../sources/pia/alta.js';
+import { Pia } from '../sources/pia/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { READ_ONLY, run } from './common.js';
 
@@ -32,11 +34,47 @@ export function registerPiaTools(
   wc = new WebCampus(),
   insc = new Inscripciones(),
   elicit: () => Elicit | undefined = () => elicitDelCliente(server),
+  pia = new Pia(),
 ): void {
   const fuentes = {
     ventanas: () => insc.ventanas(),
     oferta: async (materia: string) => wc.oferta(await insc.linkProgramacion(), materia),
   };
+
+  server.registerTool(
+    'pia_class_search',
+    {
+      title: 'Search classes in PIA (enrollment system)',
+      description:
+        'Read-only. Opens an open enrollment window in PIA (default: the first open one; or pass part of its name, e.g. "Verano") and searches the classes of up to 6 subjects there: campus, shift, weekdays, time, dates, free seats (vacantes), how it is passed, and the conditions PIA makes you accept for that class (e.g. intensive courses with fee retention on withdrawal). Also tells why a subject has no classes ("Sin Clases en el Período"). shift is required when the window offers more than one. Nothing is added to the cart.',
+      inputSchema: {
+        subjects: z.array(z.string().regex(/^[A-Z]?\d+(\.\d+)+$/)).min(1).max(6),
+        window: z.string().max(60).optional().describe('part of the window name'),
+        shift: z.string().max(20).optional().describe('e.g. MAÑANA, NOCHE, INTENSIVO'),
+        days: z.array(z.enum(['L', 'M', 'MI', 'J', 'V', 'S'])).optional(),
+      },
+      annotations: READ_ONLY,
+    },
+    ({ subjects, window, shift, days }) =>
+      run(granted, 'pia.leer', async () => {
+        const ventanas = (await cache.get('ventanas', TTL.corto, () => insc.ventanas())).value;
+        const abiertas = ventanas.filter((v) => v.tipo === 'inscripcion' && v.abierta && v.link);
+        const ventana = window ? abiertas.find((v) => v.nombre.toLowerCase().includes(window.toLowerCase())) : abiertas[0];
+        if (!ventana?.link) {
+          throw new Error(abiertas.length ? `No hay una ventana abierta que se llame "${window}". Abiertas: ${abiertas.map((v) => v.nombre).join('; ')}.` : 'No hay ninguna ventana de inscripción abierta ahora.');
+        }
+        const key = `pia:${ventana.nombre}:${[...subjects].sort().join(',')}:${shift ?? ''}:${(days ?? []).join('')}`;
+        const r = await cache.get(key, TTL.corto, () => pia.buscar(ventana.link!, { materias: subjects, turno: shift, dias: days }));
+        const { clases, materias, ...resto } = r.value;
+        return {
+          actualizado: r.actualizado,
+          ventana: ventana.nombre,
+          ...resto,
+          materias: materias.map((m) => ({ codigo: m.codigo, materia: m.materia, anio: m.anio, regimen: m.regimen, estado: m.info ?? (m.chk ? 'con clases' : 'no elegible') })),
+          clases: clases.map(({ claseId: _id, btnAlta: _b, ...c }) => c),
+        };
+      }),
+  );
 
   server.registerTool(
     'pia_prepare_enrollment',

@@ -16,6 +16,21 @@ export interface VentanaInscripcion {
   abierta: boolean;
   desde: string | null; // ISO, con hora si la hay (yyyy-mm-ddThh:mm)
   hasta: string | null;
+  // Link firmado a PIA (data-linkid) de una ventana abierta. Lleva la sesión de PIA: las tools
+  // lo usan por dentro y no lo devuelven al modelo.
+  link?: string;
+}
+
+export const PIA = 'https://inscripcionespia.uade.edu.ar';
+
+function linkPia(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const u = new URL(raw);
+    return u.origin === PIA ? u.href : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function fechaHora(raw: string): string | null {
@@ -38,14 +53,17 @@ export function parseVentanas(html: string): VentanaInscripcion[] {
     const link = $(p).find('[data-tipolink]').first();
     const tipoLink = link.attr('data-tipolink') ?? '';
     const tipo = tipoLink === 'InscripcionAsignatura' ? 'inscripcion' : tipoLink === 'CambioAsignaturaPack' || /^bajas?\b/i.test(nombre) ? 'bajas_o_cambios' : 'otro';
-    out.push({
+    const v: VentanaInscripcion = {
       sede,
       nombre,
       tipo,
       abierta: link.length > 0 || $(p).find('.fa-unlock, [class*="_on"]').length > 0,
       desde: fechaHora(clean($(p).find('.desde').text())),
       hasta: fechaHora(clean($(p).find('.hasta').text())),
-    });
+    };
+    const href = tipo === 'inscripcion' ? linkPia(link.attr('data-linkid')) : undefined;
+    if (href) v.link = href;
+    out.push(v);
   });
   return out;
 }

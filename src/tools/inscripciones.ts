@@ -26,7 +26,8 @@ export function registerInscripcionesTools(
     },
     () => read(async () => {
       const r = await cache.get('ventanas', TTL.corto, () => insc.ventanas());
-      return { actualizado: r.actualizado, ventanas: r.value };
+      // El link a PIA lleva la sesión: se usa por dentro (pia_class_search), no sale al modelo.
+      return { actualizado: r.actualizado, ventanas: r.value.map(({ link: _link, ...v }) => v) };
     }),
   );
 
