@@ -6,6 +6,7 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'www.webcampus.uade.edu.ar',
   'inscripciones.uade.edu.ar',
   'inscripcionespia.uade.edu.ar',
+  'uadeeduar.sharepoint.com', // SharePoint de UADE (solo lectura): PDF de aranceles, apuntes enlazados desde WebCampus
   'dre.uade.edu.ar', // PDFs públicos de UADE (calendario académico, cronogramas)
   'www.dre.uade.edu.ar',
   'login.microsoftonline.com',

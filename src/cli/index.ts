@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline/promises';
 import { configDir, loadGranted, PERMISSIONS, type Permission } from '../auth/permissions.js';
 import { deleteSession, loadSession } from '../auth/store.js';
 import { INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
+import { SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
 import { doctor } from './doctor.js';
 import { login } from './login.js';
@@ -54,7 +55,7 @@ export async function runCli(args: string[]): Promise<void> {
       return doctor();
 
     case 'logout': {
-      const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT].filter((a) => deleteSession(a));
+      const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT, SHAREPOINT_ACCOUNT].filter((a) => deleteSession(a));
       console.log(borradas.length ? `Sesiones borradas del llavero: ${borradas.join(', ')}.` : 'No había sesiones guardadas.');
       return;
     }

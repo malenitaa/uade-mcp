@@ -119,7 +119,14 @@ describe('WebCampus', () => {
     expect(c.deudaVencida).toEqual([]);
     expect(c.proximosVencimientos).toEqual([{ Vencimiento: '2030-11-10', Concepto: 'CUOTA 4 2DO CUATR 2030', Importe: 123456.78 }]);
     expect(c.pagos).toEqual([
-      { 'Fecha Pago': '2030-10-10', 'Nro. Recibo': 'RC-0000-00000001', Medio: 'Medio Ficticio 1', Total: 111111.11 },
+      {
+        'Fecha Pago': '2030-10-10', 'Nro. Recibo': 'RC-0000-00000001', Medio: 'Medio Ficticio 1', Total: 111111.11,
+        detalle: [
+          { concepto: 'CUOTA FICTICIA - DETALLE', materia: 'ARANCEL DE PRUEBA', comprobante: 'FC-0000-00000001', monto: 100000 },
+          { concepto: 'Gastos Y Recargos Fa - C - 0000', materia: null, comprobante: 'FC-0000-00000001', monto: 1745.15 },
+        ],
+        conRecargo: true,
+      },
       { 'Fecha Pago': '2030-09-10', 'Nro. Recibo': 'RC-0000-00000002', Medio: 'Medio Ficticio 2', Total: 22222.22 },
     ]);
   });

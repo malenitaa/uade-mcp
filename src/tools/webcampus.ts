@@ -85,14 +85,16 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     'webcampus_account_balance',
     {
       title: 'Tuition account',
-      description: 'Overdue debt, upcoming due dates and recent payments. Cannot pay.',
+      description: 'Overdue debt, upcoming due dates and payments (newest first) with their breakdown per subject and late fees (conRecargo). Cannot pay.',
       inputSchema: { allPayments: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
     ({ allPayments }) =>
       read(async () => {
         const c = await wc.cuenta();
-        return allPayments ? c : { ...c, pagos: c.pagos.slice(0, 5), pagosTotales: c.pagos.length };
+        return allPayments
+          ? c
+          : { ...c, pagos: c.pagos.slice(0, 5), pagosTotales: c.pagos.length, pagosConRecargo: c.pagos.filter((p) => p.conRecargo).length };
       }),
   );
 

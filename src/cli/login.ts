@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 import { saveSession } from '../auth/store.js';
 import { INSCRIPCIONES, INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
+import { SHAREPOINT, SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
 import { SESSION_ACCOUNT, WEBCAMPUS } from '../sources/webcampus/client.js';
 
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
@@ -53,7 +54,7 @@ export async function login(): Promise<void> {
       '  1. Iniciá sesión con tu cuenta de UADE (lo escribís vos, en la página de Microsoft).',
       '  2. Cuando veas tu WebCampus, la ventana se cierra sola.',
       '',
-      'Qué se guarda: solo las cookies de sesión de WebCampus y de Inscripciones, en el llavero de tu sistema.',
+      'Qué se guarda: solo las cookies de sesión de WebCampus, Inscripciones y SharePoint de UADE, en el llavero de tu sistema.',
       'Qué NO se guarda: tu contraseña, tu sesión de Microsoft ni el historial del navegador.',
       '',
     ].join('\n'),
@@ -95,6 +96,20 @@ export async function login(): Promise<void> {
       }
     } catch {
       console.log('No se pudo abrir Inscripciones (WebCampus quedó guardado igual). Las tools de inscripciones van a pedir login.');
+    }
+
+    // SharePoint de UADE (PDF de aranceles, apuntes): mismo login de Microsoft.
+    await page.goto(`${SHAREPOINT}/`);
+    try {
+      await page.waitForURL((u) => u.origin === SHAREPOINT, { timeout: 60_000 });
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+      const sp = (await context.cookies(SHAREPOINT)).filter((c) => /^(FedAuth|rtFa)$/.test(c.name));
+      if (sp.length) {
+        saveSession(SHAREPOINT_ACCOUNT, sp.map((c) => `${c.name}=${c.value}`).join('; '));
+        console.log(`Listo: sesión de SharePoint guardada (${sp.map((c) => c.name).join(', ')}).`);
+      } else console.log('SharePoint no dejó sesión: el PDF de aranceles no va a estar disponible.');
+    } catch {
+      console.log('No se pudo abrir SharePoint (lo demás quedó guardado igual).');
     }
   } finally {
     await browser.close();

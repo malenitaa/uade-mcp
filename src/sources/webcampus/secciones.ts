@@ -4,12 +4,14 @@
 import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
 import { WEBCAMPUS } from './client.js';
+import { SharePointClient } from '../sharepoint/index.js';
 import { WebCampusClient } from './client.js';
 import { PageChangedError } from './parse.js';
 
 // Número = ítem del menú (Principal.aspx?MenuItemId=N); texto = ruta directa en WebCampus.
 export const SECCIONES = {
   wifi: '/MiContenido/Wifi.aspx',
+  aranceles_pdf: 160, // la página de Aranceles enlaza al PDF vigente en SharePoint (montos, vencimientos)
   aranceles: 160,
   materias_intensivas_mri: 173,
   carreras: 83,
@@ -90,13 +92,23 @@ export function fragmentos(texto: string, consulta: string, radio = 350): string
 export class Secciones {
   private cache = new Map<Seccion, { at: number; data: Omit<TextoSeccion, 'recortado'> }>();
 
-  constructor(private readonly client = new WebCampusClient()) {}
+  constructor(
+    private readonly client = new WebCampusClient(),
+    private readonly sharepoint = new SharePointClient(),
+  ) {}
 
   private async leer(seccion: Seccion): Promise<Omit<TextoSeccion, 'recortado'>> {
     const hit = this.cache.get(seccion);
     if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
     const destino = SECCIONES[seccion];
     const r = await this.client.get(typeof destino === 'number' ? `/Principal.aspx?MenuItemId=${destino}` : destino);
+    if (seccion === 'aranceles_pdf') {
+      const link = cheerio.load(r.html)('a[href*="sharepoint.com"]').first().attr('href');
+      if (!link) throw new PageChangedError('aranceles (link al PDF)');
+      const data = { seccion, fuente: link, texto: (await leerPdf(await this.sharepoint.descargar(link))).texto };
+      this.cache.set(seccion, { at: Date.now(), data });
+      return data;
+    }
     const esPdf = r.bytes[0] === 0x25 && r.bytes[1] === 0x50; // "%P"
     let texto = esPdf ? (await leerPdf(r.bytes)).texto : textoPagina(r.html);
     if (!esPdf) {

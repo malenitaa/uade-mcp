@@ -344,8 +344,15 @@ export function parseHistorial(html: string): Historial {
 
 // ── Cuenta corriente ──────────────────────────────────────────────────────────
 
+export interface LineaDetalle {
+  concepto: string;
+  materia: string | null;
+  comprobante: string | null;
+  monto: number | null;
+}
+
 export interface FilaCuenta {
-  [columna: string]: string | number | null;
+  [columna: string]: string | number | null | LineaDetalle[] | boolean;
 }
 
 export interface Cuenta {
@@ -369,9 +376,22 @@ function parseTablaCuenta($: cheerio.CheerioAPI, id: string): FilaCuenta[] {
       const key = headers[i] ?? `col${i + 1}`;
       fila[key] = /^\$/.test(v) ? parseMoney(v) : /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v) ? parseFecha(v) : orNull(v);
     });
+    // El desplegable de cada pago es la fila siguiente con una tabla .adentro: materias, gastos, recargos.
+    const detalle: LineaDetalle[] = [];
+    $(tr).next('tr').find('table.adentro tr.grilla').each((_, d) => {
+      const td = $(d).children('td').map((_, c) => clean($(c).text())).get();
+      if (td.length < 4) return; // "Descargar Factura - …"
+      detalle.push({ concepto: td[0] ?? '', materia: orNull(td[1] ?? ''), comprobante: orNull(td[2] ?? ''), monto: parseMoney(td[3] ?? '') });
+    });
+    if (detalle.length) {
+      fila.detalle = detalle;
+      fila.conRecargo = detalle.some((l) => /recargo/i.test(l.concepto));
+    }
     rows.push(fila);
   });
-  return rows;
+  // UADE lista de más viejo a más nuevo: se devuelve lo más reciente primero.
+  const fecha = (f: FilaCuenta) => String(Object.values(f).find((v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ?? '');
+  return rows.sort((a, b) => fecha(b).localeCompare(fecha(a)));
 }
 
 export function parseCuenta(html: string): Cuenta {
