@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { MateriaHistorial } from '../sources/webcampus/parse.js';
+import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
 
 const idAula = z.string().regex(/^\d+$/).describe('from webcampus_current_courses');
@@ -109,7 +110,7 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     ({ query }) =>
       read(async () => {
         const r = await wc.examenesPrevios(query);
-        return { filtro: r.filtro, examenes: r.examenes.map((e) => ({ ...e, aula: e.aula === 'A/C' ? 'a confirmar' : e.aula })) };
+        return { aviso: UNTRUSTED_NOTE, filtro: r.filtro, examenes: r.examenes.map((e) => ({ ...e, aula: e.aula === 'A/C' ? 'a confirmar' : e.aula })) };
       }),
   );
 

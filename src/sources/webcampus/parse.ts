@@ -412,6 +412,8 @@ export interface Docente {
   email: string | null;
 }
 
+const ROLES_DOCENTES = /^(docente|profesor(a)?|titular|adjunt[oa]|ayudante|jtp|jefe de trabajos pr[aá]cticos|coordinador(a)?|tutor(a)?|director(a)? de carrera)\b/i;
+
 export function parseDocentes(html: string): Docente[] {
   const $ = cheerio.load(html);
   requireAnchor($, '#tableintegrantes', 'integrantes del curso');
@@ -423,7 +425,9 @@ export function parseDocentes(html: string): Docente[] {
   const out: Docente[] = [];
   table.find('tbody tr').each((_, tr) => {
     const td = $(tr).children('td').map((_, c) => clean($(c).text())).get();
-    if (iRol < 0 || /alumn/i.test(td[iRol] ?? '') || !(td[iRol] ?? '')) return;
+    // Lista blanca: solo roles de equipo docente. Cualquier otro rol (alumno, estudiante, oyente,
+    // invitado…) son datos de terceros y no salen.
+    if (iRol < 0 || !ROLES_DOCENTES.test(td[iRol] ?? '')) return;
     const email = td[iEmail] ?? '';
     out.push({ nombre: td[iNombre] ?? '', email: /^[^@\s]+@[^@\s]+$/.test(email) ? email : null });
   });

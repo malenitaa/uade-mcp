@@ -66,6 +66,8 @@ describe('adjuntos para mostrar en Finder', () => {
   });
   it.each([
     ['carpeta oculta', () => join(home, '.ssh', 'id_rsa')],
+    ['fuera de Escritorio/Documentos/Descargas', () => { mkdirSync(join(home, 'Library'), { recursive: true }); writeFileSync(join(home, 'Library', 'Cookies.pdf'), 'x'); return join(home, 'Library', 'Cookies.pdf'); }],
+    ['tipo no permitido', () => { writeFileSync(join(home, 'Downloads', 'script.sh'), 'x'); return join(home, 'Downloads', 'script.sh'); }],
     ['AppData de Windows', () => join(home, 'AppData', 'Login Data')],
     ['fuera de la carpeta personal', () => '/etc/hosts'],
     ['subir con ..', () => join(home, 'Downloads', '..', '..', 'etc', 'hosts')],

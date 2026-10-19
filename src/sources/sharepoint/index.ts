@@ -4,6 +4,9 @@ import { keychainStore, SessionClient, type SessionStore } from '../../net/sessi
 
 export const SHAREPOINT = 'https://uadeeduar.sharepoint.com';
 export const SHAREPOINT_ACCOUNT = 'sharepoint';
+// La sesión de SharePoint (rtFa) abre todo Microsoft 365 del alumno: se usa solo en estos sitios.
+// Para sumar otro (por ejemplo, apuntes de una materia), agregarlo acá a conciencia.
+export const SITIOS_PERMITIDOS = [/^\/:[a-z]:\/s\/ArchivosAranceles\//i, /^\/sites\/ArchivosAranceles\//i];
 
 export class SharePointClient extends SessionClient {
   constructor(store: SessionStore = keychainStore(SHAREPOINT_ACCOUNT)) {
@@ -14,6 +17,7 @@ export class SharePointClient extends SessionClient {
   async descargar(link: string): Promise<Uint8Array> {
     const u = new URL(link, SHAREPOINT);
     if (u.origin !== SHAREPOINT) throw new Error('Solo se descargan archivos del SharePoint de UADE.');
+    if (!SITIOS_PERMITIDOS.some((r) => r.test(u.pathname))) throw new Error('Ese sitio de SharePoint no está habilitado en el MCP.');
     u.searchParams.set('download', '1');
     const page = await this.get(u.pathname + u.search);
     if (!(page.bytes[0] === 0x25 && page.bytes[1] === 0x50)) {

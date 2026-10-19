@@ -35,7 +35,8 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
   let cookie = req.cookie;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const headers = new Headers(req.headers);
+    // Headers propios solo al host original (mañana puede haber un Authorization).
+    const headers = new Headers(url.host === originHost ? req.headers : undefined);
     if (cookie && url.host === originHost) headers.set('cookie', cookie);
 
     const res = await fetch(url, {
@@ -58,7 +59,7 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
       // en vez de viajar sin cifrar (y en vez de fallar).
       if (next.protocol === 'http:' && ALLOWED_HOSTS.has(next.hostname.toLowerCase())) next.protocol = 'https:';
       url = assertAllowed(next);
-      if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
+      if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST') || url.host !== originHost) {
         method = 'GET';
         body = undefined;
       }

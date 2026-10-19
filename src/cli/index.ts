@@ -63,8 +63,10 @@ export async function runCli(args: string[]): Promise<void> {
     case 'estado': {
       const s = loadSession(SESSION_ACCOUNT);
       console.log(s ? `Sesión de WebCampus guardada el ${s.savedAt}.` : 'Sin sesión de WebCampus. Corré: uade-mcp login');
-      const si = loadSession(INSCRIPCIONES_ACCOUNT);
-      console.log(si ? `Sesión de Inscripciones guardada el ${si.savedAt}.` : 'Sin sesión de Inscripciones. Corré: uade-mcp login');
+      for (const [cuenta, nombre] of [[INSCRIPCIONES_ACCOUNT, 'Inscripciones'], [SHAREPOINT_ACCOUNT, 'SharePoint']] as const) {
+        const x = loadSession(cuenta);
+        console.log(x ? `Sesión de ${nombre} guardada el ${x.savedAt}.` : `Sin sesión de ${nombre}. Corré: uade-mcp login`);
+      }
       const granted = await loadGranted();
       for (const [p, d] of Object.entries(PERMISSIONS)) console.log(`${granted.has(p as Permission) ? '✅' : '⛔'} ${p}: ${d}`);
       return;
@@ -72,6 +74,8 @@ export async function runCli(args: string[]): Promise<void> {
 
     case 'permitir': {
       const p = asPermission(arg);
+      // Que lo tipee una persona: no se acepta por tubería (echo … | uade-mcp permitir …).
+      if (!process.stdin.isTTY) throw new Error('permitir solo se puede usar desde una terminal, escribiendo vos la confirmación.');
       console.log(`\nEsto permite: ${PERMISSIONS[p]}\n`);
       const rl = createInterface({ input: process.stdin, output: process.stdout });
       const answer = (await rl.question(`Para habilitarlo escribí exactamente "${p}" (cualquier otra cosa cancela): `)).trim();

@@ -26,7 +26,7 @@ export function registerPlanUadeTools(
         faculty: z.enum(FACULTADES).optional().describe('only if asked'),
         open: z.boolean().default(true),
       },
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     ({ plan, faculty, open: abrir }) =>
       run(granted, 'webcampus.leer', async () => {

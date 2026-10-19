@@ -9,11 +9,19 @@ Por favor, no abras un issue público para temas de seguridad.
 
 | Garantía | Dónde | Test |
 |---|---|---|
-| Solo HTTPS, a la allowlist de hosts de UADE y Microsoft. Cada redirección se vuelve a validar | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
-| Lista negra: pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión | `src/net/policy.ts` | `test/policy.test.ts` |
-| Permisos con nombre. Escrituras apagadas por defecto. Config inválida → falla cerrado | `src/auth/permissions.ts` | pendiente |
-| Escrituras en dos pasos, de un solo uso, vencen a los 5 min y se confirman por elicitation (sin elicitation no hay escrituras) | `src/auth/confirm.ts` | `test/confirm.test.ts` |
-| El contenido de terceros se marca como no confiable | `src/untrusted.ts` | pendiente |
+| Solo HTTPS a la allowlist de UADE y Microsoft; cada redirección se revalida; http→https solo para hosts permitidos | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
+| Lista negra (pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión) en URLs y en postbacks | `src/net/policy.ts`, `src/net/session.ts` | `test/policy.test.ts`, `test/auditoria.test.ts` |
+| Cookies, headers y body solo al host que corresponde; nada sale del origen de cada sitio | `src/net/http.ts`, `src/net/session.ts` | `test/webcampus-client.test.ts`, `test/auditoria.test.ts` |
+| Sesiones en el llavero; logout efectivo aunque el MCP esté abierto | `src/auth/store.ts`, `src/net/session.ts` | `test/auditoria.test.ts` |
+| Nunca datos de compañeros (lista blanca de roles docentes) | `src/sources/webcampus/parse.ts` | `test/auditoria.test.ts` |
+| Texto de terceros marcado como información, no instrucciones | `src/untrusted.ts`, `src/tools/*` | `test/auditoria.test.ts` |
+| Borradores solo a @uade.edu.ar, con aviso si no es docente de tus materias; la tool pide aprobación | `src/sources/mail/draft.ts`, `src/tools/mail.ts` | `test/common.test.ts` |
+| Adjuntos solo de Escritorio/Documentos/Descargas/iCloud Drive, tipos de documento, sin atajos | `src/net/open-browser.ts` | `test/common.test.ts` |
+| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por Excel | varios | `test/previos.test.ts` |
+| Sin telemetría; dependencias en versiones exactas | `package.json` | — |
+
+La auditoría completa, con cada hallazgo, los controles OWASP/NIST/ISO y los riesgos aceptados,
+está en [docs/AUDITORIA.md](docs/AUDITORIA.md).
 
 ## Reglas para contribuir
 

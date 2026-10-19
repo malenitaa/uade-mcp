@@ -2,6 +2,7 @@
 // (allowlist + lista negra). Si la sesión venció no reintenta: pide `uade-mcp login`.
 import { loadSession, saveSession } from '../auth/store.js';
 import { mergeCookies, safeFetch } from './http.js';
+import { DENY_RULES, PolicyError } from './policy.js';
 
 // El comando de login tal como lo tiene que escribir la persona en SU compu: si el MCP corre
 // desde una carpeta (node …/dist/index.js), con esa ruta; si está instalado, `uade-mcp login`.
@@ -58,7 +59,11 @@ export class SessionClient {
   }
 
   // Postback de ASP.NET WebForms: reenvía el estado del formulario y el control que lo dispara.
-  postback(path: string, form: Record<string, string>, eventTarget: string): Promise<Page> {
+  async postback(path: string, form: Record<string, string>, eventTarget: string): Promise<Page> {
+    // El control que dispara el postback sale del HTML de la página: se chequea con la misma lista
+    // negra que las URLs (por ejemplo, el botón de cerrar sesión).
+    const t = eventTarget.toLowerCase();
+    for (const r of DENY_RULES) if (r.pattern.test(t)) throw new PolicyError(`bloqueado por política: ${r.motivo}`);
     const body = new URLSearchParams({ ...form, __EVENTTARGET: eventTarget, __EVENTARGUMENT: '' });
     return this.request(path, {
       method: 'POST',
@@ -71,11 +76,14 @@ export class SessionClient {
     path: string,
     init: { method: 'GET' | 'POST'; body?: URLSearchParams; headers?: Record<string, string> },
   ): Promise<Page> {
-    // El llavero es la fuente de verdad: si la persona volvió a iniciar sesión con el MCP
-    // abierto, se toma la sesión nueva sin tener que reiniciar el cliente.
-    this.cookie = this.store.load() ?? this.cookie;
+    // El llavero es la fuente de verdad: si la persona volvió a iniciar sesión con el MCP abierto
+    // se toma la sesión nueva, y si hizo logout no queda nada en memoria que la resucite.
+    this.cookie = this.store.load();
     if (!this.cookie) throw new SessionExpiredError(this.site.nombre);
-    const res = await safeFetch(new URL(path, this.site.origin), { ...init, cookie: this.cookie });
+    // Un path como "//otro-host/x" resolvería fuera del sitio y le mandaría estas cookies a otro host.
+    const target = new URL(path, this.site.origin);
+    if (target.origin !== this.site.origin) throw new PolicyError(`dirección fuera de ${this.site.nombre}`);
+    const res = await safeFetch(target, { ...init, cookie: this.cookie });
 
     if (res.setCookies.length) {
       const next = mergeCookies(this.cookie, res.setCookies);

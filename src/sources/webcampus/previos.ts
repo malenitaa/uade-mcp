@@ -1,7 +1,7 @@
 // Cronograma de exámenes previos: WebCampus lo publica como un Excel adjunto a una novedad
 // ("Exámenes Previos (noviembre - diciembre)…" → /DocsDownload/Novedades/<id>_<n>_previos….xlsx).
 import * as cheerio from 'cheerio';
-import { unzipSync } from 'fflate';
+import { Unzip, UnzipInflate } from 'fflate';
 import { readSheet } from 'read-excel-file/node';
 import { parseFecha } from './parse.js';
 
@@ -48,18 +48,24 @@ function fecha(v: unknown): string | null {
 
 const MAX_DESCOMPRIMIDO = 60 * 1024 * 1024;
 
-// Un .xlsx es un zip: antes de abrirlo se suma el tamaño descomprimido declarado de cada parte,
-// para que un archivo armado ("zip bomb") no agote la memoria.
+// Un .xlsx es un zip: antes de abrirlo se descomprime contando los bytes REALES (los tamaños que
+// declara el zip se pueden falsear), y se corta si pasa el tope: un "zip bomb" no agota la memoria.
 export function assertXlsxRazonable(bytes: Uint8Array): void {
   let total = 0;
+  let archivos = 0;
+  const unzip = new Unzip((file) => {
+    archivos++;
+    file.ondata = (err, chunk) => {
+      if (err) throw err;
+      total += chunk.length;
+      if (total > MAX_DESCOMPRIMIDO) throw new Error('demasiado grande');
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
   try {
-    unzipSync(bytes, {
-      filter: (f) => {
-        total += f.originalSize;
-        if (total > MAX_DESCOMPRIMIDO) throw new Error('demasiado grande');
-        return false; // no descomprime nada: solo mira el índice
-      },
-    });
+    unzip.push(bytes, true);
+    if (!archivos) throw new Error('vacío');
   } catch {
     throw new Error('El Excel de exámenes previos no es válido o es sospechosamente grande; no se abrió.');
   }

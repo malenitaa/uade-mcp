@@ -213,7 +213,7 @@ que usa WebCampus (`3.1.062`, …), así que el mapeo es directo.
 **Diseño:** el MCP **no le habla a ningún servidor de PlanUADE**. Arma un link así:
 
 ```
-https://planuade.ar/fain#importar=<base64url(JSON firmado con hash de integridad)>
+https://planuade.ar/fain#importar=<base64url(JSON con un hash de integridad: detecta links cortados, NO es una firma)>
 ```
 
 - Lo que va después del `#` **no viaja al servidor**: el navegador no lo manda. Vercel no lo ve y no

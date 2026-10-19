@@ -38,6 +38,9 @@ export function openInBrowser(raw: string, exec: typeof execFile = execFile): Pr
 // Muestra archivos locales seleccionados en Finder (o abre su carpeta en otros sistemas), para
 // arrastrarlos a un borrador. No sube ni lee el archivo. Solo archivos comunes dentro de tu
 // carpeta personal y fuera de carpetas ocultas (.ssh, .config, …).
+const CARPETAS_DOCUMENTOS = ['Desktop', 'Documents', 'Downloads', ['Library', 'Mobile Documents', 'com~apple~CloudDocs'].join(sep)];
+const EXTENSIONES_DOCUMENTO = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf|txt|csv|md|pages|numbers|key|png|jpe?g|gif|heic|zip)$/i;
+
 export function assertRevealablePath(raw: string, home = homedir()): string {
   const pedido = resolve(raw.replace(/^~(?=$|\/)/, home));
   if (!existsSync(pedido)) throw new Error(`No encontré el archivo: ${raw}`);
@@ -45,6 +48,12 @@ export function assertRevealablePath(raw: string, home = homedir()): string {
   const p = realpathSync(pedido);
   home = realpathSync(home);
   if (!p.startsWith(home + sep)) throw new Error(`Solo se pueden mostrar archivos de tu carpeta personal: ${raw}`);
+  // Solo carpetas de documentos y tipos de documento: nunca ~/Library, perfiles de navegador, etc.
+  const rel = p.slice(home.length + 1);
+  if (!CARPETAS_DOCUMENTOS.some((c) => rel === c || rel.startsWith(c + sep))) {
+    throw new Error(`Solo muestro archivos de Escritorio, Documentos, Descargas o iCloud Drive: ${raw}`);
+  }
+  if (!EXTENSIONES_DOCUMENTO.test(p)) throw new Error(`Ese tipo de archivo no se adjunta desde acá: ${raw}`);
   // Carpetas ocultas (.ssh, .config…) y, en Windows, AppData (perfiles de navegador, credenciales).
   if (p.slice(home.length).split(/[\\/]/).some((part) => part.startsWith('.') || /^appdata$/i.test(part))) {
     throw new Error(`No muestro archivos en carpetas ocultas o de sistema: ${raw}`);
