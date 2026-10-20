@@ -1,0 +1,33 @@
+# Publica en npm SOLO desde acá, al crear un tag vX.Y.Z que coincida con package.json. Usa
+# "trusted publishing" (OIDC): no hay token de npm guardado en ningún lado que se pueda robar, y
+# el paquete sale con provenance firmada que apunta a este repo y este commit. Antes de publicar
+# corre la misma revisión que el CI. Quien quiera verificar lo instalado: `npm audit signatures`.
+name: publicar
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: REVISAR_TODO=1 npm run revisar
+      - name: El tag tiene que ser la versión de package.json
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} ≠ package.json $v"; exit 1; }
+          grep -q "version: '$v'" src/index.ts || { echo "src/index.ts no dice la versión $v"; exit 1; }
+      - run: npm publish --provenance --access public

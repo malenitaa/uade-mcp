@@ -27,9 +27,13 @@ for (const [nombre, cmd] of pasos) {
   catch (e) { fallo = true; console.log('FALLÓ\n' + (e.stdout?.toString() || e.message).slice(-1500)); }
 }
 
-// Secretos y datos personales en lo que se va a commitear (staged).
-process.stdout.write('• Secretos y datos personales en el diff… ');
-const diff = execSync('git diff --cached -U0', { encoding: 'utf8' });
+// Secretos y datos personales: en lo que se va a commitear (staged) o, en CI (REVISAR_TODO=1), en
+// todos los archivos versionados.
+const todo = process.env.REVISAR_TODO === '1';
+process.stdout.write(todo ? '• Secretos y datos personales en todo el repo… ' : '• Secretos y datos personales en el diff… ');
+const diff = todo
+  ? execSync('git ls-files -z', { encoding: 'utf8' }).split('\0').filter(Boolean).map((f) => { try { return readFileSync(f, 'utf8').split('\n').map((l) => '+' + l).join('\n'); } catch { return ''; } }).join('\n')
+  : execSync('git diff --cached -U0', { encoding: 'utf8' });
 const PATRONES = [
   /(FedAuth|rtFa|ASPXAUTH|sessionuade|WebCampusAADCookie)=[A-Za-z0-9%._-]{8,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,

@@ -27,6 +27,22 @@ No abras un issue público para temas de seguridad.
 La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en
 [docs/AUDITORIA.md](docs/AUDITORIA.md).
 
+## Cadena de suministro (que lo que instalás sea lo que está en el repo)
+
+- **Publicación solo desde GitHub Actions** (`.github/workflows/publicar.yml`), al crear un tag `vX.Y.Z`
+  que coincida con `package.json`. Usa *trusted publishing* (OIDC): no existe ningún token de npm guardado
+  que se pueda robar, y cada versión sale con **provenance** firmada que apunta a este repo y a este commit.
+- **Verificar lo instalado:** `npm audit signatures` en una carpeta con `uade-mcp` instalado comprueba la
+  firma y la provenance contra el registro.
+- **CI en cada push y PR** (`revisar.yml`): tipos, tests, `npm audit` y búsqueda de secretos en todo el
+  repo, en Node 20 y 22, sin credenciales de nadie.
+- **Rama `main` protegida:** sin force-push ni borrado, historial lineal, y solo por PR con el CI en verde;
+  la regla aplica también a quien administra el repo.
+- **Dependabot** avisa (y propone el PR) ante vulnerabilidades en dependencias o acciones; el escaneo de
+  secretos de GitHub, con protección al push, bloquea tokens que intenten entrar.
+- **Dependencias con versión exacta** y `package-lock.json`; `npm ci --ignore-scripts` en CI: ninguna
+  dependencia corre código al instalarse.
+
 ## Lo que queda fuera de estas garantías
 
 - **`experimentos/`**: el servidor no carga nada de esa carpeta, no se compila ni se testea con el resto
