@@ -12,3 +12,9 @@ capturas/
 # Config local de Claude Code para probar el MCP solo en esta carpeta (tiene rutas de tu compu)
 .mcp.json
 teams-profile/
+
+# Espacio para probar código propio fuera del MCP: solo se versiona su README
+experimentos/*
+!experimentos/README.md
+
+.DS_Store

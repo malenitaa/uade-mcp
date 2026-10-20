@@ -1,82 +1,166 @@
-# UADE-MCP
+# uade-mcp
 
-MCP no oficial para que tu agente (Claude, ChatGPT o cualquier cliente MCP) lea tu **WebCampus**,
-busque e inscriba en **PIA** y, más adelante, maneje **Teams** y el **mail** de UADE. También le
-pasa tus materias aprobadas a [Plan UADE](https://planuade.ar).
+Servidor [MCP](https://modelcontextprotocol.io) **no oficial** para alumnos de UADE: le da a tu agente de
+IA (Claude, ChatGPT o cualquier cliente MCP) acceso de **lectura** a tu WebCampus, a las inscripciones,
+a los apuntes de tus materias en Teams/SharePoint y a la información oficial que publica la universidad.
 
-Proyecto hecho por estudiantes, sin afiliación con la universidad. Página: [planuade.ar/mcp](https://planuade.ar/mcp).
+Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu contraseña.
 
-> **Estado: v0, en construcción.** Funciona la lectura de WebCampus: períodos, materias del cuatrimestre
-> (horario, sede, notas, fecha de final), asistencia, historial académico y cuenta corriente.
-> También exámenes previos, docentes, ventanas de inscripción y oferta de clases.
-> Inscribirse en PIA, Teams y mail vienen después.
+> Proyecto de estudiantes, sin afiliación con UADE. **Repositorio privado y en desarrollo (v0).**
 
-## Uso
+## Qué podés preguntarle
+
+- "¿Qué materias puedo cursar el próximo cuatrimestre y qué finales puedo rendir?"
+- "Armame la semana con estas 5 materias, solo de noche y sin huecos."
+- "¿Cuándo es el final de Gestión de Personas y cuánto sale el derecho a examen?"
+- "¿Cuánto debo? ¿Cuándo vence la próxima cuota?"
+- "¿Cuánto sale la cuota de mi carrera a la mañana y a la noche?"
+- "Leeme el último apunte que subió el docente de Aplicaciones Interactivas."
+- "¿Qué hay de nuevo en UADE? ¿Dónde reservo el estacionamiento?"
+- "Armame un mail para mi docente pidiendo revisión del parcial." (queda en borrador, lo mandás vos)
+
+## Requisitos
+
+- Node.js 20 o más nuevo.
+- Chrome, Edge o Brave instalado (para iniciar sesión con tu cuenta de UADE).
+- macOS, Windows o Linux (probado en macOS).
+
+## Instalación
 
 ```bash
-npm install && npm run build
-node dist/index.js login      # se abre el navegador; iniciás sesión vos con tu cuenta de UADE
-node dist/index.js estado     # sesión y permisos
-node dist/index.js doctor     # prueba todo contra tu cuenta, sin mostrar datos personales
-node dist/index.js login-teams  # (opcional) iniciás sesión en Teams para leer novedades de los canales
+git clone https://github.com/malenitaa/uade-mcp.git
+cd uade-mcp
+npm install
+npm run build
+node dist/index.js login     # se abre una ventana: iniciás sesión vos con tu cuenta de UADE
+node dist/index.js doctor    # prueba todo contra tu cuenta sin mostrar datos personales
 ```
 
-Para sumarlo a Claude Code (lo corrés vos; el MCP nunca toca la configuración de tu cliente):
+Sumarlo a Claude Code (el MCP nunca toca la configuración de tu cliente; lo hacés vos):
 
 ```bash
 claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
 ```
 
+En cualquier otro cliente MCP: comando `node`, argumento `/ruta/a/uade-mcp/dist/index.js`, transporte stdio.
+
+### Sesión
+
+Iniciás sesión una vez. WebCampus vence cada ~3 horas: el MCP la renueva solo, sin ventana, con la sesión
+de Microsoft que recuerda su perfil de navegador. Si Microsoft pide la clave o el segundo factor, el agente
+llama `uade_login` (o escribís `/uade:login`) y se abre la ventana para que la completes vos.
+
+### Comandos de terminal
+
+| Comando | Qué hace |
+|---|---|
+| `login` | Iniciar sesión (o renovarla sin ventana si se puede) |
+| `estado` | Qué sesiones hay guardadas y qué permisos están activos |
+| `doctor` | Prueba cada función contra tu cuenta y muestra solo cantidades |
+| `permitir <permiso>` / `revocar <permiso>` | Prende o apaga un permiso (solo desde una terminal, escribiéndolo vos) |
+| `logout` | Borra sesiones, la copia local cifrada, su clave y el perfil del navegador |
+
+## Herramientas
+
+Los nombres de las tools están en inglés (los agentes los entienden mejor); el servidor le pide al agente
+que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
+
+**Tu cursada**
+
 | Tool | Qué devuelve |
 |---|---|
 | `webcampus_terms` | Tus cuatrimestres |
-| `webcampus_current_courses` | Materias con día, horario, aula y sede, notas, fecha de final, links a Teams y apuntes |
-| `webcampus_attendance` | Presentes, inasistencias y detalle por clase |
-| `webcampus_transcript` | Todas las materias del plan con situación, nota y fecha, y el promedio |
-| `webcampus_account_balance` | Deuda, próximos vencimientos y pagos (solo lectura: no paga) |
-| `webcampus_course_calendar` | **Tus** fechas de parciales, recuperatorio y final de cada materia (de su planificación), con día, hora y aula |
-| `uade_academic_calendar` | Calendario académico y cronogramas oficiales (PDFs de UADE, encontrados desde el menú de WebCampus): semanas de parciales por turno y sede, feriados, inscripciones |
-| `webcampus_exam_schedule` | Fecha, hora, sede, clase y docentes de los finales (por defecto, de tus materias pendientes) |
-| `webcampus_teachers` | Nombre y mail del equipo docente de una materia (no datos de compañeros) |
-| `uade_enrollment_windows` | Ventanas de inscripción con apertura, cierre y si están abiertas |
-| `webcampus_class_offering` | Clases programadas de cada materia: sede, turno, días, horario, fechas |
-| `webcampus_schedule_planner` | Planificador de cursada: hasta 6 materias, combina una clase por materia sin solapamientos (filtros por turno, días y sede), ordenadas por menos días, menos huecos y menos sedes. Si no hay combinación, dice qué materias chocan |
-| `webcampus_course_materials` | Lista y lee los apuntes que el docente comparte en Teams ("Materiales de clase": Casos, Material Teórico…), por la API de SharePoint. Lee PDF, Word (.docx y .doc), Excel (.xlsx y .xls) y PowerPoint, o los baja a Descargas |
-| `pia_class_search` | Busca clases en PIA para una ventana abierta: sede, turno, días, horario, fechas, vacantes, régimen y las condiciones que PIA hace aceptar (no agrega nada al carrito). En verificación: PIA responde 401 al link fuera del navegador |
-| `uade_eligible_subjects` | Qué podés cursar y qué finales podés rendir: cruza tu historial con las correlativas del plan (las dos de WebCampus), marca lo que se dicta el próximo cuatrimestre y dice qué te falta en lo bloqueado |
-| `pia_prepare_enrollment` | Solo lectura: resumen exacto de una inscripción a materia (clase, sede, horario, fechas, cierre de ventana, cuotas, bajas) o a examen previo (si podés rendir, fechas del cronograma, se factura y no tiene baja). No inscribe |
-| `uade_open_enrollment_site` | Abre Inscripciones en una ventana visible con tu sesión iniciada, en la lista de ventanas. De ahí la inscripción y el Finalizar los hacés vos; el MCP no recorre PIA |
-| `teams_channel_news` | Novedades del canal General de una materia en Teams (lo último que posteó el docente). Experimental: usa un navegador propio; se activa con `login-teams` |
-| `webcampus_news` | Lo que UADE comunica en el home de WebCampus: banners (parking, aulas silenciosas, campañas…), novedades con sus adjuntos y agenda; lee los documentos enlazados (PDF, SharePoint, adjuntos) |
-| `uade_login` | Renueva la sesión sola (perfil de navegador que recuerda la sesión de Microsoft) o abre la ventana para iniciar sesión; también como prompt `/uade:login`. Nunca ve la contraseña |
-| `uade_tuition` | Aranceles oficiales por carrera y turno (matrícula cuatrimestral, cuota mensual de referencia por 5 materias, cuota por materia, derecho de admisión, vigencia), del PDF que enlaza WebCampus; sin carrera, la propia |
-| `webcampus_section` | Cualquier sección informativa del menú (aranceles, MRI, normativa, guía, becas, optativas, minors, comprobantes, marcaciones, códigos…), con búsqueda dentro del texto |
-| `email_compose_draft` | Abre en Outlook web un mail ya escrito (por ejemplo, a tu docente) para que lo revises y lo mandes vos. **No envía nada** y solo acepta direcciones @uade.edu.ar |
-| `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) en tu navegador con tus aprobadas, finales pendientes y cursadas; confirmás ahí |
+| `webcampus_current_courses` | Materias del cuatrimestre: día, horario, aula, sede, notas, fecha de final, links a Teams y apuntes |
+| `webcampus_attendance` | Presentes, faltas y detalle por clase |
+| `webcampus_course_calendar` | Fechas de parciales, recuperatorio y final de cada materia |
+| `webcampus_teachers` | Nombre y mail del equipo docente (nunca datos de compañeros) |
+| `webcampus_course_materials` | Lista, lee (PDF, Word, Excel, PowerPoint) o baja los apuntes de "Materiales de clase" |
+| `teams_channel_news` | Lo último que se publicó en el canal General de una materia (experimental) |
 
-Los nombres y descripciones de las tools están en inglés (así los entienden mejor todos los agentes),
-pero el servidor le indica al agente que **te responda en castellano rioplatense, con fechas dd/mm/aaaa y
-hora de 24 h**. Todo se lee en vivo desde UADE: no hay fechas cargadas a mano, así que se actualiza solo
-cada cuatrimestre.
+**Tu carrera**
 
-## Cómo trata tus datos
+| Tool | Qué devuelve |
+|---|---|
+| `webcampus_transcript` | Historial: aprobadas, finales pendientes, cursando, sin cursar y promedio |
+| `uade_eligible_subjects` | Qué podés cursar y qué finales podés rendir, cruzando historial y correlativas del plan |
+| `webcampus_exam_schedule` | Cronograma oficial de exámenes previos (por defecto, de tus finales pendientes) |
+| `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) con tu historial para importarlo; confirmás ahí |
 
-- **Corre en tu compu**, por stdio. No hay ningún servidor nuestro en el medio.
-- **Sin telemetría.** Solo habla con los dominios de UADE y de Microsoft. Cualquier otro host se bloquea en el código.
-- **Nunca ve tu contraseña.** El login es con Microsoft en un navegador; solo se guarda la cookie de sesión, en el llavero.
-- **Lectura por defecto.** Las escrituras (inscribirte, entregar, mandar mails) vienen apagadas. Las prendés
-  vos desde la terminal y cada una te pide confirmación en un diálogo que el agente no puede contestar solo.
-- **Hay cosas que no hace nunca:** pagar, darse de baja, desvincularse de materias, tocar tus datos personales.
+**Inscripciones**
 
-El detalle completo está en [docs/DISENO.md](docs/DISENO.md), [docs/COBERTURA.md](docs/COBERTURA.md) y [SECURITY.md](SECURITY.md).
+| Tool | Qué devuelve |
+|---|---|
+| `uade_enrollment_windows` | Ventanas de inscripción (materias, previos, bajas) con apertura, cierre y si están abiertas |
+| `webcampus_class_offering` | Clases de cada materia el próximo cuatrimestre: sede, turno, días, horario, fechas |
+| `webcampus_schedule_planner` | Combina hasta 6 materias sin solapamientos, con filtros, ordenadas por menos días y huecos |
+| `pia_class_search` | Clases en PIA con vacantes y condiciones (en verificación: PIA rechaza el acceso fuera del navegador) |
+| `pia_prepare_enrollment` | Resumen exacto de una inscripción a materia o a previo: qué, cuándo, cuánto y si tiene baja |
+| `uade_open_enrollment_site` | Abre Inscripciones con tu sesión iniciada; la inscripción y el Finalizar los hacés vos |
+
+**Plata y trámites**
+
+| Tool | Qué devuelve |
+|---|---|
+| `webcampus_account_balance` | Deuda, próximos vencimientos y pagos (no paga) |
+| `uade_tuition` | Aranceles oficiales por carrera y turno, del PDF vigente |
+
+**Información de UADE**
+
+| Tool | Qué devuelve |
+|---|---|
+| `webcampus_news` | Banners, novedades y agenda del inicio de WebCampus, y lo que enlazan |
+| `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, códigos… |
+| `uade_academic_calendar` | Calendario académico y cronogramas oficiales |
+
+**Utilidades**
+
+| Tool | Qué hace |
+|---|---|
+| `email_compose_draft` | Abre en Outlook web un mail ya escrito a una dirección @uade.edu.ar. No envía |
+| `uade_refresh` | Borra la copia local para releer de UADE |
+| `uade_login` | Renueva la sesión o abre la ventana para iniciarla |
+
+## Privacidad y seguridad
+
+- **Local.** Corre en tu compu por stdio; no hay ningún servidor del proyecto en el medio.
+- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código.
+- **Sin contraseñas.** Iniciás sesión vos, en la página de Microsoft. Se guardan cookies de sesión en el
+  llavero del sistema y la sesión de Microsoft en un perfil de navegador propio (`~/.uade-mcp/browser-profile`).
+- **Copia local cifrada** (AES-256-GCM, clave en el llavero) para no pedir lo mismo dos veces. Cada respuesta dice de cuándo es.
+- **Solo lectura.** No inscribe, no paga, no da de baja, no manda mails, no toca datos personales.
+- **Tus datos y nada más.** Nunca devuelve datos de otros alumnos.
+
+Detalle en [SECURITY.md](SECURITY.md) y en la [auditoría](docs/AUDITORIA.md).
+
+## Estructura
+
+```
+src/
+  index.ts        servidor MCP (sin argumentos) o CLI (con argumentos)
+  tools/          una tool por archivo temático: qué recibe, qué devuelve
+  sources/        cómo se lee cada sitio (WebCampus, Inscripciones, PIA, SharePoint, Teams…)
+  net/            política de red (allowlist y bloqueos), cliente HTTP, sesiones
+  auth/           login, permisos, llavero
+  cache/          copia local cifrada
+  cli/            comandos de terminal y doctor
+test/             tests con datos sintéticos (fixtures anonimizados)
+docs/             diseño, cobertura y auditoría
+scripts/          revisión pre-commit y utilidades
+experimentos/     tu espacio para probar código aparte del MCP (ver su README)
+```
 
 ## Desarrollo
 
 ```bash
 npm install
-npm test
+npm test           # tests
+npm run revisar    # lo mismo que corre antes de cada commit: tipos, tests, npm audit y secretos
 npm run build
 ```
+
+Activá el hook una vez: `git config core.hooksPath .githooks`.
+
+Documentación: [diseño](docs/DISENO.md) · [qué cubre](docs/COBERTURA.md) · [auditoría](docs/AUDITORIA.md).
 
 ## Licencia
 

@@ -1,7 +1,7 @@
 {
   "name": "uade-mcp",
-  "version": "0.0.1",
-  "description": "MCP no oficial para WebCampus, PIA y Teams de UADE. Corre local, sin telemetría.",
+  "version": "0.1.0",
+  "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

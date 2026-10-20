@@ -3,36 +3,40 @@
 ## Reportar un problema
 
 Usá el [formulario privado de GitHub](https://github.com/malenitaa/uade-mcp/security/advisories/new).
-Por favor, no abras un issue público para temas de seguridad.
+No abras un issue público para temas de seguridad.
 
-## Qué garantiza el código hoy
+## Qué garantiza el servidor
 
 | Garantía | Dónde | Test |
 |---|---|---|
-| Solo HTTPS a la allowlist de UADE y Microsoft; cada redirección se revalida; http→https solo para hosts permitidos | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
-| Lista negra (pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión) en URLs y en postbacks | `src/net/policy.ts`, `src/net/session.ts` | `test/policy.test.ts`, `test/auditoria.test.ts` |
-| Cookies, headers y body solo al host que corresponde; nada sale del origen de cada sitio | `src/net/http.ts`, `src/net/session.ts` | `test/webcampus-client.test.ts`, `test/auditoria.test.ts` |
-| Sesiones en el llavero; logout efectivo aunque el MCP esté abierto | `src/auth/store.ts`, `src/net/session.ts` | `test/auditoria.test.ts` |
+| Solo HTTPS a la allowlist de UADE y Microsoft; cada redirección se revalida | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
+| Bloqueos fijos (pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión) en URLs y postbacks | `src/net/policy.ts`, `src/net/session.ts` | `test/policy.test.ts`, `test/auditoria.test.ts` |
+| Cookies y headers solo al host que corresponde; nada sale del origen de cada sitio | `src/net/http.ts`, `src/net/session.ts` | `test/webcampus-client.test.ts` |
+| Nunca ve la contraseña: el login lo hace la persona en la página de Microsoft | `src/auth/login.ts` | — |
+| Sesiones en el llavero; perfil de navegador propio en `~/.uade-mcp/browser-profile`; `logout` borra todo | `src/auth/`, `src/cli/index.ts` | `test/auditoria.test.ts` |
+| Renovación automática de sesión: una por pedido vencido, sin bucles | `src/net/session.ts` | `test/login.test.ts` |
+| Copia local cifrada (AES-256-GCM, clave en el llavero) | `src/cache/cache.ts` | `test/cache.test.ts` |
 | Nunca datos de compañeros (lista blanca de roles docentes) | `src/sources/webcampus/parse.ts` | `test/auditoria.test.ts` |
 | Texto de terceros marcado como información, no instrucciones | `src/untrusted.ts`, `src/tools/*` | `test/auditoria.test.ts` |
-| Borradores solo a @uade.edu.ar, con aviso si no es docente de tus materias; la tool pide aprobación | `src/sources/mail/draft.ts`, `src/tools/mail.ts` | `test/common.test.ts` |
-| Adjuntos solo de Escritorio/Documentos/Descargas/iCloud Drive, tipos de documento, sin atajos | `src/net/open-browser.ts` | `test/common.test.ts` |
-| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por Excel | varios | `test/previos.test.ts` |
-| Sin telemetría; dependencias en versiones exactas | `package.json` | — |
+| No envía inscripciones: el resumen es de lectura y la ventana de Inscripciones la usa la persona | `src/sources/pia/alta.ts`, `src/tools/pia.ts` | `test/pia.test.ts` |
+| Mails solo como borrador a @uade.edu.ar; adjuntos solo de carpetas de documentos | `src/sources/mail/draft.ts`, `src/net/open-browser.ts` | `test/common.test.ts` |
+| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo | varios | `test/previos.test.ts` |
+| Sin telemetría; dependencias con versión exacta; `npm audit` en cada commit | `package.json`, `scripts/revisar.mjs` | hook pre-commit |
 
-| Teams: perfil de navegador propio y aislado (`<config>/teams-profile`), headless, solo para leer canales; `logout` lo borra | `src/sources/teams/index.ts`, `src/cli/index.ts` | doctor |
+La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en
+[docs/AUDITORIA.md](docs/AUDITORIA.md).
 
-> **Sobre Teams.** Leer los canales necesita correr el Teams web real en un navegador (no se puede
-> con `fetch`, y la API oficial de Microsoft está bloqueada para alumnos). Ese navegador contacta los
-> dominios de Microsoft, como si abrieras Teams vos. El perfil (con la sesión de Microsoft) queda en
-> `<config>/teams-profile`; es la sesión más poderosa que guarda el MCP y por eso es opt-in (`login-teams`)
-> y `logout` la borra. Es la parte más frágil: si Teams cambia su interfaz, deja de leer y lo avisa.
+## Lo que queda fuera de estas garantías
 
-La auditoría completa, con cada hallazgo, los controles OWASP/NIST/ISO y los riesgos aceptados,
-está en [docs/AUDITORIA.md](docs/AUDITORIA.md).
+- **`experimentos/`**: el servidor no carga nada de esa carpeta, no se compila ni se testea con el resto
+  y git la ignora. Lo que corras ahí corre con tus credenciales y bajo tu responsabilidad.
+- **Teams** se lee corriendo el Teams web real en el navegador del MCP: contacta dominios de Microsoft,
+  como si lo abrieras vos, y puede dejar de funcionar si Microsoft cambia la interfaz.
 
 ## Reglas para contribuir
 
 - **Nunca** commitees HTML, HAR, capturas o cookies reales. Los fixtures van anonimizados en `test/fixtures/`.
-- No se agregan dependencias que hagan llamadas de red propias (analytics, update checks, crash reporting).
-- Toda tool nueva que escriba necesita un permiso propio en `PERMISSIONS` y pasar por `DraftStore`.
+- No se agregan dependencias que hagan llamadas de red propias (analytics, chequeo de versiones, reporte de errores).
+- Toda tool que escriba algo necesita un permiso propio en `PERMISSIONS`, apagado por defecto, y la
+  confirmación de la persona en un diálogo que el agente no pueda contestar.
+- `npm run revisar` tiene que pasar antes de cada commit (el hook lo corre solo).
