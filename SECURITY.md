@@ -39,6 +39,8 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
   firma y la provenance contra el registro.
 - **CI en cada push y PR** (`revisar.yml`): tipos, tests, `npm audit` y búsqueda de secretos en todo el
   repo, en Node 20 y 22, sin credenciales de nadie.
+- **Commits firmados:** `main` solo acepta commits con firma verificada (clave SSH de quien mantiene el
+  proyecto, registrada en GitHub, o la firma de GitHub en los merges). Un commit que no sea de esa clave no entra.
 - **Rama `main` protegida:** sin force-push ni borrado, historial lineal, y solo por PR con el CI en verde;
   la regla aplica también a quien administra el repo.
 - **Dependabot** avisa (y propone el PR) ante vulnerabilidades en dependencias o acciones; el escaneo de
