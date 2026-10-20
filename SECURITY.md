@@ -21,6 +21,7 @@ No abras un issue público para temas de seguridad.
 | No envía inscripciones: el resumen es de lectura y la ventana de Inscripciones la usa la persona | `src/sources/pia/alta.ts`, `src/tools/pia.ts` | `test/pia.test.ts` |
 | Mails solo como borrador a @uade.edu.ar; adjuntos solo de carpetas de documentos | `src/sources/mail/draft.ts`, `src/net/open-browser.ts` | `test/common.test.ts` |
 | Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo | varios | `test/previos.test.ts` |
+| Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página), mails y números largos tapados, un envío por error por día, único path permitido en planuade.ar | `src/report/errores.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
 | Sin telemetría; dependencias con versión exacta; `npm audit` en cada commit | `package.json`, `scripts/revisar.mjs` | hook pre-commit |
 
 La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en

@@ -1,6 +1,7 @@
 // Shared helpers for tools: permission check, error handling and Argentine date format.
 import { requirePermission, type Permission } from '../auth/permissions.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
+import { reportarError } from '../report/errores.js';
 
 // Only readOnlyHint: the other annotations would repeat defaults and cost tokens on every message.
 export const READ_ONLY = { readOnlyHint: true } as const;
@@ -53,6 +54,7 @@ export async function run(
     // Modo degradado: si UADE cambió una página, se devuelve igual su texto plano, marcado como
     // sin estructura, para que el agente pueda responder mientras se actualiza el parser.
     if (err instanceof PageChangedError && err.texto) {
+      void reportarError(err, granted);
       return {
         content: [{ type: 'text', text: JSON.stringify({
           aviso: `${err.message} Mientras tanto, abajo va el texto de la página sin procesar: leelo con cuidado y decile al estudiante que la respuesta puede estar incompleta.`,
@@ -62,6 +64,8 @@ export async function run(
         }) }],
       };
     }
+    // Si la persona activó los reportes, se avisa al proyecto (sin datos); nunca frena la respuesta.
+    void reportarError(err, granted);
     // Error messages are already in Spanish: they are meant to be relayed to the student as is.
     return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
   }

@@ -1,6 +1,19 @@
 // Revisión de seguridad automática: corre en cada commit (hook pre-commit) y cuando quieras con
 // `npm run revisar`. Si algo falla, frena. No toca cuentas ni datos: solo el código del repo.
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
+function patronesLocales() {
+  try {
+    return readFileSync(join(process.env.UADE_MCP_HOME ?? join(homedir(), '.uade-mcp'), 'datos-personales.txt'), 'utf8')
+      .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+      .map((l) => new RegExp(l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+  } catch {
+    return [];
+  }
+}
 
 const pasos = [
   ['Compilación (tsc)', 'npx tsc --noEmit'],
@@ -21,8 +34,9 @@ const PATRONES = [
   /(FedAuth|rtFa|ASPXAUTH|sessionuade|WebCampusAADCookie)=[A-Za-z0-9%._-]{8,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
   /\b(gh[pous]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b/,
-  /\bmvillaabrille\b|\bvilla abrille\b/i,
-  /\b86454630-6a53-40cd-960d-c2ba61c66efc\b/,
+  // Datos personales de quien desarrolla (legajo, nombre, mails, ids): viven en un archivo local,
+  // fuera del repo, una línea por patrón (texto literal, sin distinguir mayúsculas).
+  ...patronesLocales(),
 ];
 const sumadas = diff.split('\n').filter((l) => l.startsWith('+') && !l.startsWith('+++'));
 const hits = sumadas.filter((l) => PATRONES.some((p) => p.test(l)));

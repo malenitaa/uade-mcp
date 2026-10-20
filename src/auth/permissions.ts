@@ -14,6 +14,8 @@ export const PERMISSIONS = {
     'Subir archivos como entrega en tareas de Teams en tu nombre. Cada entrega igual te pide confirmación. No permite mandar mensajes.',
   'mail.leer': 'Leer tu mail institucional.',
   'mail.enviar': 'Enviar mails desde tu cuenta institucional. Cada envío igual te pide confirmación.',
+  'reportes.errores':
+    'Avisarle al proyecto (planuade.ar) cuando UADE cambia una página o una tool falla, para que se arregle. Manda solo versión, nombre de la tool, tipo de error y qué página; nunca tu pregunta, tus datos ni el contenido. A lo sumo un aviso por error por día.',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;

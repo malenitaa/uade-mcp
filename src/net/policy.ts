@@ -12,6 +12,8 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   // Acortador de UADE Comunicación: los banners del home de WebCampus enlazan por acá. Solo se sigue
   // la redirección (sin cookies: no es un origen de sesión) hasta un host permitido.
   'comunicacion.short.gy',
+  // Solo para el reporte de errores opcional (permiso reportes.errores): un único path, ver DENY_RULES.
+  'planuade.ar',
   'login.microsoftonline.com',
   'graph.microsoft.com',
 ]);
@@ -31,6 +33,7 @@ export const DENY_RULES: readonly DenyRule[] = [
   { pattern: /\/home\/logout|lnkcerrarsesion/, motivo: 'cerrar sesión' },
   { pattern: /pago|cupon|mercadopago|pagofacil|rapipago/, motivo: 'pagos' },
   { pattern: /\bbaja|cambioasignaturapack/, motivo: 'bajas o cambios de inscripción' },
+  { pattern: /^planuade\.ar\/(?!api\/mcp-error$)/, motivo: 'a planuade.ar solo va el reporte de errores (si lo activaste)' },
 ];
 
 export class PolicyError extends Error {

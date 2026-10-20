@@ -2,16 +2,49 @@
   "name": "uade-mcp",
   "version": "0.1.0",
   "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "uade",
+    "webcampus",
+    "claude",
+    "universidad"
+  ],
+  "homepage": "https://planuade.ar/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malenitaa/uade-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/malenitaa/uade-mcp/issues"
+  },
+  "license": "MIT",
+  "author": "malenitaa",
+  "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "uade-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
-    "revisar": "node scripts/revisar.mjs"
+    "revisar": "node scripts/revisar.mjs",
+    "prepublishOnly": "npm run build && npm test"
   },
-  "license": "MIT",
-  "type": "module",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
     "@napi-rs/keyring": "2.1.1",
@@ -30,18 +63,5 @@
     "typescript": "7.0.2",
     "vitest": "5.0.5",
     "write-excel-file": "4.1.1"
-  },
-  "private": true,
-  "bin": {
-    "uade-mcp": "dist/index.js"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "SECURITY.md"
-  ]
+  }
 }

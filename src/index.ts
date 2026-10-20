@@ -8,6 +8,7 @@ import { runCli } from './cli/index.js';
 import { iniciarSesion } from './auth/login.js';
 import { setRenovador } from './net/session.js';
 import { registerLoginTools } from './tools/login.js';
+import { toolActual } from './report/contexto.js';
 import { registerCacheTools } from './tools/cache.js';
 import { registerCalendarioTools } from './tools/calendario.js';
 import { registerElegibilidadTools, registerInscripcionesTools, registerPlanCuatrimestreTools } from './tools/inscripciones.js';
@@ -49,6 +50,11 @@ if (args.length) {
       ].join('\n'),
     },
   );
+  // Cada handler corre sabiendo qué tool es (para el reporte de errores opcional).
+  const registrar = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
+  (server as unknown as { registerTool: unknown }).registerTool = (name: string, cfg: unknown, cb: (...a: unknown[]) => unknown) =>
+    registrar(name, cfg, (...a: unknown[]) => toolActual.run(name, () => cb(...a)));
+
   const granted = await loadGranted();
   // WebCampus vence cada ~3 h: cuando una tool se encuentra la sesión vencida, se renueva sola
   // (sin ventana, con la sesión de Microsoft que recuerda el perfil del navegador) y se reintenta.

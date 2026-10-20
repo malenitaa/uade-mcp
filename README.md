@@ -6,7 +6,7 @@ a los apuntes de tus materias en Teams/SharePoint y a la información oficial qu
 
 Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu contraseña.
 
-> Proyecto de estudiantes, sin afiliación con UADE. **Repositorio privado y en desarrollo (v0).**
+> Proyecto de estudiantes, sin afiliación con UADE. **Beta (v0.1):** probado en macOS con una cuenta de grado; Windows y Linux, en prueba.
 
 ## Qué podés preguntarle
 
@@ -27,22 +27,23 @@ Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu cont
 
 ## Instalación
 
+No hace falta clonar nada: `npx` baja el paquete y lo corre.
+
 ```bash
-git clone https://github.com/malenitaa/uade-mcp.git
-cd uade-mcp
-npm install
-npm run build
-node dist/index.js login     # se abre una ventana: iniciás sesión vos con tu cuenta de UADE
-node dist/index.js doctor    # prueba todo contra tu cuenta sin mostrar datos personales
+npx -y uade-mcp login     # se abre una ventana: iniciás sesión vos con tu cuenta de UADE
+npx -y uade-mcp doctor    # prueba todo contra tu cuenta sin mostrar datos personales
 ```
 
 Sumarlo a Claude Code (el MCP nunca toca la configuración de tu cliente; lo hacés vos):
 
 ```bash
-claude mcp add uade -- node /ruta/a/uade-mcp/dist/index.js
+claude mcp add uade -- npx -y uade-mcp
 ```
 
-En cualquier otro cliente MCP: comando `node`, argumento `/ruta/a/uade-mcp/dist/index.js`, transporte stdio.
+En cualquier otro cliente MCP: comando `npx`, argumentos `-y uade-mcp`, transporte stdio. Si preferís
+tenerlo instalado: `npm i -g uade-mcp` y después `uade-mcp login`.
+
+Desde el código (para desarrollar): `git clone`, `npm install`, `npm run build` y `node dist/index.js`.
 
 ### Sesión
 
@@ -132,27 +133,31 @@ los aranceles y tu historial, así que el **contenido se actualiza solo**. Lo qu
 - `doctor` lo detecta. Para enterarte antes que los alumnos, programalo:
 
 ```bash
-node ~/uade-mcp/dist/index.js doctor --json
+npx -y uade-mcp doctor --json
 ```
 
 Imprime una línea JSON por capacidad, sin datos personales, renueva la sesión sola si venció y termina con
 código 1 si algo se rompió. En macOS/Linux, por ejemplo cada mañana con `crontab -e`:
 
 ```
-0 9 * * * node "$HOME/uade-mcp/dist/index.js" doctor --json >> "$HOME/uade-mcp-doctor.log" 2>&1
+0 9 * * * npx -y uade-mcp doctor --json >> "$HOME/uade-mcp-doctor.log" 2>&1
 ```
 
 En Windows, el Programador de tareas con el mismo comando. Si el log muestra `"estado":"error"`, hay que
-actualizar el MCP (`git pull && npm install && npm run build`) o, si es nuevo, abrir un issue.
+actualizar el MCP (`npx` usa siempre la última versión publicada; con `npm i -g`, `npm update -g uade-mcp`) o, si es nuevo, abrir un issue.
 
 ## Privacidad y seguridad
 
 - **Local.** Corre en tu compu por stdio; no hay ningún servidor del proyecto en el medio.
-- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código.
+- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código (salvo el reporte de errores, si lo activás vos).
 - **Sin contraseñas.** Iniciás sesión vos, en la página de Microsoft. Se guardan cookies de sesión en el
   llavero del sistema y la sesión de Microsoft en un perfil de navegador propio (`~/.uade-mcp/browser-profile`).
 - **Copia local cifrada** (AES-256-GCM, clave en el llavero) para no pedir lo mismo dos veces. Cada respuesta dice de cuándo es.
 - **Solo lectura.** No inscribe, no paga, no da de baja, no manda mails, no toca datos personales.
+- **Reportes de errores, apagados por defecto.** Si activás `reportes.errores`, cuando UADE cambia una página
+  o una tool falla el MCP le avisa al proyecto (`planuade.ar/api/mcp-error`, el único destino fuera de UADE y
+  Microsoft) con la versión, el nombre de la tool, el tipo de error y qué página. Nunca tu pregunta, tus datos
+  ni el contenido; a lo sumo un aviso por error por día. Lo apagás con `revocar reportes.errores`.
 - **Tus datos y nada más.** Nunca devuelve datos de otros alumnos.
 
 Detalle en [SECURITY.md](SECURITY.md) y en la [auditoría](docs/AUDITORIA.md).
