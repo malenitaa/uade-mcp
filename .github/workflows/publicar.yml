@@ -1,7 +1,8 @@
-# Publica en npm SOLO desde acá, al crear un tag vX.Y.Z que coincida con package.json. Usa
-# "trusted publishing" (OIDC): no hay token de npm guardado en ningún lado que se pueda robar, y
-# el paquete sale con provenance firmada que apunta a este repo y este commit. Antes de publicar
-# corre la misma revisión que el CI. Quien quiera verificar lo instalado: `npm audit signatures`.
+# Deja una versión EN ESPERA en npm, SOLO desde acá, al crear un tag vX.Y.Z que coincida con
+# package.json. Usa "trusted publishing" (OIDC): no hay token de npm guardado que se pueda robar.
+# La versión no sale al público hasta que quien mantiene el paquete la aprueba en npmjs.com con
+# su 2FA ("staged publishing"): ni un repo comprometido alcanza para publicar. Antes corre la
+# misma revisión que el CI. Quien quiera verificar lo instalado: `npm audit signatures`.
 name: publicar
 on:
   push:
@@ -34,4 +35,4 @@ jobs:
           v="$(node -p "require('./package.json').version")"
           [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} ≠ package.json $v"; exit 1; }
           grep -q "version: '$v'" src/index.ts || { echo "src/index.ts no dice la versión $v"; exit 1; }
-      - run: npm publish --provenance --access public
+      - run: npm stage publish . --provenance --access public

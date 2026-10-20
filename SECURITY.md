@@ -32,6 +32,9 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 - **Publicación solo desde GitHub Actions** (`.github/workflows/publicar.yml`), al crear un tag `vX.Y.Z`
   que coincida con `package.json`. Usa *trusted publishing* (OIDC): no existe ningún token de npm guardado
   que se pueda robar, y cada versión sale con **provenance** firmada que apunta a este repo y a este commit.
+- **Nada sale al público sin una persona:** GitHub solo deja la versión *en espera* en npm; la publica quien
+  mantiene el paquete, aprobándola en npmjs.com con su segundo factor. Un repo o una cuenta de GitHub
+  comprometidos no alcanzan para publicar.
 - **Verificar lo instalado:** `npm audit signatures` en una carpeta con `uade-mcp` instalado comprueba la
   firma y la provenance contra el registro.
 - **CI en cada push y PR** (`revisar.yml`): tipos, tests, `npm audit` y búsqueda de secretos en todo el
