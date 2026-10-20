@@ -65,7 +65,7 @@ ejemplo, mandar mensajes con su cuenta).
 **Diseño:**
 
 1. **Permisos con nombre y alcance**, nunca genéricos. No existe "conectate". Existen permisos concretos:
-   `webcampus.leer`, `pia.leer`, `pia.inscribir`, `teams.leer_tareas`, `teams.entregar`, `mail.leer`, `mail.enviar`.
+   `webcampus.leer`, `pia.leer`, `teams.leer_tareas`, `teams.entregar`, `mail.leer`, `mail.enviar`.
 2. **Se otorgan en la config, no en el chat.** Para habilitar `teams.entregar` editás
    `~/.uade-mcp/config.json` o corrés `uade-mcp permitir teams.entregar`. El CLI muestra:
    > Esto permite que el agente **suba archivos como entrega en tareas de Teams en tu nombre**.
@@ -156,7 +156,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 - Abrirlo directo hoy devuelve **401**. Puede ser porque la ventana de inscripción está cerrada o porque
   exige algo más (Referer, otra cookie). **Hay que volver a mirarlo cuando abra la próxima inscripción.**
 - Alcance: **buscar asignaturas**, ver **docente** (si figura), **sede**, **horario**, cupos y tu carrito.
-  **Alta** de inscripción con el permiso `pia.inscribir` y confirmación por elicitation. Nunca bajas ni cambios de pack.
+  **Inscripción**: el MCP no la hace. Prepara el resumen (materia o previo) y abre Inscripciones con la sesión iniciada; la persona recorre PIA y aprieta Finalizar. Nunca bajas ni cambios de pack.
 
 ### Teams / SharePoint / Mail: Microsoft 365, tenant UADE
 
@@ -198,7 +198,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 
 | Tool | Permiso |
 |---|---|
-| `pia_prepare_enrollment` → `pia_confirm_enrollment` | `pia.inscribir` · hecho el circuito completo (borrador de un solo uso, 5 min, elicitation, falla cerrado sin diálogo); el envío real a PIA es un ejecutor no conectado que falla cerrado |
+| `pia_prepare_enrollment` + `uade_open_enrollment_site` | `pia.leer` · resumen exacto (materia o previo, con elegibilidad por correlativas) y ventana visible con sesión hasta la lista de ventanas. Decisión: el MCP no automatiza PIA (ni el carrito ni Finalizar); se sacó `pia_confirm_enrollment` y el permiso `pia.inscribir` |
 
 ### PIA (inscripcionespia.uade.edu.ar), mapeado del registro de red
 

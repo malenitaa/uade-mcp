@@ -1,5 +1,6 @@
 // "Nuestra API" de WebCampus: funciones de alto nivel que devuelven JSON tipado.
 import { WebCampusClient, WEBCAMPUS } from './client.js';
+import { parseCorrelativas, type Correlativas } from './correlativas.js';
 import { parseHome, parseNovedad, type Home, type Novedad } from './novedades.js';
 import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
@@ -41,6 +42,15 @@ export class WebCampus {
   async asistencia(idAula: string): Promise<Asistencia> {
     if (!ID.test(idAula)) throw new Error('idAula inválido');
     return parseAsistencia((await this.client.get(`/AsistenciaAlumnos.aspx?IdAula=${idAula}`)).html);
+  }
+
+  // Correlativas del plan (Académico > Correlativas): misma elección de plan que el historial.
+  async correlativas(plan?: string): Promise<Correlativas> {
+    const path = '/HistorialAcademico/Plan_Acedemico.aspx?VieneDe=Correlativa';
+    const { planes, form } = parsePlanes((await this.client.get(path)).html);
+    const elegido = plan ? planes.find((p) => p.plan === plan) : (planes.find((p) => /activa/i.test(p.estado)) ?? planes[0]);
+    if (!elegido) throw new Error(plan ? `No existe el plan ${plan}` : 'No se encontraron carreras');
+    return parseCorrelativas((await this.client.postback(path, form, elegido.postbackTarget)).html);
   }
 
   // Carreras/planes de la persona (una sola lectura, sin el historial completo).

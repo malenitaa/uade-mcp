@@ -1,44 +1,41 @@
 // pia_prepare_enrollment (read-only) and pia_confirm_enrollment (write: own permission + human dialog).
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { Elicit } from '../auth/confirm.js';
 import type { Permission } from '../auth/permissions.js';
 import { cache, TTL } from '../cache/cache.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
-import { confirmarAlta, prepararAlta } from '../sources/pia/alta.js';
+import { abrirInscripciones } from '../auth/login.js';
+import { elegibilidad } from '../sources/planificador/elegibilidad.js';
+import { resumenClase, resumenPrevio } from '../sources/pia/alta.js';
 import { Pia } from '../sources/pia/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { READ_ONLY, run } from './common.js';
-
-// La confirmación la responde la persona en un diálogo del cliente (MCP elicitation), no el modelo.
-// Si el cliente no soporta diálogos, devuelve undefined y la escritura se rechaza (falla cerrado).
-export function elicitDelCliente(server: McpServer): Elicit | undefined {
-  if (!server.server.getClientCapabilities()?.elicitation) return undefined;
-  return async (mensaje) => {
-    const r = await server.server.elicitInput({
-      message: mensaje,
-      requestedSchema: {
-        type: 'object',
-        properties: { confirmar: { type: 'boolean', title: 'Confirmo la inscripción (no se puede deshacer)' } },
-        required: ['confirmar'],
-      },
-    });
-    if (r.action !== 'accept') return r.action === 'decline' ? 'decline' : 'cancel';
-    return (r.content as { confirmar?: boolean } | undefined)?.confirmar === true ? 'accept' : 'decline';
-  };
-}
 
 export function registerPiaTools(
   server: McpServer,
   granted: ReadonlySet<Permission>,
   wc = new WebCampus(),
   insc = new Inscripciones(),
-  elicit: () => Elicit | undefined = () => elicitDelCliente(server),
   pia = new Pia(),
+  abrir: () => Promise<void> = abrirInscripciones,
 ): void {
-  const fuentes = {
-    ventanas: () => insc.ventanas(),
-    oferta: async (materia: string) => wc.oferta(await insc.linkProgramacion(), materia),
+  const ventanas = async () => (await cache.get('ventanas', TTL.corto, () => insc.ventanas())).value;
+  const fuentesClase = {
+    ventanas,
+    oferta: async (materia: string) => (await cache.get(`oferta:${materia}`, TTL.medio, async () => wc.oferta(await insc.linkProgramacion(), materia))).value,
+  };
+  const fuentesPrevio = {
+    ventanas,
+    examenes: async (materia: string) => (await cache.get(`previos:${materia}`, TTL.medio, () => wc.examenesPrevios(materia))).value.examenes.filter((e) => e.codigo === materia || e.codigo.replace(/^[A-Z]/, '') === materia),
+    puedeRendir: async (materia: string) => {
+      const [h, c] = await Promise.all([cache.get('historial:', TTL.dia, () => wc.historial()), cache.get('correlativas:', TTL.semana, () => wc.correlativas())]);
+      const e = elegibilidad(h.value.materias, c.value);
+      if (e.rendir.some((m) => m.codigo === materia)) return { ok: true };
+      const b = e.rendirBloqueadas.find((m) => m.codigo === materia);
+      if (b) return { ok: false, motivo: `faltan aprobar ${b.faltan!.join(', ')}` };
+      const s = h.value.materias.find((m) => m.codigo === materia)?.situacion;
+      return { ok: false, motivo: s ? `la materia figura como ${s.replace('_', ' ')}, no como final pendiente` : 'no está en tu plan' };
+    },
   };
 
   server.registerTool(
@@ -79,24 +76,36 @@ export function registerPiaTools(
   server.registerTool(
     'pia_prepare_enrollment',
     {
-      title: 'Prepare an enrollment (nothing is sent)',
+      title: 'Enrollment summary (nothing is sent)',
       description:
-        'Read-only. Checks an enrollment window is open, finds the class (code + class number from webcampus_class_offering) and returns the exact summary of what enrolling would do (campus, shift, schedule, dates, window deadline, charge, seat, not reversible) plus a draft id valid 5 minutes. Show the summary to the student verbatim. Nothing is enrolled.',
-      inputSchema: { subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/), classNumber: z.string().regex(/^\d+$/) },
+        'Read-only. kind "class": checks an open subject window and returns the exact summary for that class (code + class number from webcampus_class_offering / the planner). kind "exam": checks the previos window is open, that the student can sit it (transcript + prerequisites) and returns the exam dates from the official schedule. Both say what happens on Finalizar (charges, seat, whether it can be withdrawn). Show the summary verbatim. Nothing is enrolled; to continue, uade_open_enrollment_site.',
+      inputSchema: {
+        kind: z.enum(['class', 'exam']),
+        subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/),
+        classNumber: z.string().regex(/^\d+$/).optional().describe('required for kind "class"'),
+      },
       annotations: READ_ONLY,
     },
-    ({ subject, classNumber }) => run(granted, 'pia.leer', () => prepararAlta(fuentes, subject, classNumber)),
+    ({ kind, subject, classNumber }) =>
+      run(granted, 'pia.leer', async () => {
+        if (kind === 'exam') return resumenPrevio(fuentesPrevio, subject);
+        if (!classNumber) throw new Error('Para una materia hace falta el número de clase (classNumber).');
+        return resumenClase(fuentesClase, subject, classNumber);
+      }),
   );
 
   server.registerTool(
-    'pia_confirm_enrollment',
+    'uade_open_enrollment_site',
     {
-      title: 'Confirm an enrollment (write)',
+      title: 'Open the enrollment site for the student',
       description:
-        'Write action. Needs the pia.inscribir permission (the student enables it in the terminal) and the student confirming in a client dialog; the model cannot confirm on its own. Only call it when the student explicitly asked to enroll after reading the summary. Never call it as a test.',
-      inputSchema: { draftId: z.string().uuid() },
-      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+        'Opens inscripciones.uade.edu.ar in a visible browser window on the student\'s computer, already signed in, at the list of enrollment windows. It does not navigate further or click anything else: the student enrolls and presses Finalizar themselves. Call it only when the student asks to enroll, after showing the pia_prepare_enrollment summary, and tell them which window and class/exam to pick.',
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    ({ draftId }) => run(granted, 'pia.inscribir', () => confirmarAlta(draftId, elicit())),
+    () =>
+      run(granted, 'pia.leer', async () => {
+        await abrir();
+        return 'Se abrió la ventana de Inscripciones con tu sesión. Elegí la ventana (materias o exámenes previos) → ¡INSCRIBITE!, buscá la materia, agregá la clase o el examen al carrito, confirmá, aceptá términos y condiciones y revisá la última pantalla (arancel y vencimiento) antes de apretar Finalizar.';
+      }),
   );
 }

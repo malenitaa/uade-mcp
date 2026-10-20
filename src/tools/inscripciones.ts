@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
+import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { MAX_MATERIAS, planificar } from '../sources/planificador/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { ClaseOfertada } from '../sources/webcampus/parse.js';
@@ -89,6 +90,49 @@ export function registerInscripcionesTools(
           sinClases: r.sinClases,
           conflictos: r.conflictos,
           aviso: r.truncado ? 'Había demasiadas combinaciones; se muestran las mejores entre las primeras exploradas. Agregá filtros.' : undefined,
+        };
+      }),
+  );
+}
+
+export function registerElegibilidadTools(server: McpServer, granted: ReadonlySet<Permission>, wc = new WebCampus(), insc = new Inscripciones()): void {
+  server.registerTool(
+    'uade_eligible_subjects',
+    {
+      title: 'What I can take and which finals I can sit',
+      description:
+        'Computed from WebCampus only (transcript + the plan\'s prerequisites page): finals the student can sit now (pending final + all prerequisites passed, with regularity expiry), subjects they can take (all prerequisites passed; marked if offered next term), subjects whose prerequisites are only regularized (PIA decides), and blocked ones with what is missing. Use it before the schedule planner or any enrollment question.',
+      inputSchema: { plan: z.string().regex(/^\d+$/).optional() },
+      annotations: READ_ONLY,
+    },
+    ({ plan }) =>
+      run(granted, 'webcampus.leer', async () => {
+        const [h, c] = await Promise.all([
+          cache.get(`historial:${plan ?? ''}`, TTL.dia, () => wc.historial(plan)),
+          cache.get(`correlativas:${plan ?? ''}`, TTL.semana, () => wc.correlativas(plan)),
+        ]);
+        const e = elegibilidad(h.value.materias, c.value);
+        // Si se puede, marca cuáles se dictan el próximo cuatrimestre (programación de clases).
+        let ofrecidas: Set<string> | null = null;
+        try {
+          const o = await cache.get('oferta-materias', TTL.medio, async () => wc.ofertaMaterias(await insc.linkProgramacion()));
+          ofrecidas = new Set(o.value.map((m) => m.codigo));
+        } catch {
+          /* sin programación publicada: se omite la marca */
+        }
+        const marcar = <T extends { codigo: string }>(xs: T[]) => (ofrecidas ? xs.map((x) => ({ ...x, seDicta: ofrecidas!.has(x.codigo) })) : xs);
+        return {
+          actualizado: h.actualizado,
+          carrera: h.value.carrera,
+          plan: c.value.plan,
+          progreso: `${e.aprobadas} de ${e.totalPlan} materias del plan aprobadas`,
+          podesRendir: e.rendir,
+          rendirBloqueadas: e.rendirBloqueadas,
+          podesCursar: marcar(e.cursar),
+          cursarConCorrelativasRegularizadas: marcar(e.cursarConRegularizadas),
+          cursarBloqueadas: e.cursarBloqueadas,
+          cursando: e.cursando,
+          nota: 'Rendir: final pendiente y correlativas anteriores aprobadas. La regla exacta para cursar con correlativas solo regularizadas la aplica PIA (muestra solo las materias habilitadas). La regularidad vence a los 2 años de regularizada.',
         };
       }),
   );

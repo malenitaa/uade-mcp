@@ -8,8 +8,6 @@ import { z } from 'zod';
 export const PERMISSIONS = {
   'webcampus.leer': 'Leer notas, asistencia, historial, cuenta corriente y novedades de WebCampus.',
   'pia.leer': 'Buscar asignaturas, docentes, sedes, horarios y ver tu carrito en PIA.',
-  'pia.inscribir':
-    'Inscribirte (alta) en clases de PIA en tu nombre. Cada alta igual te pide confirmación. No permite bajas ni cambios.',
   'teams.leer_tareas': 'Leer tareas y consignas de Teams.',
   'teams.leer_novedades': 'Leer las novedades del canal General de tus materias en Teams (con el navegador propio del MCP).',
   'teams.entregar':

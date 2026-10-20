@@ -61,6 +61,11 @@ export function setRenovador(fn: (() => Promise<boolean>) | null): void {
   renovador = fn;
 }
 
+// Para sitios que no avisan la sesión vencida con un redirect (Inscripciones responde 500).
+export async function renovarSesion(): Promise<boolean> {
+  return renovador ? renovador().catch(() => false) : false;
+}
+
 export class SessionClient {
   private cookie: string | null;
 

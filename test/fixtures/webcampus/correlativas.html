@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><body>
+<table id="ctl00_ContentPlaceHolderMain_tbl_Materias"><tbody>
+<tr><td class="TablaTitFACU1" colspan="3"><span>- Plan: 99999 - Año: 2030</span></td></tr>
+<tr><td>Código</td><td>Materias</td><td>-</td></tr>
+<tr><td>1° Año</td></tr>
+<tr><td>1° Cuatrimestre</td></tr>
+<tr><td class="materias2"><span>9.9.001</span></td><td class="materias"><span>Base Uno</span></td><td class="TablaCampos"><input type="image" /></td></tr>
+<tr><td><table id="ctl00_ContentPlaceHolderMain_29.9.001"><tr><td>Correlativas Anteriores: No posee</td></tr></table></td></tr>
+<tr><td class="materias2"><span>9.9.002</span></td><td class="materias"><span>Base Dos</span></td><td class="TablaCampos"></td></tr>
+<tr><td>2° Año</td></tr>
+<tr><td>1° Cuatrimestre</td></tr>
+<tr><td class="materias2"><span>9.9.010</span></td><td class="materias"><span>Avanzada</span></td><td class="TablaCampos"></td></tr>
+<tr><td class="materias2"><span>9.9.011</span></td><td class="materias"><span>Otra Avanzada</span></td><td class="TablaCampos"></td></tr>
+<tr><td class="materias2"><span>9.9.020</span></td><td class="materias"><span>Final</span></td><td class="TablaCampos"></td></tr>
+</tbody></table>
+<script>var t = null;function ConfigTree(t){}
+t = new ECOTree('t','ArbolAnt9.9.010');ConfigTree(t);t.add(1,-1,"9.9.010",null,null,null,null,"'AVANZADA'","'9.9.0101'");t.add(2,1,"9.9.001",null,null,null,null,"'BASE UNO'","'9.9.0011'");t.UpdateTree('9.9.010ArbolAnt');
+t = new ECOTree('t','Arbol9.9.001');ConfigTree(t);t.add(1,-1,"9.9.001",null,null,null,null,"'BASE UNO'","'x'");t.add(2,1,"9.9.010",null,null,null,null,"'AVANZADA'","'x'");t.UpdateTree('9.9.001Arbol');
+t = new ECOTree('t','ArbolAnt9.9.011');ConfigTree(t);t.add(1,-1,"9.9.011",null,null,null,null,"'OTRA'","'x'");t.add(2,1,"9.9.002",null,null,null,null,"'BASE DOS'","'x'");t.UpdateTree('9.9.011ArbolAnt');
+t = new ECOTree('t','ArbolAnt9.9.020');ConfigTree(t);t.add(1,-1,"9.9.020",null,null,null,null,"'FINAL'","'x'");t.add(2,1,"9.9.010",null,null,null,null,"'AVANZADA'","'x'");t.add(3,1,"9.9.011",null,null,null,null,"'OTRA'","'x'");t.add(4,2,"9.9.001",null,null,null,null,"'BASE UNO'","'x'");t.UpdateTree('9.9.020ArbolAnt');
+</script></body></html>

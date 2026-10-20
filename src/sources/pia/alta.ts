@@ -1,32 +1,21 @@
-// Alta de inscripción en PIA, en dos pasos: preparar (solo lectura, arma el resumen exacto de lo que
-// pasaría) → confirmar (permiso propio + confirmación del humano en un diálogo del cliente).
-//
-// El envío real a PIA NO está conectado todavía: PIA no se mapeó (devolvía 401 con la ventana
-// cerrada) y por decisión de la autora nunca se hace una inscripción "de prueba". Por eso el
-// ejecutor por defecto falla cerrado con un mensaje claro. Cuando se mapee, se reemplaza
-// `ejecutarAltaReal` y el resto del circuito (permiso, borrador, diálogo) queda igual.
-import { ConfirmationError, DraftStore, type Elicit } from '../../auth/confirm.js';
+// Resumen de una inscripción (materia o examen previo), solo lectura. El MCP no inscribe: arma el
+// resumen exacto de lo que pasaría y abre la ventana de inscripción con la sesión iniciada; la
+// persona hace la inscripción y aprieta Finalizar en PIA.
 import type { VentanaInscripcion } from '../inscripciones/index.js';
+import type { ExamenPrevio } from '../webcampus/previos.js';
 import type { ClaseOfertada } from '../webcampus/parse.js';
 
-export interface ParamsAlta {
-  materia: string; // código
-  clase: string; // número de clase
-  ventana: string; // nombre de la ventana de inscripción
-}
-
-export interface Borrador {
-  id: string;
-  resumen: string;
-  venceEn: string; // ISO
-}
-
-export interface Fuentes {
+export interface FuentesClase {
   ventanas(): Promise<VentanaInscripcion[]>;
   oferta(materia: string): Promise<ClaseOfertada[]>;
 }
 
-const borradores = new DraftStore();
+export interface FuentesPrevio {
+  ventanas(): Promise<VentanaInscripcion[]>;
+  examenes(materia: string): Promise<ExamenPrevio[]>;
+  // Si se puede rendir según historial + correlativas (uade_eligible_subjects).
+  puedeRendir(materia: string): Promise<{ ok: boolean; motivo?: string }>;
+}
 
 const ddmmaaaa = (iso: string | null): string => {
   if (!iso) return 'sin fecha';
@@ -34,49 +23,42 @@ const ddmmaaaa = (iso: string | null): string => {
   return m ? `${m[3]}/${m[2]}/${m[1]}${m[4] ? ` ${m[4]}` : ''}` : iso;
 };
 
-// Solo lectura. Devuelve el resumen y un borrador que vence a los 5 minutos.
-export async function prepararAlta(fuentes: Fuentes, materia: string, clase: string): Promise<Borrador> {
-  const abiertas = (await fuentes.ventanas()).filter((v) => v.tipo === 'inscripcion' && v.abierta);
-  if (!abiertas.length) throw new Error('No hay ninguna ventana de inscripción abierta ahora. No se puede preparar un alta.');
+const PASOS_FINALES = 'La inscripción la hacés vos en PIA: cuando llegues a la pantalla con el resumen y el arancel, revisalo y recién ahí apretá Finalizar.';
 
+export async function resumenClase(fuentes: FuentesClase, materia: string, clase: string): Promise<string> {
+  const abiertas = (await fuentes.ventanas()).filter((v) => v.tipo === 'inscripcion' && v.abierta);
+  if (!abiertas.length) throw new Error('No hay ninguna ventana de inscripción a materias abierta ahora.');
   const clases = await fuentes.oferta(materia);
   const elegida = clases.find((c) => c.clase === clase);
   if (!elegida) {
     const lista = clases.map((c) => `${c.clase} (${c.sede}, ${c.turno}, ${c.dias.join('/')} ${c.horario ?? ''})`).join('; ');
     throw new Error(`No encontré la clase ${clase} de ${materia}. Clases programadas: ${lista || 'ninguna'}.`);
   }
-
-  const ventana = abiertas[0]!;
-  const params: ParamsAlta = { materia, clase, ventana: ventana.nombre };
-  const resumen = [
-    `INSCRIPCIÓN (ALTA) EN PIA: todavía no se hizo nada.`,
+  return [
+    'INSCRIPCIÓN A MATERIA: todavía no se hizo nada.',
     `Materia: ${elegida.materia} (${elegida.codigo})`,
     `Clase: ${elegida.clase} · ${elegida.sede} · turno ${elegida.turno} · ${elegida.dias.join('/')} ${elegida.horario ?? ''}`,
     `Cursada: del ${ddmmaaaa(elegida.desde)} al ${ddmmaaaa(elegida.hasta)} · ${elegida.regimenAprobacion ?? ''}`,
-    `Ventana: ${ventana.nombre}, cierra el ${ddmmaaaa(ventana.hasta)}`,
-    `Consecuencias: genera un cargo en tu cuenta corriente y ocupa un cupo. NO se puede dar de baja desde este MCP (las bajas quedaron fuera a propósito).`,
-    `Para seguir hace falta el permiso pia.inscribir (lo prendés vos en la terminal) y tu confirmación en un diálogo. Este borrador vence en 5 minutos.`,
+    `Ventanas abiertas: ${abiertas.map((v) => `${v.nombre} (cierra el ${ddmmaaaa(v.hasta)})`).join('; ')}`,
+    'Consecuencias: genera cuotas en tu cuenta corriente y ocupa un cupo. Las materias tienen ventana de bajas (mirá su cierre con uade_enrollment_windows); los cursos intensivos pueden retener cuotas: PIA te muestra esas condiciones antes de agregar al carrito.',
+    PASOS_FINALES,
   ].join('\n');
-
-  const d = borradores.preparar('pia.inscribir', resumen, params);
-  return { id: d.id, resumen, venceEn: new Date(d.expiresAt).toISOString() };
 }
 
-// Ejecutor por defecto: PIA no está mapeado. Falla cerrado, nunca simula un éxito.
-export async function ejecutarAltaReal(_params: ParamsAlta): Promise<never> {
-  throw new ConfirmationError(
-    'La inscripción real en PIA todavía no está conectada al MCP (PIA no se mapeó y nunca se hace una ' +
-      'inscripción de prueba). Tu confirmación quedó registrada pero NO se envió nada. Hacé el alta desde ' +
-      'inscripciones.uade.edu.ar → ¡INSCRIBITE!',
-  );
-}
-
-// Consume el borrador (un solo uso), pide confirmación al humano por elicitation y recién ahí ejecuta.
-export async function confirmarAlta(
-  id: string,
-  elicit: Elicit | undefined,
-  ejecutar: (p: ParamsAlta) => Promise<unknown> = ejecutarAltaReal,
-): Promise<unknown> {
-  const params = await borradores.confirmar<ParamsAlta>(id, 'pia.inscribir', elicit);
-  return ejecutar(params);
+export async function resumenPrevio(fuentes: FuentesPrevio, materia: string): Promise<string> {
+  const ventana = (await fuentes.ventanas()).find((v) => v.tipo === 'examenes' && v.abierta);
+  if (!ventana) throw new Error('No hay ninguna ventana de inscripción a exámenes previos abierta ahora.');
+  const puede = await fuentes.puedeRendir(materia);
+  if (!puede.ok) throw new Error(`Según tu historial y las correlativas no podés rendir ${materia}: ${puede.motivo}.`);
+  const examenes = await fuentes.examenes(materia);
+  if (!examenes.length) throw new Error(`No encontré ${materia} en el cronograma de previos publicado.`);
+  const lineas = examenes.map((e) => `${e.sede} · ${ddmmaaaa(e.fecha)}${e.hora ? ` ${e.hora}` : ''}${e.clase ? ` · clase ${e.clase}` : ''}${e.aula ? ` · aula ${e.aula}` : ''}`);
+  return [
+    'INSCRIPCIÓN A EXAMEN PREVIO: todavía no se hizo nada.',
+    `Materia: ${examenes[0]!.materia} (${materia})`,
+    `Fechas en el cronograma: ${lineas.join('; ')}`,
+    `Ventana: ${ventana.nombre}, del ${ddmmaaaa(ventana.desde)} al ${ddmmaaaa(ventana.hasta)}. Cada examen puede cerrar antes: PIA muestra el límite.`,
+    'Consecuencias: al Finalizar se factura el derecho a examen (PIA muestra el monto y el vencimiento en la última pantalla) y la inscripción a examen no se puede dar de baja.',
+    PASOS_FINALES,
+  ].join('\n');
 }

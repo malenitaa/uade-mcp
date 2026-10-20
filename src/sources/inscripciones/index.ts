@@ -1,7 +1,7 @@
 // Sitio de inscripciones (inscripciones.uade.edu.ar): ventanas de inscripción con sus fechas y
 // el link a la Programación de Clases de WebCampus. Solo lectura: no abre PIA ni inscribe.
 import * as cheerio from 'cheerio';
-import { keychainStore, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
+import { keychainStore, renovarSesion, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
 import { PageChangedError, parseFecha } from '../webcampus/parse.js';
 
 export const INSCRIPCIONES = 'https://inscripciones.uade.edu.ar';
@@ -12,7 +12,7 @@ const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').
 export interface VentanaInscripcion {
   sede: string | null;
   nombre: string;
-  tipo: 'inscripcion' | 'bajas_o_cambios' | 'otro';
+  tipo: 'inscripcion' | 'examenes' | 'bajas_o_cambios' | 'otro';
   abierta: boolean;
   desde: string | null; // ISO, con hora si la hay (yyyy-mm-ddThh:mm)
   hasta: string | null;
@@ -52,7 +52,7 @@ export function parseVentanas(html: string): VentanaInscripcion[] {
     if (!nombre) return;
     const link = $(p).find('[data-tipolink]').first();
     const tipoLink = link.attr('data-tipolink') ?? '';
-    const tipo = tipoLink === 'InscripcionAsignatura' ? 'inscripcion' : tipoLink === 'CambioAsignaturaPack' || /^bajas?\b/i.test(nombre) ? 'bajas_o_cambios' : 'otro';
+    const tipo = tipoLink === 'InscripcionAsignatura' ? 'inscripcion' : tipoLink === 'InscripcionExamen' || /^ex[aá]menes/i.test(nombre) ? 'examenes' : tipoLink === 'CambioAsignaturaPack' || /^bajas?\b/i.test(nombre) ? 'bajas_o_cambios' : 'otro';
     const v: VentanaInscripcion = {
       sede,
       nombre,
@@ -90,13 +90,16 @@ export class InscripcionesClient extends SessionClient {
 export class Inscripciones {
   constructor(private readonly client = new InscripcionesClient()) {}
 
-  async ventanas(): Promise<VentanaInscripcion[]> {
+  async ventanas(reintento = false): Promise<VentanaInscripcion[]> {
     try {
       return parseVentanas((await this.client.get('/Home/ObtenerInscripciones')).html);
     } catch (err) {
       // Con la sesión vencida este endpoint responde 500 en vez de mandar al login:
       // se pregunta a ValidarUsuario (devuelve true/false) para dar el mensaje correcto.
-      if (err instanceof SessionExpiredError || !(await this.sesionValida())) throw new SessionExpiredError('Inscripciones');
+      if (err instanceof SessionExpiredError || !(await this.sesionValida())) {
+        if (!reintento && (await renovarSesion())) return this.ventanas(true);
+        throw new SessionExpiredError('Inscripciones');
+      }
       throw err;
     }
   }

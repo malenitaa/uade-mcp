@@ -64,18 +64,44 @@ export function iniciarSesion(op: Opciones): Promise<Resultado> {
   return enCurso;
 }
 
+// Ventana visible que el MCP dejó abierta para la persona (uade_open_enrollment_site). Mientras
+// está abierta, el perfil está en uso: la renovación usa esa misma ventana con una pestaña aparte.
+let ventana: BrowserContext | null = null;
+
+// Abre inscripciones.uade.edu.ar en una ventana visible, con la sesión ya iniciada, y la deja
+// abierta para que la persona siga. No navega más allá de la lista de ventanas de inscripción.
+export async function abrirInscripciones(): Promise<void> {
+  if (!ventana) {
+    ventana = await chromium.launchPersistentContext(browserProfileDir(), {
+      executablePath: findBrowser(),
+      headless: false,
+      viewport: null,
+      args: ['--no-first-run', '--no-default-browser-check', '--start-maximized'],
+    });
+    ventana.on('close', () => { ventana = null; });
+  }
+  const page = ventana.pages()[0] ?? (await ventana.newPage());
+  await page.goto(`${INSCRIPCIONES}/`);
+  if (/^\/account\/login/i.test(new URL(page.url()).pathname)) {
+    await page.getByRole('button', { name: /iniciar sesi/i }).or(page.getByRole('link', { name: /iniciar sesi/i })).first().click({ timeout: 10_000 }).catch(() => {});
+    await page.waitForURL((u) => u.origin === INSCRIPCIONES && !/^\/account\//i.test(u.pathname), { timeout: 60_000 }).catch(() => {});
+  }
+  await page.bringToFront().catch(() => {});
+}
+
 async function correr(op: Opciones): Promise<Resultado> {
   const log = op.log ?? (() => {});
   const executablePath = findBrowser();
   if (!op.interactivo && !browserProfileExists()) return { ok: false, guardadas: [], motivo: 'todavía no iniciaste sesión nunca' };
-  const ctx: BrowserContext = await chromium.launchPersistentContext(browserProfileDir(), {
+  const propia = !ventana;
+  const ctx: BrowserContext = ventana ?? (await chromium.launchPersistentContext(browserProfileDir(), {
     executablePath,
     headless: !op.interactivo,
     args: ['--no-first-run', '--no-default-browser-check'],
-  });
+  }));
   const guardadas: string[] = [];
+  const page = propia ? (ctx.pages()[0] ?? (await ctx.newPage())) : await ctx.newPage();
   try {
-    const page = ctx.pages()[0] ?? (await ctx.newPage());
     await page.goto(`${WEBCAMPUS}/Login.aspx`);
     if (op.interactivo) await page.bringToFront().catch(() => {});
     // El botón "Entrar" solo redirige al login de Microsoft; no manda credenciales.
@@ -99,6 +125,11 @@ async function correr(op: Opciones): Promise<Resultado> {
 
     // Inscripciones y SharePoint usan el mismo login de Microsoft: con la sesión abierta entran solos.
     await page.goto(`${INSCRIPCIONES}/`).catch(() => {});
+    // Inscripciones muestra su propia portada con "Iniciar sesión": ese botón solo manda a Microsoft,
+    // que ya reconoce la sesión y vuelve solo.
+    if (/^\/account\/login/i.test(new URL(page.url()).pathname)) {
+      await page.getByRole('button', { name: /iniciar sesi/i }).or(page.getByRole('link', { name: /iniciar sesi/i })).first().click({ timeout: 10_000 }).catch(() => {});
+    }
     try {
       await page.waitForURL((u) => u.origin === INSCRIPCIONES && !/^\/account\//i.test(u.pathname), { timeout: 60_000 });
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
@@ -126,6 +157,7 @@ async function correr(op: Opciones): Promise<Resultado> {
     }
     return { ok: true, guardadas };
   } finally {
-    await ctx.close().catch(() => {});
+    if (propia) await ctx.close().catch(() => {});
+    else await page.close().catch(() => {});
   }
 }
