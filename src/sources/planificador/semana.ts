@@ -53,7 +53,7 @@ export function semanaHtml(combos: Combinacion[], meta: Meta): string {
 </section>`;
   };
 
-  const tabs = combos.map((c, i) => `<button role="tab" aria-selected="${i === 0}" data-i="${i}">Opción ${i + 1}<small>${c.diasDeCursada.map((d) => NOMBRE_DIA[d]?.slice(0, 3)).join(' · ')}</small></button>`).join('');
+  const tabs = combos.map((c, i) => `<button role="tab" aria-selected="${i === 0}" data-i="${i}">Opción ${i + 1}<small>${c.diasDeCursada.map((d) => NOMBRE_DIA[d]?.slice(0, 3)).join(' · ')}</small><small>${c.sedes.map((x) => esc(x.replace(/^UADE /, ''))).join(' + ')}</small></button>`).join('');
 
   return `<!DOCTYPE html>
 <html lang="es-AR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">

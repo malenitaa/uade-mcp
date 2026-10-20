@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { elegibilidad } from '../sources/planificador/elegibilidad.js';
-import { MAX_MATERIAS, planificar } from '../sources/planificador/index.js';
+import { MAX_MATERIAS, planificar, sedesPorMateria, variadas } from '../sources/planificador/index.js';
 import { semanaHtml, semanaIcs } from '../sources/planificador/semana.js';
 import { carpetaSalida, openGeneratedFile } from '../net/open-browser.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -66,7 +66,7 @@ export function registerInscripcionesTools(
         'Read-only. Given up to 6 subject codes, combines one class per subject so that days and times never overlap, ranked by fewer campus days, fewer gaps and fewer campuses. Optional filters: shifts, weekdays (L, M, MI, J, V, S), campuses. Returns the best combinations with class numbers (usable in pia_prepare_enrollment), subjects with no matching class, and the conflicting pairs when no full combination exists. Teachers are not in the offering; webcampus_teachers only covers current courses.',
       inputSchema: {
         subjects: z.array(z.string().regex(/^[A-Z]?\d+(\.\d+)+$/)).min(1).max(MAX_MATERIAS),
-        shifts: z.array(z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE'])).optional(),
+        shifts: z.array(z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE', 'INTENSIVO'])).optional(),
         days: z.array(z.enum(['L', 'M', 'MI', 'J', 'V', 'S'])).optional(),
         campuses: z.array(z.string().max(30)).optional(),
         maxResults: z.number().int().min(1).max(10).optional(),
@@ -82,7 +82,8 @@ export function registerInscripcionesTools(
           oferta.set(s, r.value);
           actualizado = actualizado && actualizado < r.actualizado ? actualizado : r.actualizado;
         }
-        const r = planificar(oferta, { turnos: shifts, dias: days, sedes: campuses }, maxResults ?? 5);
+        const todas = planificar(oferta, { turnos: shifts, dias: days, sedes: campuses }, Number.MAX_SAFE_INTEGER);
+        const r = { ...todas, combinaciones: variadas(todas.combinaciones, maxResults ?? 5) };
         return {
           actualizado,
           combinaciones: r.combinaciones.map((c) => ({
@@ -157,10 +158,10 @@ export function registerPlanCuatrimestreTools(
     {
       title: 'Plan my next term (subjects, offering, week)',
       description:
-        'One call for "what can I take, what is offered, build my week": crosses transcript + prerequisites (WebCampus) with the class offering WebCampus publishes (the result says which term it is; tell the student if it is still the current one). Without subjects: lists every subject the student can take and whether it is offered, plus what remains in the plan. With up to 6 subjects (codes): checks each one (can take it? offered?) and returns the best non-overlapping weekly combinations, with class numbers for pia_prepare_enrollment. view=true also writes a weekly calendar (HTML grid with every option + .ics for the best one) to Downloads/uade-mcp and opens it in the browser. Filters: shifts, days, campuses.',
+        'One call for "what can I take, what is offered, build my week": crosses transcript + prerequisites (WebCampus) with the class offering WebCampus publishes (the result says which term it is; tell the student if it is still the current one). Without subjects: lists every subject the student can take and whether it is offered, plus what remains in the plan. With up to 6 subjects (codes): checks each one (can take it? offered?) and returns the best non-overlapping weekly combinations, with class numbers for pia_prepare_enrollment. view=true also writes a weekly calendar (HTML grid with every option + .ics for the best one) to Downloads/uade-mcp and opens it in the browser. Filters: shifts, days, campuses (e.g. MONSERRAT, BELGRANO, RECOLETA, ONLINE). Intensive summer courses (Costa Argentina) only appear if asked for (shift INTENSIVO or campus Pinamar).',
       inputSchema: {
         subjects: z.array(z.string().regex(/^[A-Z]?\d+(\.\d+)+$/)).max(MAX_MATERIAS).optional(),
-        shifts: z.array(z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE'])).optional(),
+        shifts: z.array(z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE', 'INTENSIVO'])).optional(),
         days: z.array(z.enum(['L', 'M', 'MI', 'J', 'V', 'S'])).optional(),
         campuses: z.array(z.string().max(30)).optional(),
         view: z.boolean().default(false).describe('write and open the weekly calendar file'),
@@ -220,11 +221,13 @@ export function registerPlanCuatrimestreTools(
         }
         if (!oferta.size) return { avisos, combinaciones: [] };
 
-        const r = planificar(oferta, { turnos: shifts, dias: days, sedes: campuses }, 5);
+        const todas = planificar(oferta, { turnos: shifts, dias: days, sedes: campuses }, Number.MAX_SAFE_INTEGER);
+        const r = { ...todas, combinaciones: variadas(todas.combinaciones, 5) };
         const periodo = periodoProgramacion([...oferta.values()].flat());
         const resultado: Record<string, unknown> = {
           actualizado: h.actualizado,
           programacion: periodo,
+          dondeSeDicta: sedesPorMateria(oferta),
           avisos,
           combinaciones: r.combinaciones.map((cb, i) => ({
             opcion: i + 1,

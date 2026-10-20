@@ -61,7 +61,15 @@ export function solapan(a: ClaseOfertada, b: ClaseOfertada): boolean {
 
 const norm = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
 
+// Los cursos intensivos (Campus Costa Argentina, en verano) no se mezclan con la cursada semanal:
+// solo entran si se piden por turno (INTENSIVO) o por sede (Pinamar / Costa).
+export function esIntensivo(c: ClaseOfertada): boolean {
+  return /INTENSIV/.test(norm(c.turno)) || /PINAMAR|COSTA/.test(norm(c.sede));
+}
+
 export function pasaFiltros(c: ClaseOfertada, f: Filtros): boolean {
+  const pideIntensivo = f.turnos?.some((t) => /INTENSIV/.test(norm(t))) || f.sedes?.some((s) => /PINAMAR|COSTA/.test(norm(s)));
+  if (esIntensivo(c) && !pideIntensivo) return false;
   if (f.turnos?.length && !f.turnos.some((t) => norm(c.turno).includes(norm(t)))) return false;
   if (f.sedes?.length && !f.sedes.some((s) => norm(c.sede).includes(norm(s)))) return false;
   if (f.dias?.length) {
@@ -141,4 +149,40 @@ export function planificar(oferta: Map<string, ClaseOfertada[]>, filtros: Filtro
     }
   }
   return { combinaciones: combinaciones.slice(0, maximo), exploradas, truncado, sinClases, conflictos };
+}
+
+// Opciones variadas: la mejor de cada combinación de sedes (todo en Monserrat, Monserrat y Belgrano,
+// online…), ordenadas por puntaje. Sin esto, todas las opciones salen en la sede que más clases tiene.
+export function variadas(combos: Combinacion[], maximo = 5): Combinacion[] {
+  const porSedes = new Map<string, Combinacion[]>();
+  for (const c of combos) {
+    const k = c.sedes.join('+');
+    const g = porSedes.get(k);
+    if (g) g.push(c); else porSedes.set(k, [c]);
+  }
+  const elegidas: Combinacion[] = [];
+  // Primero la mejor de cada grupo de sedes; después se completa con las siguientes mejores.
+  const grupos = [...porSedes.values()].sort((a, b) => a[0]!.puntaje - b[0]!.puntaje);
+  for (let ronda = 0; elegidas.length < maximo; ronda++) {
+    let agregada = false;
+    for (const g of grupos) {
+      if (g[ronda] && elegidas.length < maximo) { elegidas.push(g[ronda]!); agregada = true; }
+    }
+    if (!agregada) break;
+  }
+  return elegidas.sort((a, b) => a.puntaje - b.puntaje);
+}
+
+// Dónde y en qué turnos se dicta cada materia (para elegir sede con datos).
+export function sedesPorMateria(oferta: Map<string, ClaseOfertada[]>): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [codigo, clases] of oferta) {
+    const m = new Map<string, Set<string>>();
+    for (const c of clases) {
+      if (!m.has(c.sede)) m.set(c.sede, new Set());
+      m.get(c.sede)!.add(c.turno.toLowerCase());
+    }
+    out[codigo] = [...m].map(([sede, turnos]) => `${sede} (${[...turnos].join(', ')})`);
+  }
+  return out;
 }
