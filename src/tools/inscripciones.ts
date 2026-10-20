@@ -236,7 +236,8 @@ export function registerPlanCuatrimestreTools(
             sedes: cb.sedes,
             clases: cb.clases.map((x) => ({ materia: x.materia, codigo: x.codigo, clase: x.clase, sede: x.sede, turno: x.turno, dias: x.dias, horario: x.horario, desde: x.desde, hasta: x.hasta })),
           })),
-          sinClasesConEsosFiltros: r.sinClases,
+          // Con "todo en Belgrano" (o un turno), las materias que ahí no se dictan quedan afuera: se dice dónde sí.
+          noEntranConEsosFiltros: r.sinClases.map((cod) => `${cod} ${nombre.get(cod) ?? ''}: con esos filtros no hay clases; se dicta en ${sedesPorMateria(new Map([[cod, oferta.get(cod) ?? []]]))[cod]?.join(', ') || 'ninguna sede'}`),
           conflictos: r.conflictos,
         };
         if (view && r.combinaciones.length) {
