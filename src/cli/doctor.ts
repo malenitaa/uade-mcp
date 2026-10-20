@@ -38,7 +38,8 @@ function fechasValidas(fechas: (string | null | undefined)[]): boolean {
   return fechas.filter(Boolean).every((f) => FECHA_ISO.test(f!) && !Number.isNaN(Date.parse(f!.slice(0, 10))));
 }
 
-export async function doctor(): Promise<void> {
+export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
+  const log = opciones.json ? () => {} : console.log;
   const wc = new WebCampus();
   const insc = new Inscripciones();
   const cal = new Calendario();
@@ -47,11 +48,11 @@ export async function doctor(): Promise<void> {
   const push = async (n: string, f: () => Promise<[Estado, string]>) => {
     const res = await probar(n, f);
     r.push(res);
-    console.log(`${ICONO[res.estado]} ${res.nombre.padEnd(30)} ${res.detalle} (${(res.ms / 1000).toFixed(1)} s)`);
+    log(`${ICONO[res.estado]} ${res.nombre.padEnd(30)} ${res.detalle} (${(res.ms / 1000).toFixed(1)} s)`);
     return res;
   };
 
-  console.log('uade-mcp doctor — prueba cada capacidad. No muestra datos personales.\n');
+  log('uade-mcp doctor — prueba cada capacidad. No muestra datos personales.\n');
 
   let idAula: string | undefined;
   await push('períodos', async () => {
@@ -155,7 +156,13 @@ export async function doctor(): Promise<void> {
   }
 
   const n = (e: Estado) => r.filter((x) => x.estado === e).length;
-  console.log(`\nResultado: ${n('ok')} OK, ${n('aviso')} avisos, ${n('error')} errores.`);
-  if (r.some((x) => /sesión vencida/.test(x.detalle))) console.log('Hay sesiones vencidas: corré login y volvé a probar.');
+  if (opciones.json) {
+    // Para programarlo (cron, launchd, Programador de tareas): una línea por resultado, sin datos
+    // personales, y código de salida 1 si algo se rompió.
+    console.log(JSON.stringify({ fecha: new Date().toISOString(), ok: n('ok'), avisos: n('aviso'), errores: n('error'), resultados: r }));
+  } else {
+    log(`\nResultado: ${n('ok')} OK, ${n('aviso')} avisos, ${n('error')} errores.`);
+    if (r.some((x) => /sesión vencida/.test(x.detalle))) log('Hay sesiones vencidas: corré login y volvé a probar.');
+  }
   if (n('error')) process.exitCode = 1;
 }

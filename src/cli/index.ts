@@ -11,7 +11,8 @@ import { SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
 import { SESSION_ACCOUNT } from '../sources/webcampus/client.js';
 import { doctor } from './doctor.js';
 import { rmSync } from 'node:fs';
-import { borrarPerfil } from '../auth/login.js';
+import { borrarPerfil, iniciarSesion } from '../auth/login.js';
+import { setRenovador } from '../net/session.js';
 import { login } from './login.js';
 import { loginTeams, teamsProfileDir } from '../sources/teams/index.js';
 
@@ -23,7 +24,7 @@ Uso:
   uade-mcp login-teams         iniciás sesión en Teams (solo si querés leer novedades de los canales)
   uade-mcp logout              borra la sesión guardada del llavero
   uade-mcp estado              muestra sesión y permisos
-  uade-mcp doctor              prueba todas las capacidades contra tu cuenta (sin mostrar datos personales)
+  uade-mcp doctor [--json]     prueba todas las capacidades contra tu cuenta (sin mostrar datos personales); --json para programarlo
   uade-mcp permitir <permiso>  habilita un permiso (te explica qué permite y pide confirmación)
   uade-mcp revocar <permiso>   deshabilita un permiso
 
@@ -60,7 +61,9 @@ export async function runCli(args: string[]): Promise<void> {
       return loginTeams();
 
     case 'doctor':
-      return doctor();
+      // Programado (cron, launchd): renueva las sesiones sin ventana antes de probar, como hace el servidor.
+      setRenovador(async () => (await iniciarSesion({ interactivo: false })).ok);
+      return doctor({ json: arg === '--json' });
 
     case 'logout': {
       const borradas = [SESSION_ACCOUNT, INSCRIPCIONES_ACCOUNT, SHAREPOINT_ACCOUNT].filter((a) => deleteSession(a));

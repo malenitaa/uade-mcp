@@ -8,17 +8,31 @@ const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').
 // Si falta un elemento que la página siempre tiene (aunque no haya datos), UADE cambió el HTML:
 // es mejor decirlo que devolver una lista vacía que parezca real.
 export class PageChangedError extends Error {
-  constructor(public readonly pagina: string) {
+  // Texto plano de la página, para responder "en modo degradado" mientras se actualiza el parser.
+  public readonly texto: string | null;
+  constructor(public readonly pagina: string, html?: string) {
     super(
       `UADE cambió la página "${pagina}" y el MCP ya no la sabe leer. No es un problema de tu cuenta: ` +
         'hay que actualizar el MCP. Podés confirmarlo corriendo el comando doctor.',
     );
     this.name = 'PageChangedError';
+    this.texto = html ? textoPlano(html) : null;
   }
 }
 
+// Texto visible de una página, sin estructura: lo que queda cuando el parser no entiende el HTML.
+export function textoPlano(html: string, max = 8000): string {
+  const t = html
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<!--[\s\S]*?-->/gi, ' ')
+    .replace(/<\/(p|div|tr|li|h\d|br|td|th)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+  return t.length > max ? t.slice(0, max) + ' …(recortado)' : t;
+}
+
 export function requireAnchor($: cheerio.CheerioAPI, selector: string, pagina: string): void {
-  if (!$(selector).length) throw new PageChangedError(pagina);
+  if (!$(selector).length) throw new PageChangedError(pagina, $.html());
 }
 const orNull = (s: string): string | null => (s === '' || s === '-' ? null : s);
 
@@ -419,7 +433,7 @@ export function parseDocentes(html: string): Docente[] {
   requireAnchor($, '#tableintegrantes', 'integrantes del curso');
   const table = $('#tableintegrantes');
   const headers = table.find('thead th').map((_, th) => clean($(th).text()).toLowerCase()).get();
-  if (!headers.includes('rol') || !headers.includes('email')) throw new PageChangedError('integrantes del curso');
+  if (!headers.includes('rol') || !headers.includes('email')) throw new PageChangedError('integrantes del curso', $.html());
   const col = (name: string) => headers.indexOf(name);
   const [iNombre, iEmail, iRol] = [col('nombre'), col('email'), col('rol')];
   const out: Docente[] = [];
@@ -555,7 +569,7 @@ export function parsePlanificacion(html: string): Planificacion {
   // página, cambió la página.
   if (!$('table.cursada_celdas').length) {
     if (/Mi Semana/i.test($('body').text())) return { clase: null, materia: null, actividades: [] };
-    throw new PageChangedError('planificación del curso (Mi Semana)');
+    throw new PageChangedError('planificación del curso (Mi Semana)', $.html());
   }
   const table = $('table.cursada_celdas').first();
   const titulo = clean(table.find('tr.tr_ancho').first().text()).match(/^Clase:\s*(\d+)\s*-\s*(.+)$/i);

@@ -65,7 +65,7 @@ export function textoPagina(html: string): string {
   // Separar bloques: si no, "<h3>Becas</h3><p>Requisitos" queda "BecasRequisitos".
   $('p, div, li, td, th, tr, br, h1, h2, h3, h4, h5, h6, span, a, strong').append(' ');
   const bloques = $('[id^="ctl00_ContentPlaceHolderMain"]').filter((_, e) => !$(e).parents('[id^="ctl00_ContentPlaceHolderMain"]').length);
-  if (!bloques.length) throw new PageChangedError('sección de WebCampus');
+  if (!bloques.length) throw new PageChangedError('sección de WebCampus', $.html());
   return bloques.map((_, e) => $(e).text()).get().join(' ').replace(/\s+/g, ' ').trim();
 }
 
@@ -104,7 +104,7 @@ export class Secciones {
     const r = await this.client.get(typeof destino === 'number' ? `/Principal.aspx?MenuItemId=${destino}` : destino);
     if (seccion === 'aranceles_pdf') {
       const link = cheerio.load(r.html)('a[href*="sharepoint.com"]').first().attr('href');
-      if (!link) throw new PageChangedError('aranceles (link al PDF)');
+      if (!link) throw new PageChangedError('aranceles (link al PDF)', r.html);
       const data = { seccion, fuente: link, texto: (await leerPdf(await this.sharepoint.descargar(link))).texto };
       this.cache.set(seccion, { at: Date.now(), data });
       return data;

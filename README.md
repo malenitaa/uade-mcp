@@ -121,6 +121,30 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `uade_refresh` | Borra la copia local para releer de UADE |
 | `uade_login` | Renueva la sesión o abre la ventana para iniciarla |
 
+## Si UADE cambia una página
+
+El MCP no tiene datos cargados a mano: lee en vivo la programación, las ventanas, las novedades, los PDFs,
+los aranceles y tu historial, así que el **contenido se actualiza solo**. Lo que puede romperse es la
+**estructura**: si UADE rediseña una página, el parser deja de entenderla. En ese caso:
+
+- La tool no inventa: avisa que UADE cambió la página y devuelve igual su **texto plano** ("modo degradado"),
+  marcado como sin estructura, para que el agente pueda responder mientras se actualiza el parser.
+- `doctor` lo detecta. Para enterarte antes que los alumnos, programalo:
+
+```bash
+node ~/uade-mcp/dist/index.js doctor --json
+```
+
+Imprime una línea JSON por capacidad, sin datos personales, renueva la sesión sola si venció y termina con
+código 1 si algo se rompió. En macOS/Linux, por ejemplo cada mañana con `crontab -e`:
+
+```
+0 9 * * * node "$HOME/uade-mcp/dist/index.js" doctor --json >> "$HOME/uade-mcp-doctor.log" 2>&1
+```
+
+En Windows, el Programador de tareas con el mismo comando. Si el log muestra `"estado":"error"`, hay que
+actualizar el MCP (`git pull && npm install && npm run build`) o, si es nuevo, abrir un issue.
+
 ## Privacidad y seguridad
 
 - **Local.** Corre en tu compu por stdio; no hay ningún servidor del proyecto en el medio.

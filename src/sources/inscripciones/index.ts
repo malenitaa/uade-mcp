@@ -43,7 +43,7 @@ export function parseVentanas(html: string): VentanaInscripcion[] {
   const $ = cheerio.load(html);
   // Con ventanas, hay .panel con .lbl-inscripciones; sin ventanas, UADE muestra igual el encabezado de sede.
   if (!$('.lbl-inscripciones').length && !$('span').filter((_, s) => / - (Grado|Posgrado)/i.test($(s).text())).length) {
-    throw new PageChangedError('ventanas de inscripción');
+    throw new PageChangedError('ventanas de inscripción', $.html());
   }
   const sede = clean($('span').filter((_, s) => / - (Grado|Posgrado)/i.test($(s).text())).first().text()) || null;
   const out: VentanaInscripcion[] = [];

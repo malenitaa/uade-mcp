@@ -22,7 +22,7 @@ export interface Correlativas {
 export function parseCorrelativas(html: string): Correlativas {
   const $ = cheerio.load(html);
   const tbl = $('#ctl00_ContentPlaceHolderMain_tbl_Materias');
-  if (!tbl.length) throw new PageChangedError('correlativas del plan');
+  if (!tbl.length) throw new PageChangedError('correlativas del plan', $.html());
   const plan = clean(tbl.find('td.TablaTitFACU1').first().text()).match(/Plan:\s*(\d+)/)?.[1] ?? null;
 
   const anteriores = new Map<string, string[]>();
@@ -47,6 +47,6 @@ export function parseCorrelativas(html: string): Correlativas {
     if (!/^[A-Z]?\d+(\.\d+)+$/.test(codigo)) return;
     materias.push({ codigo, nombre: clean(tds.filter('.materias').first().text()), anio, cuatrimestre, anteriores: anteriores.get(codigo) ?? [] });
   });
-  if (!materias.length) throw new PageChangedError('correlativas del plan (sin materias)');
+  if (!materias.length) throw new PageChangedError('correlativas del plan (sin materias)', $.html());
   return { plan, materias };
 }

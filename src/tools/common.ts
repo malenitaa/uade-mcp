@@ -1,5 +1,6 @@
 // Shared helpers for tools: permission check, error handling and Argentine date format.
 import { requirePermission, type Permission } from '../auth/permissions.js';
+import { PageChangedError } from '../sources/webcampus/parse.js';
 
 // Only readOnlyHint: the other annotations would repeat defaults and cost tokens on every message.
 export const READ_ONLY = { readOnlyHint: true } as const;
@@ -49,6 +50,18 @@ export async function run(
     const data = compact(toArgentineDates(await fn()));
     return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data) }] };
   } catch (err) {
+    // Modo degradado: si UADE cambió una página, se devuelve igual su texto plano, marcado como
+    // sin estructura, para que el agente pueda responder mientras se actualiza el parser.
+    if (err instanceof PageChangedError && err.texto) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({
+          aviso: `${err.message} Mientras tanto, abajo va el texto de la página sin procesar: leelo con cuidado y decile al estudiante que la respuesta puede estar incompleta.`,
+          modoDegradado: true,
+          pagina: err.pagina,
+          textoSinEstructura: err.texto,
+        }) }],
+      };
+    }
     // Error messages are already in Spanish: they are meant to be relayed to the student as is.
     return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
   }

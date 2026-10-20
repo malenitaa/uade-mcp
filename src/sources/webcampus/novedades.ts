@@ -48,7 +48,7 @@ const idDe = (href: string | undefined): string | null => href?.match(/[?&]Id=(\
 export function parseHome(html: string, hoy = new Date()): Home {
   const $ = cheerio.load(html);
   const items = $('.carousel-item');
-  if (!items.length && !$('a[href*="Novedades.aspx"]').length) throw new PageChangedError('home de WebCampus');
+  if (!items.length && !$('a[href*="Novedades.aspx"]').length) throw new PageChangedError('home de WebCampus', $.html());
 
   const banners: Banner[] = [];
   items.each((_, it) => {
@@ -97,7 +97,7 @@ export interface Novedad {
 export function parseNovedad(html: string, id: string): Novedad {
   const $ = cheerio.load(html);
   const panel = $('#ctl00_ContentPlaceHolderMain_Pnl_Novedad');
-  if (!panel.length) throw new PageChangedError('novedad de WebCampus');
+  if (!panel.length) throw new PageChangedError('novedad de WebCampus', $.html());
   panel.find('p, div, li, br, h1, h2, h3, h4, a, td, tr, span').append(' ');
   const titulo = clean(panel.find('h1, h2, h3, .titulo, b, strong').first().text()) || clean(panel.text()).slice(0, 80);
   const adjuntos = panel.find('a[href]').map((_, a) => $(a).attr('href')!).get().filter((h) => /DocsDownload|\.pdf$|\.xlsx?$|\.docx?$|sharepoint\.com|short\.gy/i.test(h));

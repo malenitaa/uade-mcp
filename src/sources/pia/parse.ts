@@ -73,7 +73,7 @@ export interface Buscador {
 export function parseBuscador(html: string): Buscador {
   const $ = cheerio.load(html);
   if (!$(`select[name="${CONTROLES.turno}"]`).length || !$(`select[name="${CONTROLES.carrera}"]`).length) {
-    throw new PageChangedError('búsqueda de clases de PIA');
+    throw new PageChangedError('búsqueda de clases de PIA', $.html());
   }
   const opciones = (name: string): Opcion[] =>
     $(`select[name="${name}"] option`)
@@ -106,7 +106,7 @@ export interface MateriaPia {
 export function parseMaterias(html: string): MateriaPia[] {
   const $ = cheerio.load(html);
   const tablas = $('table.gridViewMaterias');
-  if (!tablas.length) throw new PageChangedError('lista de materias de PIA');
+  if (!tablas.length) throw new PageChangedError('lista de materias de PIA', $.html());
   const out: MateriaPia[] = [];
   tablas.each((_, t) => {
     // El año ("PRIMER AÑO") es el encabezado que precede a cada tabla.
@@ -162,7 +162,7 @@ export function parseClases(html: string): ClasePia[] {
   const tablas = $('table.grillaInscripcion[id*="grdResultados"]');
   if (!titulos.length && !tablas.length) {
     if (/Sin Clases|No se encontraron/i.test($.text())) return [];
-    throw new PageChangedError('clases de PIA');
+    throw new PageChangedError('clases de PIA', $.html());
   }
   tablas.each((i, t) => {
     const titulo = titulos[i] ?? '';
@@ -276,7 +276,7 @@ export function parseFinalizar(html: string): Finalizar {
   const $ = cheerio.load(html);
   const grdTotales = $('#ContentPlaceHolder1_grdTotales');
   const carrito = $('[id*="grdClasesAlta_grdResultados"]').filter('table');
-  if (!$(`input[name="${CONTROLES.terminos}"]`).length) throw new PageChangedError('finalizar inscripción de PIA');
+  if (!$(`input[name="${CONTROLES.terminos}"]`).length) throw new PageChangedError('finalizar inscripción de PIA', $.html());
   const pendientes: PendienteAlta[] = [];
   carrito.find('tr').slice(1).each((_, tr) => {
     const hidden = (suf: string): string => $(tr).find(`input[type=hidden][name$="$hidden${suf}"]`).attr('value') ?? '';
