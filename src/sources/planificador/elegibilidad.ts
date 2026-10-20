@@ -20,6 +20,8 @@ export interface Elegibilidad {
   rendirBloqueadas: Pendiente[];
   cursar: Pendiente[];
   cursarConRegularizadas: Pendiente[];
+  // Les falta solo lo que estás cursando ahora: el próximo cuatrimestre, si lo aprobás o regularizás.
+  cursarSiTerminasLoActual: Pendiente[];
   cursarBloqueadas: Pendiente[];
   cursando: string[];
   aprobadas: number;
@@ -46,7 +48,7 @@ export function elegibilidad(historial: MateriaHistorial[], plan: Correlativas):
   const regularizada = (c: string) => estado.get(c)?.situacion === 'final_pendiente';
   const base = (m: MateriaPlan): Pendiente => ({ codigo: m.codigo, nombre: m.nombre, anio: m.anio });
 
-  const r: Elegibilidad = { rendir: [], rendirBloqueadas: [], cursar: [], cursarConRegularizadas: [], cursarBloqueadas: [], cursando: [], aprobadas: 0, totalPlan: plan.materias.length };
+  const r: Elegibilidad = { rendir: [], rendirBloqueadas: [], cursar: [], cursarConRegularizadas: [], cursarSiTerminasLoActual: [], cursarBloqueadas: [], cursando: [], aprobadas: 0, totalPlan: plan.materias.length };
   for (const m of plan.materias) {
     const h = estado.get(m.codigo);
     const s = h?.situacion ?? 'sin_cursar';
@@ -60,6 +62,7 @@ export function elegibilidad(historial: MateriaHistorial[], plan: Correlativas):
     }
     if (!noAprobadas.length) r.cursar.push(base(m));
     else if (noAprobadas.every(regularizada)) r.cursarConRegularizadas.push({ ...base(m), faltan: noAprobadas.map(etiqueta) });
+    else if (noAprobadas.every((x) => regularizada(x) || estado.get(x)?.situacion === 'cursando')) r.cursarSiTerminasLoActual.push({ ...base(m), faltan: noAprobadas.map(etiqueta) });
     else r.cursarBloqueadas.push({ ...base(m), faltan: noAprobadas.map(etiqueta) });
   }
   return r;

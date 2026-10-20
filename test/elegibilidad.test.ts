@@ -42,6 +42,11 @@ describe('elegibilidad', () => {
     expect(e.rendirBloqueadas).toEqual([{ codigo: '9.9.011', nombre: 'Otra Avanzada', anio: '2° Año', faltan: ['9.9.002 Base Dos (cursando)'] }]);
     expect(e.cursar.map((x) => x.codigo)).toEqual(['9.9.010']);
     expect(e.cursando).toEqual(['9.9.002 Base Dos']);
+    // Otra Avanzada depende de Base Dos, que está cursando: entra en "si terminás lo actual".
+    expect(e.cursarSiTerminasLoActual.map((x) => x.codigo)).toEqual([]);
+    const f = elegibilidad([h('9.9.001', 'aprobada'), h('9.9.002', 'cursando')], c);
+    expect(f.cursarSiTerminasLoActual).toEqual([{ codigo: '9.9.011', nombre: 'Otra Avanzada', anio: '2° Año', faltan: ['9.9.002 Base Dos (cursando)'] }]);
+    expect(f.cursarBloqueadas.map((x) => x.codigo)).toEqual(['9.9.020']);
     expect(e.aprobadas).toBe(1);
   });
 });

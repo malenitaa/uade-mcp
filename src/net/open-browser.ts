@@ -3,7 +3,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 
 export const OPENABLE_ORIGINS: ReadonlySet<string> = new Set(['https://planuade.ar', 'https://outlook.cloud.microsoft']);
 
@@ -67,4 +67,19 @@ export function revealInFileManager(raw: string, exec: typeof execFile = execFil
   const [cmd, args]: [string, string[]] =
     process.platform === 'darwin' ? ['open', ['-R', p]] : process.platform === 'win32' ? ['explorer.exe', [`/select,${p}`]] : ['xdg-open', [dirname(p)]];
   return new Promise((ok, fail) => exec(cmd, args, { timeout: 10_000 }, (err) => (err && process.platform !== 'win32' ? fail(new Error('No pude mostrar el archivo.')) : ok())));
+}
+
+// Carpeta donde el MCP deja archivos que genera para la persona (la vista de la semana).
+export function carpetaSalida(home = homedir()): string {
+  return join(home, 'Downloads', 'uade-mcp');
+}
+
+// Abre con la app predeterminada un archivo .html o .ics que generó el MCP, solo de su carpeta de salida.
+export function openGeneratedFile(raw: string, exec: typeof execFile = execFile): Promise<void> {
+  const p = realpathSync(resolve(raw));
+  const base = realpathSync(carpetaSalida());
+  if (!p.startsWith(base + sep) || !/\.(html|ics)$/i.test(p)) throw new Error('Solo abro archivos que generó el MCP.');
+  const [cmd, args]: [string, string[]] =
+    process.platform === 'darwin' ? ['open', [p]] : process.platform === 'win32' ? ['explorer.exe', [p]] : ['xdg-open', [p]];
+  return new Promise((ok, fail) => exec(cmd, args, { timeout: 10_000 }, (err) => (err && process.platform !== 'win32' ? fail(new Error('No pude abrir el archivo.')) : ok())));
 }

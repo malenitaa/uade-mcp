@@ -90,6 +90,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 
 | Tool | Qué devuelve |
 |---|---|
+| `uade_plan_next_term` | Todo el armado en un pedido: qué podés cursar (y qué se habilita si aprobás lo que cursás), qué se dicta, las mejores semanas sin superposiciones y, si querés, la vista de la semana en tu navegador (HTML) y un calendario `.ics` |
 | `uade_enrollment_windows` | Ventanas de inscripción (materias, previos, bajas) con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases de cada materia el próximo cuatrimestre: sede, turno, días, horario, fechas |
 | `webcampus_schedule_planner` | Combina hasta 6 materias sin solapamientos, con filtros, ordenadas por menos días y huecos |
