@@ -21,8 +21,12 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm install -g npm@latest
+      - run: npm install -g npm@12
+      # SheetJS (lector de .xls viejos) solo publica sus versiones seguras en su propio CDN, no en npm;
+      # npm 12 bloquea esos tarballs por defecto. Está fijado por URL exacta e integridad en el lockfile.
       - run: npm ci --ignore-scripts
+        env:
+          NPM_CONFIG_ALLOW_REMOTE: all
       - run: npm run build
       - run: REVISAR_TODO=1 npm run revisar
       - name: El tag tiene que ser la versión de package.json
