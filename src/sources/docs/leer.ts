@@ -6,6 +6,7 @@ import { readSheet } from 'read-excel-file/node';
 import WordExtractor from 'word-extractor';
 import { read as leerXls, utils as xlsUtils } from 'xlsx';
 import { leerPdf } from '../calendario/index.js';
+import { assertXlsxRazonable, MAX_DESCOMPRIMIDO } from '../webcampus/previos.js';
 
 const MAX_TEXTO = 12000;
 
@@ -13,14 +14,19 @@ export function tipoLegible(nombre: string): boolean {
   return /\.(pdf|xlsx|xls|docx|doc|pptx|txt|csv|md)$/i.test(nombre);
 }
 
-// Lee archivos de un zip (docx/pptx/xlsx) cuyo nombre matchea `filtro`, concatenando su contenido.
+// Lee archivos de un zip (docx/pptx) cuyo nombre matchea `filtro`, concatenando su contenido.
+// Cuenta los bytes REALES que salen (los tamaños que declara el zip se pueden falsear) y corta al
+// pasar el tope: un "zip bomb" disfrazado de apunte no agota la memoria.
 function partesDeZip(bytes: Uint8Array, filtro: RegExp): string[] {
   const partes: { nombre: string; data: Uint8Array }[] = [];
+  let total = 0;
   const unzip = new Unzip((file) => {
     if (!filtro.test(file.name)) return; // no se arranca: fflate lo saltea
     const trozos: Uint8Array[] = [];
     file.ondata = (err, chunk, final) => {
       if (err) throw err;
+      total += chunk.length;
+      if (total > MAX_DESCOMPRIMIDO) throw new Error('El documento es sospechosamente grande al descomprimirlo; no se abrió.');
       trozos.push(chunk);
       if (final) {
         const total = trozos.reduce((n, c) => n + c.length, 0);
@@ -57,6 +63,7 @@ export async function leerDocumento(nombre: string, bytes: Uint8Array): Promise<
     const slides = partesDeZip(bytes, /^ppt\/slides\/slide\d+\.xml$/);
     texto = slides.map((x, i) => `[Diapositiva ${i + 1}] ${textoDeXml(x, 'a:t')}`).join('\n');
   } else if (ext === 'xlsx') {
+    assertXlsxRazonable(bytes, 'El Excel');
     const rows = await readSheet(Buffer.from(bytes));
     texto = rows.map((r) => r.map((c) => (c == null ? '' : String(c))).join('\t')).join('\n');
   } else if (ext === 'doc') {

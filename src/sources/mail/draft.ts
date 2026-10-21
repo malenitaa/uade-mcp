@@ -5,6 +5,8 @@
 
 // outlook.cloud.microsoft es el dominio actual de Outlook web; con outlook.office.com Microsoft
 // pide iniciar sesión de nuevo aunque ya estés adentro en la otra dirección.
+import { ErrorDeUso } from '../../error-de-uso.js';
+
 export const COMPOSE_URL = 'https://outlook.cloud.microsoft/mail/deeplink/compose';
 const ALLOWED_DOMAIN = /@uade\.edu\.ar$/i;
 const EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -20,9 +22,9 @@ export interface Draft {
 function checkRecipients(list: string[] | undefined, field: string): string[] {
   const out = (list ?? []).map((e) => e.trim()).filter(Boolean);
   for (const e of out) {
-    if (!EMAIL.test(e)) throw new Error(`"${e}" no es un mail válido (${field}).`);
+    if (!EMAIL.test(e)) throw new ErrorDeUso(`"${e}" no es un mail válido (${field}).`);
     if (!ALLOWED_DOMAIN.test(e)) {
-      throw new Error(`Solo se pueden armar borradores para direcciones @uade.edu.ar ("${e}" no lo es).`);
+      throw new ErrorDeUso(`Solo se pueden armar borradores para direcciones @uade.edu.ar ("${e}" no lo es).`);
     }
   }
   return [...new Set(out.map((e) => e.toLowerCase()))];

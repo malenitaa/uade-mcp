@@ -100,7 +100,7 @@ export function registerPiaTools(
       title: 'Open the enrollment site for the student',
       description:
         'Opens inscripciones.uade.edu.ar in a visible browser window on the student\'s computer, already signed in, at the list of enrollment windows. It does not navigate further or click anything else: the student enrolls and presses Finalizar themselves. Call it only when the student asks to enroll, after showing the pia_prepare_enrollment summary, and tell them which window and class/exam to pick.',
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     () =>
       run(granted, 'pia.leer', async () => {

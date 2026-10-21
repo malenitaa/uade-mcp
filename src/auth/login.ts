@@ -18,6 +18,13 @@ import { configDir } from './permissions.js';
 import { saveSession } from './store.js';
 
 const INTERACTIVO_MS = 10 * 60 * 1000;
+
+// Playwright arranca Chromium con un llavero de mentira (--use-mock-keychain / --password-store=basic):
+// las cookies del perfil quedan cifradas con una clave fija que cualquier programa conoce. Sin esos
+// flags, el navegador usa el llavero del sistema ("Chrome Safe Storage" en macOS), como cuando lo
+// abrís vos. Las cookies de UADE (WebCampus, Inscripciones, SharePoint) ya iban al llavero; esto cubre
+// la sesión persistente de Microsoft que vive en el perfil.
+export const SIN_LLAVERO_FALSO = ['--use-mock-keychain', '--password-store=basic'];
 const SILENCIOSO_MS = 45 * 1000;
 
 // Cookies de analytics que no hacen falta para la sesión y no guardamos.
@@ -76,6 +83,7 @@ export async function abrirInscripciones(): Promise<void> {
       executablePath: findBrowser(),
       headless: false,
       viewport: null,
+      ignoreDefaultArgs: SIN_LLAVERO_FALSO,
       args: ['--no-first-run', '--no-default-browser-check', '--start-maximized'],
     });
     ventana.on('close', () => { ventana = null; });
@@ -97,6 +105,7 @@ async function correr(op: Opciones): Promise<Resultado> {
   const ctx: BrowserContext = ventana ?? (await chromium.launchPersistentContext(browserProfileDir(), {
     executablePath,
     headless: !op.interactivo,
+    ignoreDefaultArgs: SIN_LLAVERO_FALSO,
     args: ['--no-first-run', '--no-default-browser-check'],
   }));
   const guardadas: string[] = [];

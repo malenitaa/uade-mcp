@@ -57,7 +57,14 @@ export function assertAllowed(rawUrl: string | URL): URL {
   const host = url.hostname.toLowerCase();
   if (!ALLOWED_HOSTS.has(host)) throw new PolicyError(`host fuera de la allowlist: ${host}`);
 
-  const target = decodeURIComponent(host + url.pathname + url.search).toLowerCase();
+  // Un "%" mal armado (p. ej. en una Location que devuelve el servidor) haría tirar URIError: se
+  // trata como URL inválida, no como excepción suelta.
+  let target: string;
+  try {
+    target = decodeURIComponent(host + url.pathname + url.search).toLowerCase();
+  } catch {
+    throw new PolicyError('URL inválida (escape mal formado)');
+  }
   for (const rule of DENY_RULES) {
     if (rule.pattern.test(target)) throw new PolicyError(`bloqueado por política: ${rule.motivo}`);
   }

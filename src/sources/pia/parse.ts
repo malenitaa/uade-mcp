@@ -4,6 +4,7 @@
 // sintéticas en test/fixtures/pia.
 import * as cheerio from 'cheerio';
 import { PageChangedError, parseFecha, type FormState } from '../webcampus/parse.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
 
 const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 const PREFIJO = 'ctl00$ContentPlaceHolder1$';
@@ -237,7 +238,7 @@ export function parseDelta(text: string): Delta {
 export function htmlDe(text: string): string {
   if (!esDelta(text)) return text;
   const d = parseDelta(text);
-  if (d.error) throw new Error(`PIA devolvió un error: ${clean(d.error)}`);
+  if (d.error) throw new ErrorDeUso(`PIA devolvió un error: ${clean(d.error)}`);
   return `<form>${[...d.paneles.values()].join('\n')}</form>`;
 }
 

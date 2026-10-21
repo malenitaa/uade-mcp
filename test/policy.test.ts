@@ -47,4 +47,9 @@ describe('lista negra de acciones', () => {
   it('no bloquea palabras que solo contienen "baja"', () => {
     expect(() => assertAllowed('https://www.webcampus.uade.edu.ar/Trabajar.aspx')).not.toThrow();
   });
+
+  it('un "%" mal formado (p. ej. en una Location) es URL inválida, no una excepción suelta', () => {
+    expect(() => assertAllowed('https://www.webcampus.uade.edu.ar/x%E0%A4%A')).toThrow(PolicyError);
+    expect(() => assertAllowed('https://www.webcampus.uade.edu.ar/x?q=%ZZ')).toThrow(PolicyError);
+  });
 });

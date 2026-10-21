@@ -18,7 +18,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Mi Semana por materia (parciales, recuperatorio, final) | ✅ | `webcampus_course_calendar` |
 | Mi Semana general (`Misemanasel.aspx`) | ⛔ | Falla del lado de UADE; se usa la de cada materia |
 | Integrantes: equipo docente | ✅ | `webcampus_teachers` (nunca compañeros) |
-| Apuntes y materiales de la materia (Teams → "Materiales de clase") | ✅ | `webcampus_course_materials` (API de SharePoint; lee PDF, Word .docx/.doc, Excel .xlsx/.xls, PPT) |
+| Apuntes y materiales de la materia (Teams → "Materiales de clase") | ✅ | `webcampus_course_materials` (API de SharePoint; lee PDF, Word .docx/.doc, Excel .xlsx/.xls, PPT) y `webcampus_save_material` (guarda una copia en Downloads/uade-mcp) |
 | Novedades del canal General de cada materia (Teams) | ✅ | `teams_channel_news` (experimental; navegador propio, `login-teams`) |
 | Novedades de cada curso (WebCampus, `NovedadHist.aspx?IdAula=`) | ⏳ | Relevada: en todas las aulas vistas dice "Sin Novedades cargadas", así que no hay un ejemplo con contenido del que escribir el parser. Lo que el docente publica llega por Teams (`teams_channel_news`) |
 | Novedades y agenda generales | ✅ | `webcampus_news`: novedades (con adjuntos), agenda completa (`allEvents`) y detalle de cada evento (`eventId`: fecha, hora, sede, texto). Inscribirse al evento queda fuera (escritura) |

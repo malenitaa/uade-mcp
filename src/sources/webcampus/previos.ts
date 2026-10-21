@@ -46,11 +46,11 @@ function fecha(v: unknown): string | null {
   return parseFecha(clean(v));
 }
 
-const MAX_DESCOMPRIMIDO = 60 * 1024 * 1024;
+export const MAX_DESCOMPRIMIDO = 60 * 1024 * 1024;
 
 // Un .xlsx es un zip: antes de abrirlo se descomprime contando los bytes REALES (los tamaños que
 // declara el zip se pueden falsear), y se corta si pasa el tope: un "zip bomb" no agota la memoria.
-export function assertXlsxRazonable(bytes: Uint8Array): void {
+export function assertXlsxRazonable(bytes: Uint8Array, que = 'El Excel de exámenes previos'): void {
   let total = 0;
   let archivos = 0;
   const unzip = new Unzip((file) => {
@@ -67,7 +67,7 @@ export function assertXlsxRazonable(bytes: Uint8Array): void {
     unzip.push(bytes, true);
     if (!archivos) throw new Error('vacío');
   } catch {
-    throw new Error('El Excel de exámenes previos no es válido o es sospechosamente grande; no se abrió.');
+    throw new Error(`${que} no es válido o es sospechosamente grande; no se abrió.`);
   }
 }
 

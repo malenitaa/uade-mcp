@@ -61,4 +61,30 @@ describe('imágenes de un PDF', () => {
   it('un PDF sin imágenes (texto vectorial) devuelve vacío', () => {
     expect(imagenesDePdf(pdf(obj(1, '/Filter/FlateDecode', deflateSync(Buffer.from('BT /F1 12 Tf (hola) Tj ET')))))).toEqual([]);
   });
+
+  it('un stream chico que infla a cientos de MB se corta (tope por imagen), sin tirar', () => {
+    // Declara 300x60 gris (18 KB) pero el zlib trae 40 MB: se descarta sin reservar esa memoria.
+    const bomba = deflateSync(Buffer.alloc(40 * 1024 * 1024, 7));
+    expect(bomba.length).toBeLessThan(100_000);
+    const doc = pdf(
+      obj(1, `/Subtype/Image/Width ${W}/Height ${H}/Filter/FlateDecode/ColorSpace/DeviceGray/BitsPerComponent 8`, bomba),
+      obj(2, `/Subtype/Image/Width ${W}/Height ${H}/Filter/DCTDecode/ColorSpace/DeviceRGB/BitsPerComponent 8`, jpeg),
+    );
+    const r = imagenesDePdf(doc);
+    expect(r.map((i) => i.mimeType)).toEqual(['image/jpeg']);
+  });
+
+  it('un PDF hostil con miles de "N 0 obj <<" sin cerrar se recorre en tiempo lineal (< 1 s)', () => {
+    const hostil = pdf(Buffer.from('1 0 obj <</Subtype/Image '.repeat(60_000)), obj(2, `/Subtype/Image/Width ${W}/Height ${H}/Filter/DCTDecode`, jpeg));
+    expect(hostil.length).toBeGreaterThan(1_400_000);
+    const t0 = performance.now();
+    const r = imagenesDePdf(hostil);
+    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(r.length).toBeLessThanOrEqual(1);
+  });
+
+  it('un diccionario anidado (DecodeParms) no corta el objeto antes de tiempo', () => {
+    const doc = pdf(obj(1, `/Subtype/Image/Width ${W}/Height ${H}/DecodeParms<</Predictor 1/Colors 3>>/Filter/DCTDecode/ColorSpace/DeviceRGB/BitsPerComponent 8`, jpeg));
+    expect(imagenesDePdf(doc).map((i) => i.mimeType)).toEqual(['image/jpeg']);
+  });
 });

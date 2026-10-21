@@ -6,6 +6,7 @@ import * as cheerio from 'cheerio';
 import { memoryStore, SessionClient, type SessionStore } from '../../net/session.js';
 import { PIA } from '../inscripciones/index.js';
 import { CONTROLES, DIAS_PIA, htmlDe, leerFormulario, parseBuscador, parseClases, parseMaterias, type Buscador, type ClasePia, type MateriaPia } from './parse.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
 
 export class PiaClient extends SessionClient {
   constructor(store: SessionStore = memoryStore()) {
@@ -61,7 +62,7 @@ export class Pia {
     const pedidas: MateriaPia[] = [];
     for (const codigo of b.materias) {
       const m = materias.find((x) => x.codigo === codigo);
-      if (!m) throw new Error(`La materia ${codigo} no está en la lista de PIA para esta ventana. Hay ${materias.length} materias: ${materias.map((x) => x.codigo).join(', ')}.`);
+      if (!m) throw new ErrorDeUso(`La materia ${codigo} no está en la lista de PIA para esta ventana. Hay ${materias.length} materias: ${materias.map((x) => x.codigo).join(', ')}.`);
       pedidas.push(m);
       if (m.chk) form[m.chk] = 'on';
     }
@@ -72,11 +73,11 @@ export class Pia {
 
     let turno = buscador.turnos.find((t) => b.turno && norm(t.nombre).includes(norm(b.turno)));
     if (!turno && !b.turno && buscador.turnos.length === 1) turno = buscador.turnos[0];
-    if (!turno) throw new Error(`PIA pide un turno. Opciones para esta ventana: ${buscador.turnos.map((t) => t.nombre).join(', ') || 'ninguna'}.`);
+    if (!turno) throw new ErrorDeUso(`PIA pide un turno. Opciones para esta ventana: ${buscador.turnos.map((t) => t.nombre).join(', ') || 'ninguna'}.`);
     form[CONTROLES.turno] = turno.id;
     for (const d of b.dias ?? []) {
       const chk = DIAS_PIA[norm(d)];
-      if (!chk) throw new Error(`Día inválido: ${d}. Usá L, M, MI, J, V o S.`);
+      if (!chk) throw new ErrorDeUso(`Día inválido: ${d}. Usá L, M, MI, J, V o S.`);
       form[chk] = 'on';
     }
 

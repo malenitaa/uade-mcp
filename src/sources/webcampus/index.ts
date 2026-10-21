@@ -23,6 +23,7 @@ import {
   type Historial,
   type Periodo,
 } from './parse.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
 
 const ID = /^\d{1,12}$/;
 
@@ -144,7 +145,7 @@ export class WebCampus {
   async oferta(linkProgramacion: string, materia: string): Promise<ClaseOfertada[]> {
     const inicial = parseOferta((await this.client.get(linkProgramacion)).html);
     if (!inicial.materias.some((m) => m.codigo === materia)) {
-      throw new Error(`La materia ${materia} no está en la programación de tu carrera para este cuatrimestre.`);
+      throw new ErrorDeUso(`La materia ${materia} no está en la programación de tu carrera para este cuatrimestre.`);
     }
     const ddl = Object.keys(inicial.form).find((k) => k.endsWith('$ddlMateria'));
     if (!ddl) throw new Error('No encontré el filtro de materia en la Programación de Clases.');

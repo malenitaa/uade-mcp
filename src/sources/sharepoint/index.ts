@@ -3,6 +3,7 @@
 // de cada materia (los apuntes que comparte el docente en Teams). La sesión de SharePoint (rtFa) abre
 // todo Microsoft 365, por eso se acota a esos sitios a conciencia.
 import { keychainStore, SessionClient, type SessionStore } from '../../net/session.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
 
 export const SHAREPOINT = 'https://uadeeduar.sharepoint.com';
 export const SHAREPOINT_ACCOUNT = 'sharepoint';
@@ -10,8 +11,15 @@ export const SITIOS_PERMITIDOS = [
   /^\/:[a-z]:\/s\/ArchivosAranceles\//i,
   /^\/sites\/ArchivosAranceles\//i,
   // Apuntes de una materia: la carpeta "Materiales de clase" (o "Class Materials") del equipo.
-  /\/sites\/[^/]+\/(Materiales de clase|Class Materials)(\/|$)/i,
+  /^\/sites\/[^/]+\/(Materiales de clase|Class Materials)(\/|$)/i,
 ];
+
+// Segmentos "." o ".." (también escapados) saldrían de la carpeta habilitada: no se aceptan.
+export function rutaSana(serverRelativePath: string): boolean {
+  let p = serverRelativePath;
+  try { p = decodeURIComponent(p); } catch { return false; }
+  return !p.split('/').some((seg) => seg === '.' || seg === '..') && !/[\x00-\x1f\\]/.test(p);
+}
 
 export interface EntradaSP {
   nombre: string;
@@ -21,7 +29,7 @@ export interface EntradaSP {
   modificado?: string;
 }
 
-const permitido = (serverRelativePath: string): boolean => SITIOS_PERMITIDOS.some((r) => r.test(serverRelativePath));
+const permitido = (serverRelativePath: string): boolean => rutaSana(serverRelativePath) && SITIOS_PERMITIDOS.some((r) => r.test(serverRelativePath));
 const siteDe = (serverRelativePath: string): string => serverRelativePath.match(/^(\/sites\/[^/]+)/i)?.[1] ?? '';
 const quote = (p: string): string => `decodedurl='${p.replace(/'/g, "''")}'`;
 
@@ -81,10 +89,10 @@ export class SharePointClient extends SessionClient {
       file = await this.get(d.pathname + d.search);
     } catch (err) {
       // Compartido solo para ver en el visor (sin descarga): se respeta y se devuelve el link.
-      if (/403/.test((err as Error).message)) throw new Error(`"${nombre}" está compartido solo para verlo en el navegador, no para descargarlo. Abrilo vos: ${u.href}`);
+      if (/403/.test((err as Error).message)) throw new ErrorDeUso(`"${nombre}" está compartido solo para verlo en el navegador, no para descargarlo. Abrilo vos: ${u.href}`);
       throw err;
     }
-    if (!esDoc(file.bytes)) throw new Error(`No pude descargar ${nombre} de SharePoint.`);
+    if (!esDoc(file.bytes)) throw new ErrorDeUso(`No pude descargar ${nombre} de SharePoint.`);
     return { nombre, bytes: file.bytes };
   }
 
