@@ -37,7 +37,8 @@ jobs:
           grep -q "version: '$v'" src/index.ts || { echo "src/index.ts no dice la versión $v"; exit 1; }
       # npm-shrinkwrap.json: el lockfile viaja dentro del paquete, así `npx -y uade-mcp` instala exactamente
       # las mismas versiones (también las transitivas) que se probaron acá, con su integridad.
-      - run: npm shrinkwrap
+      # npm 12 ya no trae `npm shrinkwrap`; es lo mismo que copiar el lockfile con ese nombre.
+      - run: cp package-lock.json npm-shrinkwrap.json
       - name: El paquete tiene que incluir npm-shrinkwrap.json
         run: |
           npm pack --dry-run --json | node -e '
