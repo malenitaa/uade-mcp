@@ -18,3 +18,5 @@ experimentos/*
 !experimentos/README.md
 
 .DS_Store
+
+.claude/launch.json

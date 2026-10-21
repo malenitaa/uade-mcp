@@ -91,7 +91,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 
 | Tool | Qué devuelve |
 |---|---|
-| `uade_plan_next_term` | Todo el armado en un pedido: qué podés cursar (y qué se habilita si aprobás lo que cursás), qué se dicta, las mejores semanas sin superposiciones y, si querés, la vista en [planuade.ar/misemana](https://planuade.ar/misemana) (los datos van en el link, no al servidor) o un archivo local con calendario `.ics` |
+| `uade_plan_next_term` | Todo el armado en un pedido: qué podés cursar (y qué se habilita si aprobás lo que cursás), qué se dicta, las mejores semanas sin superposiciones y, si querés, la vista en [planuade.ar/misemana](https://planuade.ar/misemana) (los datos van en el link, no al servidor) o un archivo local con calendario `.ics`. Esa página también se usa sin MCP, pegando la Programación de Clases |
 | `uade_enrollment_windows` | Ventanas de inscripción (materias, previos, bajas) con apertura, cierre y si están abiertas |
 | `webcampus_class_offering` | Clases de cada materia el próximo cuatrimestre: sede, turno, días, horario, fechas |
 | `webcampus_schedule_planner` | Combina hasta 6 materias sin solapamientos, con filtros, ordenadas por menos días y huecos |
