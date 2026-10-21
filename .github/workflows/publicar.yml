@@ -39,13 +39,12 @@ jobs:
       # las mismas versiones (también las transitivas) que se probaron acá, con su integridad.
       # npm 12 ya no trae `npm shrinkwrap`; es lo mismo que copiar el lockfile con ese nombre.
       - run: cp package-lock.json npm-shrinkwrap.json
-      - name: El paquete tiene que incluir npm-shrinkwrap.json
+      - name: El paquete tiene que incluir npm-shrinkwrap.json (y nada fuera de dist, README, LICENSE, SECURITY)
         run: |
-          npm pack --dry-run --json | node -e '
-            const j = JSON.parse(require("fs").readFileSync(0, "utf8")); const p = Array.isArray(j) ? j[0] : Object.values(j)[0]; // npm 11 imprime una lista; npm 12, un objeto por paquete
-            const files = p.files.map((f) => f.path);
-            if (!files.includes("npm-shrinkwrap.json")) { console.error("falta npm-shrinkwrap.json en el paquete:", files); process.exit(1); }
-            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$|npm-shrinkwrap\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
-            console.log(files.length, "archivos, con npm-shrinkwrap.json");
-          '
+          tgz="$(npm pack --silent 2>/dev/null | tail -1)"
+          tar -tzf "$tgz" | sed 's#^package/##' | sort > /tmp/archivos.txt
+          rm -f "$tgz"
+          grep -qx 'npm-shrinkwrap.json' /tmp/archivos.txt || { echo "falta npm-shrinkwrap.json en el paquete:"; cat /tmp/archivos.txt; exit 1; }
+          if grep -Ev '^(dist/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$|npm-shrinkwrap\.json$)' /tmp/archivos.txt; then echo "archivo inesperado en el paquete"; exit 1; fi
+          echo "$(wc -l < /tmp/archivos.txt) archivos, con npm-shrinkwrap.json"
       - run: npm stage publish . --provenance --access public
