@@ -103,3 +103,56 @@ export function parseNovedad(html: string, id: string): Novedad {
   const adjuntos = panel.find('a[href]').map((_, a) => $(a).attr('href')!).get().filter((h) => /DocsDownload|\.pdf$|\.xlsx?$|\.docx?$|sharepoint\.com|short\.gy/i.test(h));
   return { id, titulo, texto: clean(panel.text()), adjuntos };
 }
+
+// ── Agenda completa (MiContenido/Eventos.aspx) y detalle de un evento (MiContenido/Agenda.aspx?Id=) ──
+
+export function parseEventos(html: string, hoy = new Date()): EventoAgenda[] {
+  const $ = cheerio.load(html);
+  const cards = $('.card.agenda');
+  if (!cards.length && !$('[id$="Pnl_Tabs"]').length) throw new PageChangedError('agenda de eventos de WebCampus', $.html());
+  const out: EventoAgenda[] = [];
+  const vistos = new Set<string>();
+  cards.each((_, c) => {
+    const titulo = clean($(c).find('.agenda-tit-home').first().text());
+    const id = idDe($(c).find('a[href*="Agenda.aspx"]').first().attr('href'));
+    if (!titulo || (id && vistos.has(id))) return;
+    if (id) vistos.add(id);
+    const f = clean($(c).find('.agenda-fecha-home').first().text()).match(/(\d{1,2})\s+([A-Za-zÁ-ú]+)/);
+    out.push({
+      categoria: clean($(c).find('.agenda-titulo-facultad').first().text()) || null,
+      titulo,
+      fecha: f ? fechaAgenda(f[1]!, f[2]!, hoy) : null,
+      hora: clean($(c).find('.agenda-hora-home').first().text()).replace(/^de\s+/i, 'De ').replace(/\s*hs\.?\s*$/i, '') || null,
+      id,
+    });
+  });
+  return out;
+}
+
+export interface Evento {
+  id: string;
+  titulo: string;
+  organiza: string | null; // "Fac. de Ingeniería y Ciencias Exactas (Charlas)"
+  fechaTexto: string | null; // "Miercoles 21 de octubre" (sin año, tal como lo publica WebCampus)
+  hora: string | null;
+  lugar: string | null;
+  texto: string;
+}
+
+export function parseEvento(html: string, id: string): Evento {
+  const $ = cheerio.load(html);
+  const panel = $('#ctl00_ContentPlaceHolderMain_Pnl_Agenda');
+  if (!panel.length) throw new PageChangedError('evento de la agenda de WebCampus', $.html());
+  panel.find('p, div, li, br, h1, h2, h3, h4, td, tr').append(' ');
+  const ps = panel.find('p.card-text').map((_, p) => clean($(p).text())).get();
+  const cuerpo = panel.find('.card-text.mt-4').first();
+  return {
+    id,
+    titulo: clean(panel.find('h1').first().text()),
+    organiza: clean(panel.find('h2').first().text()) || null,
+    fechaTexto: ps.find((t) => /\d{1,2}\s+de\s+[a-zá-ú]+/i.test(t)) ?? null,
+    hora: (ps.find((t) => /\d{1,2}:\d{2}/.test(t)) ?? '').replace(/\s*hs\.?\s*$/i, '') || null,
+    lugar: ps.find((t) => !/\d{1,2}:\d{2}/.test(t) && !/\d{1,2}\s+de\s+[a-zá-ú]+/i.test(t)) ?? null,
+    texto: clean(cuerpo.length ? cuerpo.text() : panel.text()),
+  };
+}

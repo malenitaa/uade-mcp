@@ -1,7 +1,8 @@
 // "Nuestra API" de WebCampus: funciones de alto nivel que devuelven JSON tipado.
 import { WebCampusClient, WEBCAMPUS } from './client.js';
 import { parseCorrelativas, type Correlativas } from './correlativas.js';
-import { parseHome, parseNovedad, type Home, type Novedad } from './novedades.js';
+import { parseEvento, parseEventos, parseHome, parseNovedad, type Evento, type EventoAgenda, type Home, type Novedad } from './novedades.js';
+import { parseClasesDeConsulta, type ClasesDeConsulta } from './consultas.js';
 import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
   parsePlanificacion,
@@ -92,6 +93,34 @@ export class WebCampus {
   async novedad(id: string): Promise<Novedad> {
     if (!ID.test(id)) throw new Error('id de novedad inválido');
     return parseNovedad((await this.client.get(`/MiContenido/Novedades.aspx?Id=${id}&EsDC=False`)).html, id);
+  }
+
+  // Agenda completa de eventos (charlas, reuniones informativas, talleres) y el detalle de uno.
+  async eventos(): Promise<EventoAgenda[]> {
+    return parseEventos((await this.client.get('/MiContenido/Eventos.aspx?EsActiv=False')).html);
+  }
+
+  async evento(id: string): Promise<Evento> {
+    if (!ID.test(id)) throw new Error('id de evento inválido');
+    return parseEvento((await this.client.get(`/MiContenido/Agenda.aspx?Id=${id}&EsActiv=False`)).html, id);
+  }
+
+  // Clases de consulta de la carrera (Mi cursada > Clases de consulta): dos postbacks (carrera, materia).
+  async clasesDeConsulta(materia?: string): Promise<ClasesDeConsulta> {
+    const path = '/Contenidos/MisClasesApoyo.aspx';
+    const p0 = parseClasesDeConsulta((await this.client.get(path)).html);
+    const carrera = p0.carreras[0];
+    if (!carrera) return { ...p0, aviso: 'WebCampus no muestra ninguna carrera para buscar clases de consulta.' };
+    const ddlCarrera = Object.keys(p0.form).find((k) => k.endsWith('$ddlCarrera')) ?? 'ctl00$ContentPlaceHolderMain$ddlCarrera';
+    const p1 = parseClasesDeConsulta((await this.client.postback(path, { ...p0.form, [ddlCarrera]: carrera.id }, ddlCarrera)).html);
+    if (!p1.materias.length) return { ...p1, carrera: carrera.nombre, aviso: 'No hay clases de consulta programadas para tu carrera en este momento.' };
+    if (!materia) return { ...p1, carrera: carrera.nombre, aviso: 'Pasá subject (código o parte del nombre) para ver días y horarios.' };
+    const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const elegida = p1.materias.find((m) => m.id === materia || m.nombre.includes(materia)) ?? p1.materias.find((m) => norm(m.nombre).includes(norm(materia)));
+    if (!elegida) return { ...p1, carrera: carrera.nombre, aviso: `"${materia}" no está entre las materias con clases de consulta.` };
+    const ddlMateria = Object.keys(p1.form).find((k) => k.endsWith('$ddlMateria')) ?? 'ctl00$ContentPlaceHolderMain$ddlMateria';
+    const p2 = parseClasesDeConsulta((await this.client.postback(path, { ...p1.form, [ddlCarrera]: carrera.id, [ddlMateria]: elegida.id }, ddlMateria)).html);
+    return { ...p2, carrera: carrera.nombre, materia: elegida.nombre };
   }
 
   // Un archivo publicado en WebCampus (adjunto de una novedad): solo rutas del propio sitio.

@@ -86,7 +86,9 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     const ap = h.materias.filter((m) => m.situacion === 'aprobada');
     if (!fechasValidas(h.materias.flatMap((m) => [m.fechaAprobacion, m.fechaRegularizacion]))) return ['error', 'hay fechas inválidas'];
     const sinFecha = ap.filter((m) => !m.fechaAprobacion).length;
-    return [sinFecha ? 'aviso' : 'ok', `${h.materias.length} materias, ${ap.length} aprobadas${sinFecha ? `, ${sinFecha} sin fecha` : ''}, promedio ${h.promedio !== null ? 'ok' : 'sin dato'}`];
+    const fp = h.materias.filter((m) => m.situacion === 'final_pendiente');
+    const conVenc = fp.filter((m) => m.vencimientoRegularidad).length;
+    return [sinFecha ? 'aviso' : 'ok', `${h.materias.length} materias, ${ap.length} aprobadas${sinFecha ? `, ${sinFecha} sin fecha` : ''}, ${fp.length} a final (${conVenc} con vencimiento), ${h.materias.reduce((n, m) => n + m.intentos.length, 0)} actas, promedio ${h.promedio !== null ? 'ok' : 'sin dato'}`];
   });
   await push('cuenta corriente', async () => {
     const c = await wc.cuenta();
@@ -111,6 +113,26 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     const v = await insc.ventanas();
     if (!fechasValidas(v.flatMap((x) => [x.desde, x.hasta]))) return ['error', 'hay fechas inválidas'];
     return ['ok', `${v.length} ventanas, ${v.filter((x) => x.abierta).length} abiertas`];
+  });
+  await push('cronograma (imagen)', async () => {
+    const c = await insc.cronograma();
+    return [c.bytes.length > 10_000 ? 'ok' : 'aviso', `${c.mimeType}, ${Math.round(c.bytes.length / 1024)} KB`];
+  });
+  await push('guía de inscripciones', async () => {
+    const g = await insc.guia();
+    return [g.preguntasFrecuentes.length ? 'ok' : 'aviso', `${g.importante.length} avisos, ${g.instructivos.length} instructivos, ${g.preguntasFrecuentes.length} preguntas frecuentes`];
+  });
+  await push('agenda de eventos', async () => {
+    const e = await wc.eventos();
+    if (!fechasValidas(e.map((x) => x.fecha))) return ['error', 'hay fechas inválidas'];
+    const primero = e.find((x) => x.id);
+    if (!primero?.id) return ['aviso', 'sin eventos publicados'];
+    const d = await wc.evento(primero.id);
+    return [d.titulo ? 'ok' : 'aviso', `${e.length} eventos; el primero ${d.titulo ? 'con detalle' : 'sin detalle'}`];
+  });
+  await push('clases de consulta', async () => {
+    const c = await wc.clasesDeConsulta();
+    return ['ok', c.materias.length ? `${c.materias.length} materias con clases de consulta` : 'ninguna materia con clases de consulta ahora'];
   });
   await push('oferta de clases', async () => {
     const link = await insc.linkProgramacion();
@@ -151,6 +173,8 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     await push(`sección: ${s}`, async () => {
       const d = await sec.consultar(s);
       const largo = 'texto' in d ? d.texto.length : 0;
+      const imgs = 'imagenes' in d && Array.isArray(d.imagenes) ? d.imagenes.length : 0;
+      if (imgs) return ['ok', `PDF escaneado: ${imgs} imagen${imgs > 1 ? 'es' : ''}`];
       return [largo > 100 ? 'ok' : 'aviso', largo > 100 ? `${largo} caracteres` : 'sin texto legible (PDF escaneado o página con filtros)'];
     });
   }

@@ -20,7 +20,11 @@ function resumirHistorial(materias: MateriaHistorial[]) {
     ),
     aprobadas: de('aprobada').map((m) => ({ codigo: m.codigo, nombre: m.nombre, nota: m.nota, fecha: m.fechaAprobacion })),
     equivalencias: de('equivalencia').map((m) => `${m.codigo} ${m.nombre}`),
-    finalesPendientes: de('final_pendiente').map((m) => ({ codigo: m.codigo, nombre: m.nombre, regularizada: m.fechaRegularizacion })),
+    finalesPendientes: de('final_pendiente').map((m) => ({ codigo: m.codigo, nombre: m.nombre, regularizada: m.fechaRegularizacion, venceRegularidad: m.vencimientoRegularidad, finalesDesaprobados: m.intentos.filter((i) => /EXAMEN/i.test(i.condicion) && /REPROBADO|DESAPROBADO|AUSENTE/i.test(i.situacion)).length || undefined })),
+    // Cursadas anteriores que no salieron (recursa, ausente): para "¿cuántas veces recursé X?".
+    intentosAnteriores: materias
+      .map((m) => ({ codigo: m.codigo, nombre: m.nombre, intentos: m.intentos.filter((i) => /ASIGNATURA/i.test(i.condicion) && /RECURSA|AUSENTE|REPROBADO|DESAPROBADO/i.test(i.situacion)).map((i) => `${i.situacion.toLowerCase()} ${i.fecha ?? ''}`.trim()) }))
+      .filter((m) => m.intentos.length),
     cursando: de('cursando').map((m) => `${m.codigo} ${m.nombre}`),
     sinCursar: de('sin_cursar').map((m) => `${m.codigo} ${m.nombre} (${m.anio.toLowerCase()})`),
   };
@@ -75,7 +79,7 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
     'webcampus_transcript',
     {
       title: 'Transcript',
-      description: 'Degree plan status: counts, passed (grade, date), pending finals, current, not taken; average. detail=true for every field.',
+      description: 'Degree plan status: counts, passed (grade, date), pending finals (with regularity expiry and failed finals), previous failed/absent attempts per subject, current, not taken; average. detail=true for every field (every act of every subject).',
       inputSchema: { plan: z.string().regex(/^\d+$/).optional(), detail: z.boolean().default(false) },
       annotations: READ_ONLY,
     },
@@ -138,6 +142,22 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
             fecha: a.fecha, dia: a.dia, horario: a.horario, actividad: a.actividad, aula: a.aula, sede: a.sede,
           })),
         })) };
+      }),
+  );
+
+  server.registerTool(
+    'webcampus_consultation_classes',
+    {
+      title: 'Consultation classes (clases de consulta)',
+      description: "Extra consultation/support classes WebCampus schedules for the student's degree (Mi cursada > Clases de consulta). No subject: which subjects have them. subject (code or part of the name): days, times and details as published.",
+      inputSchema: { subject: z.string().min(2).max(80).optional() },
+      annotations: READ_ONLY,
+    },
+    ({ subject }) =>
+      read(async () => {
+        const r = await cache.get(`consultas:${subject ?? ''}`, TTL.medio, () => wc.clasesDeConsulta(subject));
+        const { form: _f, carreras: _c, ...v } = r.value;
+        return { actualizado: r.actualizado, ...v, materias: v.materias.map((m) => m.nombre) };
       }),
   );
 

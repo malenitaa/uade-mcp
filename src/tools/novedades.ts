@@ -8,11 +8,12 @@ import { cache, TTL } from '../cache/cache.js';
 import { ALLOWED_HOSTS } from '../net/policy.js';
 import { safeFetch } from '../net/http.js';
 import { leerDocumento, tipoLegible } from '../sources/docs/leer.js';
+import { aBase64, imagenesDePdf } from '../sources/docs/pdf-imagenes.js';
 import { SharePointClient, SHAREPOINT } from '../sources/sharepoint/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { textoPagina } from '../sources/webcampus/secciones.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
-import { READ_ONLY, run } from './common.js';
+import { CON_IMAGENES, READ_ONLY, run, type Imagen } from './common.js';
 
 const MAX_TEXTO = 8000;
 
@@ -36,6 +37,18 @@ export interface Lectura {
   url: string; // destino final
   texto?: string;
   nota?: string;
+  // PDF escaneado (sin texto): sus imágenes, para que el modelo las mire.
+  imagenes?: Imagen[];
+}
+
+// Texto de un documento; si es un PDF sin texto, sus imágenes.
+export async function leerBytesOImagenes(nombre: string, bytes: Uint8Array): Promise<{ texto: string; imagenes?: Imagen[] }> {
+  const texto = await leerBytes(nombre, bytes);
+  if (!/^\(PDF sin texto/.test(texto)) return { texto };
+  const imgs = imagenesDePdf(bytes).map((i) => ({ mimeType: i.mimeType, base64: aBase64(i.bytes) }));
+  return imgs.length
+    ? { texto: `(PDF escaneado: no tiene texto; van ${imgs.length} imagen${imgs.length > 1 ? 'es' : ''} para que las leas)`, imagenes: imgs }
+    : { texto };
 }
 
 // Sigue un link de WebCampus (incluido el acortador de UADE) y lee el destino si es un sitio del MCP.
@@ -45,14 +58,14 @@ export async function leerLink(link: string, deps: { wc: WebCampus; sp: SharePoi
   if (u.origin === SHAREPOINT) {
     try {
       const { nombre, bytes } = await deps.sp.descargarCompartido(u.href);
-      return { url: u.href, texto: await leerBytes(nombre, bytes) };
+      return { url: u.href, ...(await leerBytesOImagenes(nombre, bytes)) };
     } catch (err) {
       return { url: u.href, nota: (err as Error).message };
     }
   }
   if (/webcampus\.uade\.edu\.ar$/.test(u.hostname)) {
     const { nombre, bytes } = await deps.wc.archivo(u.pathname + u.search);
-    return { url: u.href, texto: await leerBytes(nombre, bytes) };
+    return { url: u.href, ...(await leerBytesOImagenes(nombre, bytes)) };
   }
   // Acortador o dre.uade.edu.ar: sin cookies (no son sitios con sesión); se sigue la redirección.
   const res = await safeFetch(u, { method: 'GET', redireccionAfuera: 'devolver' });
@@ -70,7 +83,7 @@ export async function leerLink(link: string, deps: { wc: WebCampus; sp: SharePoi
     }
     return { url: final.href, texto: texto.slice(0, MAX_TEXTO) };
   }
-  return { url: final.href, texto: await leerBytes(nombre, res.body) };
+  return { url: final.href, ...(await leerBytesOImagenes(nombre, res.body)) };
 }
 
 export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<Permission>, wc = new WebCampus(), sp = new SharePointClient()): void {
@@ -79,18 +92,29 @@ export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<P
     {
       title: 'What UADE is announcing (WebCampus home)',
       description:
-        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, events.',
+        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list (agenda = next few events). allEvents=true: the full events agenda. eventId: one event with date, time, campus and description. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment; scanned PDFs come back as images); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, talks, events.',
       inputSchema: {
         newsId: z.string().regex(/^\d+$/).optional(),
+        eventId: z.string().regex(/^\d+$/).optional().describe('id from the agenda'),
+        allEvents: z.boolean().default(false).describe('the whole events agenda, not only the next few'),
         link: z.string().url().max(500).optional().describe('a banner or news link as returned by this tool'),
       },
       annotations: READ_ONLY,
     },
-    ({ newsId, link }) =>
+    ({ newsId, eventId, allEvents, link }) =>
       run(granted, 'webcampus.leer', async () => {
         if (link) {
           const r = await cache.get(`link:${link}`, TTL.dia, () => leerLink(link, { wc, sp }));
-          return { actualizado: r.actualizado, ...r.value, aviso: UNTRUSTED_NOTE };
+          const { imagenes, ...resto } = r.value;
+          return { actualizado: r.actualizado, ...resto, aviso: UNTRUSTED_NOTE, [CON_IMAGENES]: imagenes };
+        }
+        if (eventId) {
+          const r = await cache.get(`evento:${eventId}`, TTL.dia, () => wc.evento(eventId));
+          return { actualizado: r.actualizado, ...r.value, aviso: UNTRUSTED_NOTE, nota: 'Inscribirse al evento se hace en WebCampus (botón Inscribirme): el MCP no lo hace.' };
+        }
+        if (allEvents) {
+          const r = await cache.get('eventos', TTL.corto, () => wc.eventos());
+          return { actualizado: r.actualizado, eventos: r.value, aviso: UNTRUSTED_NOTE };
         }
         if (newsId) {
           const r = await cache.get(`novedad:${newsId}`, TTL.dia, async () => {

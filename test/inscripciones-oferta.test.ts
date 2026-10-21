@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseLinkProgramacion, parseVentanas } from '../src/sources/inscripciones/index.js';
+import { parseCronograma, parseGuia, parseLinkProgramacion, parseVentanas } from '../src/sources/inscripciones/index.js';
+import { turnoDeCursada } from '../src/tools/inscripciones.js';
 import { parseDocentes, parseOferta } from '../src/sources/webcampus/parse.js';
 
 const fx = (p: string) => readFileSync(new URL(`./fixtures/${p}`, import.meta.url), 'utf8');
@@ -12,6 +13,35 @@ describe('inscripciones', () => {
       { sede: 'Buenos Aires - Grado', nombre: 'Bajas 2do Cuatrimestre 2030', tipo: 'bajas_o_cambios', abierta: true, desde: '2030-08-01T00:00', hasta: '2030-10-31' },
       { sede: 'Buenos Aires - Grado', nombre: 'Asignaturas Verano 2031', tipo: 'otro', abierta: false, desde: '2030-10-05T12:00', hasta: '2031-02-28' },
     ]);
+  });
+
+  it('cronograma: la imagen de la pestaña, solo del propio sitio', () => {
+    expect(parseCronograma(fx('inscripciones/home.html'))).toEqual({ imagen: '/Content/images/cuadro_inscripciones01.jpg', alt: 'Fechas de inscripciones ficticias' });
+    expect(parseCronograma(fx('inscripciones/home.html').replace('src="/Content', 'src="~/Content'))).toMatchObject({ imagen: '/Content/images/cuadro_inscripciones01.jpg' });
+    expect(() => parseCronograma(fx('inscripciones/home.html').replace('src="/Content', 'src="https://evil.example/Content'))).toThrow('cronograma');
+  });
+
+  it('guía: avisos de Importante, instructivos y preguntas frecuentes', () => {
+    const g = parseGuia(fx('inscripciones/home.html'));
+    expect(g.importante).toEqual([
+      '¡Aviso ficticio uno! Como alumno de CARRERA FICTICIA, también podés cursar en otro campus. ¿Cómo me inscribo? Vas a ver la oferta identificada así: Consultas a ficticio@uade.edu.ar',
+      '¡Importante! Recordatorio para quienes no cursaron: • Materia ficticia A • Materia ficticia B Hace falta una notebook.',
+    ]);
+    expect(g.instructivos).toEqual([
+      { titulo: 'Tutorial ficticio de examen', link: 'https://www.youtube.com/watch?v=ficticio1' },
+      { titulo: 'Tutorial ficticio de asignaturas', link: 'https://youtu.be/ficticio2' },
+    ]);
+    expect(g.preguntasFrecuentes).toEqual([
+      { pregunta: '¿Pregunta ficticia uno?', respuesta: 'Respuesta ficticia uno, primer párrafo. Segundo párrafo con un link.' },
+      { pregunta: '¿Pregunta ficticia dos sobre correlativas?', respuesta: 'Respuesta ficticia dos: podés inscribirte igual.' },
+    ]);
+    expect(g.ayuda).toBe('https://help.uade.edu.ar/help/preguntas/999');
+  });
+
+  it('turno de cursada según la hora de inicio', () => {
+    expect(turnoDeCursada(['18:30 - 22:00', '19:00 - 22:00', null])).toBe('noche');
+    expect(turnoDeCursada(['08:00 - 11:00', '14:00 - 17:00'])).toBe('mañana y tarde');
+    expect(turnoDeCursada([null, 'sin hora'])).toBeNull();
   });
 
   it('link a la Programación de Clases (solo si apunta a WebCampus)', () => {

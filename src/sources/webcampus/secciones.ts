@@ -3,6 +3,8 @@
 // lista de espera MRI) ni nada de la lista negra (pagos, datos personales, trámites).
 import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
+import { aBase64, imagenesDePdf } from '../docs/pdf-imagenes.js';
+import { safeFetch } from '../../net/http.js';
 import { WEBCAMPUS } from './client.js';
 import { SharePointClient } from '../sharepoint/index.js';
 import { WebCampusClient } from './client.js';
@@ -33,19 +35,23 @@ export const SECCIONES = {
   compromiso_uade: 225,
   codigo_vestimenta: 513,
   protocolo_intervencion: 368,
+  admision_sia: 93, // Sistema de Admisión (SIA), ENI (nivel de inglés) y ENE, con la guía de ingreso
 } as const;
 export type Seccion = keyof typeof SECCIONES;
 
 const MAX_TEXTO = 8000;
 const MAX_GUIAS = 6;
-// Guías en PDF que una página de WebCampus enlaza (por ejemplo, las de Wi-Fi por sistema operativo).
+// Guías en PDF que una página de WebCampus enlaza: las propias (/Docs/…, con sesión) y las públicas
+// de dre.uade.edu.ar (talleres de AYUES, guía de ingreso), que se bajan sin cookies.
 export function guiasEnlazadas(html: string): string[] {
   const $ = cheerio.load(html);
-  const urls = $('a[href]')
-    .map((_, a) => new URL($(a).attr('href')!, WEBCAMPUS))
+  // Solo los links del contenido de la sección, no los del pie de página (que están en todas).
+  const urls = $('[id^="ctl00_ContentPlaceHolderMain"] a[href]')
+    .map((_, a) => { try { return new URL($(a).attr('href')!, WEBCAMPUS); } catch { return null; } })
     .get()
-    .filter((u) => u.origin === WEBCAMPUS && /^\/Docs\/[^/]+\.pdf$/i.test(u.pathname))
-    .map((u) => u.pathname);
+    .filter((u): u is URL => !!u)
+    .filter((u) => (u.origin === WEBCAMPUS && /^\/Docs\/[^/]+\.pdf$/i.test(u.pathname)) || (/^(www\.)?dre\.uade\.edu\.ar$/i.test(u.hostname) && /\.pdf$/i.test(u.pathname)))
+    .map((u) => (u.origin === WEBCAMPUS ? u.pathname : `https://${u.hostname}${u.pathname}`));
   return [...new Set(urls)].slice(0, MAX_GUIAS);
 }
 const CACHE_MS = 60 * 60 * 1000;
@@ -55,6 +61,8 @@ export interface TextoSeccion {
   fuente: string; // URL de la página o del PDF
   texto: string;
   recortado?: boolean;
+  // PDF escaneado (sin texto): sus imágenes en base64, para que el modelo las mire.
+  imagenes?: { mimeType: string; base64: string }[];
 }
 
 // Texto principal de una página de WebCampus: los bloques del contenido (ids ctl00_ContentPlaceHolderMain…),
@@ -111,17 +119,26 @@ export class Secciones {
     }
     const esPdf = r.bytes[0] === 0x25 && r.bytes[1] === 0x50; // "%P"
     let texto = esPdf ? (await leerPdf(r.bytes)).texto : textoPagina(r.html);
+    let imagenes: TextoSeccion['imagenes'];
+    if (esPdf && texto.length < 100) {
+      // PDF escaneado (por ejemplo, "Números ante emergencias"): se mandan sus imágenes.
+      const imgs = imagenesDePdf(r.bytes);
+      if (imgs.length) {
+        imagenes = imgs.map((i) => ({ mimeType: i.mimeType, base64: aBase64(i.bytes) }));
+        texto = `(PDF escaneado: no tiene texto; van ${imgs.length} imagen${imgs.length > 1 ? 'es' : ''} para que las leas)`;
+      }
+    }
     if (!esPdf) {
       for (const guia of guiasEnlazadas(r.html)) {
         try {
-          const g = await this.client.get(guia);
-          texto += `\n\n[Guía: ${decodeURIComponent(guia.split('/').pop()!)}] ${(await leerPdf(g.bytes)).texto}`;
+          const bytes = guia.startsWith('https://') ? (await safeFetch(guia)).body : (await this.client.get(guia)).bytes;
+          texto += `\n\n[Guía: ${decodeURIComponent(guia.split('/').pop()!)}] ${(await leerPdf(bytes)).texto}`;
         } catch {
           texto += `\n\n[Guía: ${guia}] (no se pudo leer)`;
         }
       }
     }
-    const data = { seccion, fuente: r.url.href, texto };
+    const data: Omit<TextoSeccion, 'recortado'> = { seccion, fuente: r.url.href, texto, imagenes };
     this.cache.set(seccion, { at: Date.now(), data });
     return data;
   }
@@ -139,6 +156,7 @@ export class Secciones {
       return { seccion, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${consulta}" en esta sección.`] };
     }
     if (!d.texto) return { ...d, texto: '(la sección no tiene texto: puede ser un PDF escaneado o una página que se completa con filtros)' };
+    if (d.imagenes) return d;
     return d.texto.length > MAX_TEXTO ? { ...d, texto: d.texto.slice(0, MAX_TEXTO) + ' … (recortado: pasá query para buscar una parte)', recortado: true } : d;
   }
 }

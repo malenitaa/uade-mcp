@@ -12,6 +12,8 @@ Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu cont
 
 - "¿Qué materias puedo cursar el próximo cuatrimestre y qué finales puedo rendir?"
 - "Armame la semana con estas 5 materias, solo de noche y sin huecos."
+- "¿Qué día me toca inscribirme si curso de noche?" (lee el cronograma de UADE y cuenta tus aprobadas)
+- "¿Por qué me dice que las reglas de validación impiden continuar la inscripción?"
 - "¿Cuándo es el final de Gestión de Personas y cuánto sale el derecho a examen?"
 - "¿Cuánto debo? ¿Cuándo vence la próxima cuota?"
 - "¿Cuánto sale la cuota de mi carrera a la mañana y a la noche?"
@@ -77,12 +79,13 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `webcampus_teachers` | Nombre y mail del equipo docente (nunca datos de compañeros) |
 | `webcampus_course_materials` | Lista, lee (PDF, Word, Excel, PowerPoint) o baja los apuntes de "Materiales de clase" |
 | `teams_channel_news` | Lo último que se publicó en el canal General de una materia (experimental) |
+| `webcampus_consultation_classes` | Clases de consulta programadas para tu carrera: materias, días y horarios |
 
 **Tu carrera**
 
 | Tool | Qué devuelve |
 |---|---|
-| `webcampus_transcript` | Historial: aprobadas, finales pendientes, cursando, sin cursar y promedio |
+| `webcampus_transcript` | Historial: aprobadas, finales pendientes (con vencimiento de la regularidad), recursadas y ausentes anteriores, cursando, sin cursar y promedio |
 | `uade_eligible_subjects` | Qué podés cursar y qué finales podés rendir, cruzando historial y correlativas del plan |
 | `webcampus_exam_schedule` | Cronograma oficial de exámenes previos (por defecto, de tus finales pendientes) |
 | `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) con tu historial para importarlo; confirmás ahí |
@@ -93,6 +96,8 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 |---|---|
 | `uade_plan_next_term` | Todo el armado en un pedido: qué podés cursar (y qué se habilita si aprobás lo que cursás), qué se dicta, las mejores semanas sin superposiciones y, si querés, la vista en [planuade.ar/misemana](https://planuade.ar/misemana) (los datos van en el link, no al servidor) o un archivo local con calendario `.ics`. Esa página también se usa sin MCP, pegando la Programación de Clases |
 | `uade_enrollment_windows` | Ventanas de inscripción (materias, previos, bajas) con apertura, cierre y si están abiertas |
+| `uade_enrollment_schedule` | Qué día te toca inscribirte: el cronograma oficial (la imagen por turno y cantidad de aprobadas, que el agente lee) junto con tus aprobadas y tu turno |
+| `uade_enrollment_guide` | Avisos, tutoriales y preguntas frecuentes oficiales del sitio de inscripciones (packs, optativas, MRI, "adeuda correlativas", reglas de validación) |
 | `webcampus_class_offering` | Clases de cada materia el próximo cuatrimestre: sede, turno, días, horario, fechas |
 | `webcampus_schedule_planner` | Combina hasta 6 materias sin solapamientos, con filtros, ordenadas por menos días y huecos |
 | `pia_class_search` | Clases en PIA con vacantes y condiciones (en verificación: PIA rechaza el acceso fuera del navegador) |
@@ -110,8 +115,8 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 
 | Tool | Qué devuelve |
 |---|---|
-| `webcampus_news` | Banners, novedades y agenda del inicio de WebCampus, y lo que enlazan |
-| `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, códigos… |
+| `webcampus_news` | Banners, novedades, la agenda completa de eventos (charlas, talleres, con detalle) y lo que enlazan |
+| `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, admisión (SIA/ENI), códigos… Los PDFs escaneados vuelven como imagen |
 | `uade_academic_calendar` | Calendario académico y cronogramas oficiales |
 
 **Utilidades**
@@ -124,8 +129,9 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 
 ## Si UADE cambia una página
 
-El MCP no tiene datos cargados a mano: lee en vivo la programación, las ventanas, las novedades, los PDFs,
-los aranceles y tu historial, así que el **contenido se actualiza solo**. Lo que puede romperse es la
+El MCP no tiene datos cargados a mano: lee en vivo la programación, las ventanas, el cronograma (es una
+imagen: se la pasa al agente para que la lea), las novedades, los PDFs, los aranceles y tu historial, así
+que el **contenido se actualiza solo**. Lo que puede romperse es la
 **estructura**: si UADE rediseña una página, el parser deja de entenderla. En ese caso:
 
 - La tool no inventa: avisa que UADE cambió la página y devuelve igual su **texto plano** ("modo degradado"),

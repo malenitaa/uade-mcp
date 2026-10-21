@@ -16,7 +16,7 @@ import { PageChangedError } from '../sources/webcampus/parse.js';
 import { toolActual } from './contexto.js';
 
 export const REPORT_URL = 'https://planuade.ar/api/mcp-error';
-export const VERSION = '0.1.4';
+export const VERSION = '0.2.0';
 
 export interface Reporte {
   version: string;
