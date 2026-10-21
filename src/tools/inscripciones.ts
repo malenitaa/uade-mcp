@@ -6,6 +6,8 @@ import { Inscripciones } from '../sources/inscripciones/index.js';
 import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { MAX_MATERIAS, planificar, sedesPorMateria, variadas } from '../sources/planificador/index.js';
 import { semanaHtml, semanaIcs } from '../sources/planificador/semana.js';
+import { buildSemanaLink } from '../sources/planificador/link.js';
+import { openInBrowser } from '../net/open-browser.js';
 import { carpetaSalida, openGeneratedFile } from '../net/open-browser.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -152,23 +154,25 @@ export function registerPlanCuatrimestreTools(
   insc = new Inscripciones(),
   escribir: (nombre: string, contenido: string) => string = guardarSalida,
   abrir: (ruta: string) => Promise<void> = openGeneratedFile,
+  abrirWeb: (url: string) => Promise<void> = openInBrowser,
 ): void {
   server.registerTool(
     'uade_plan_next_term',
     {
       title: 'Plan my next term (subjects, offering, week)',
       description:
-        'One call for "what can I take, what is offered, build my week": crosses transcript + prerequisites (WebCampus) with the class offering WebCampus publishes (the result says which term it is; tell the student if it is still the current one). Without subjects: lists every subject the student can take and whether it is offered, plus what remains in the plan. With up to 6 subjects (codes): checks each one (can take it? offered?) and returns the best non-overlapping weekly combinations, with class numbers for pia_prepare_enrollment. view=true also writes a weekly calendar (HTML grid with every option + .ics for the best one) to Downloads/uade-mcp and opens it in the browser. Filters: shifts, days, campuses (e.g. MONSERRAT, BELGRANO, RECOLETA, ONLINE). Intensive summer courses (Costa Argentina) only appear if asked for (shift INTENSIVO or campus Pinamar).',
+        'One call for "what can I take, what is offered, build my week": crosses transcript + prerequisites (WebCampus) with the class offering WebCampus publishes (the result says which term it is; tell the student if it is still the current one). Without subjects: lists every subject the student can take and whether it is offered, plus what remains in the plan. With up to 6 subjects (codes): checks each one (can take it? offered?) and returns the best non-overlapping weekly combinations, with class numbers for pia_prepare_enrollment. view=true opens planuade.ar/misemana in the browser with every option in a weekly grid (data travel in the URL fragment, never to a server; the page keeps them only in that browser and can export an .ics). file=true instead writes an HTML grid + .ics to Downloads/uade-mcp. Filters: shifts, days, campuses (e.g. MONSERRAT, BELGRANO, RECOLETA, ONLINE). Intensive summer courses (Costa Argentina) only appear if asked for (shift INTENSIVO or campus Pinamar).',
       inputSchema: {
         subjects: z.array(z.string().regex(/^[A-Z]?\d+(\.\d+)+$/)).max(MAX_MATERIAS).optional(),
         shifts: z.array(z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE', 'INTENSIVO'])).optional(),
         days: z.array(z.enum(['L', 'M', 'MI', 'J', 'V', 'S'])).optional(),
         campuses: z.array(z.string().max(30)).optional(),
-        view: z.boolean().default(false).describe('write and open the weekly calendar file'),
+        view: z.boolean().default(false).describe('open the weekly grid at planuade.ar/misemana'),
+        file: z.boolean().default(false).describe('write the weekly grid + .ics to Downloads/uade-mcp and open the file'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
-    ({ subjects, shifts, days, campuses, view }) =>
+    ({ subjects, shifts, days, campuses, view, file }) =>
       run(granted, 'webcampus.leer', async () => {
         const [h, c] = await Promise.all([
           cache.get('historial:', TTL.dia, () => wc.historial()),
@@ -240,14 +244,21 @@ export function registerPlanCuatrimestreTools(
           noEntranConEsosFiltros: r.sinClases.map((cod) => `${cod} ${nombre.get(cod) ?? ''}: con esos filtros no hay clases; se dicta en ${sedesPorMateria(new Map([[cod, oferta.get(cod) ?? []]]))[cod]?.join(', ') || 'ninguna sede'}`),
           conflictos: r.conflictos,
         };
+        const filtros = [shifts?.length ? `turno ${shifts.join('/').toLowerCase()}` : '', days?.length ? `días ${days.join(', ')}` : '', campuses?.length ? `sede ${campuses.join('/')}` : ''].filter(Boolean).join(' · ') || 'sin filtros';
         if (view && r.combinaciones.length) {
-          const filtros = [shifts?.length ? `turno ${shifts.join('/').toLowerCase()}` : '', days?.length ? `días ${days.join(', ')}` : '', campuses?.length ? `sede ${campuses.join('/')}` : ''].filter(Boolean).join(' · ') || 'sin filtros';
+          const ahora = new Date();
+          const generado = `${String(ahora.getDate()).padStart(2, '0')}/${String(ahora.getMonth() + 1).padStart(2, '0')}/${ahora.getFullYear()} ${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+          const link = buildSemanaLink(r.combinaciones, { carrera: h.value.carrera, generado, programacion: periodo?.aviso ?? null, filtros });
+          await abrirWeb(link).catch(() => {});
+          resultado.vista = { link, nota: 'Se abrió planuade.ar/misemana en el navegador con las opciones. Los datos van después del # y no salen de ese navegador.' };
+        }
+        if (file && r.combinaciones.length) {
           const ahora = new Date();
           const sello = ahora.toISOString().slice(0, 16).replace(/[-:T]/g, '');
           const html = escribir(`semana-${sello}.html`, semanaHtml(r.combinaciones, { carrera: h.value.carrera, generado: ahora, filtros, periodo: periodo?.aviso }));
           const ics = escribir(`semana-${sello}.ics`, semanaIcs(r.combinaciones[0]!.clases, ahora));
           await abrir(html).catch(() => {});
-          resultado.vista = { html, calendario: ics, nota: 'Se abrió la vista en tu navegador. El .ics tiene la opción 1: abrilo para sumarla a tu calendario.' };
+          resultado.archivos = { html, calendario: ics, nota: 'Se abrió el archivo en tu navegador. El .ics tiene la opción 1: abrilo para sumarla a tu calendario.' };
         }
         return resultado;
       }),

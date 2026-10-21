@@ -58,7 +58,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Armar la semana sin solapamientos | ✅ | `webcampus_schedule_planner` (combinaciones de hasta 6 materias, filtros, conflictos). Sin docentes: la programación no los publica |
 | Cronograma (imagen) | ⛔ | Es una imagen; las mismas fechas salen de los PDFs de cronogramas |
 | Buscar clases en PIA (vacantes, condiciones) | 🟡 | `pia_class_search`: mapeado a partir de un registro de red de la autora (búsqueda, materias, clases, carrito, pantalla de finalizar con el resumen arancelario). Parsers y cliente con tests sobre fixtures; en vivo PIA responde 401 (HTTP Basic, realm uade.edu.ar) al link firmado: falta identificar qué credencial manda el navegador |
-| Armar el cuatrimestre y ver la semana | ✅ | `uade_plan_next_term`: elegibilidad + oferta + combinaciones; vista HTML y `.ics` en `~/Downloads/uade-mcp`. Avisa si la programación publicada es la del cuatrimestre en curso |
+| Armar el cuatrimestre y ver la semana | ✅ | `uade_plan_next_term`: elegibilidad + oferta + combinaciones; `view` abre planuade.ar/misemana (datos en el fragmento), `file` deja HTML + `.ics` en `~/Downloads/uade-mcp`. Avisa si la programación publicada es la del cuatrimestre en curso |
 | Qué puedo cursar / rendir | ✅ | `uade_eligible_subjects` (historial + correlativas de WebCampus) |
 | Inscripción en PIA | 🟡 por diseño | `pia_prepare_enrollment` (resumen de materia o previo) + `uade_open_enrollment_site` (ventana con sesión). El MCP no recorre PIA ni envía inscripciones: la persona elige, agrega al carrito y aprieta Finalizar |
 | Bajas y cambios | ⛔ | Decisión de producto |
