@@ -42,7 +42,7 @@ jobs:
       - name: El paquete tiene que incluir npm-shrinkwrap.json
         run: |
           npm pack --dry-run --json | node -e '
-            const [p] = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const j = JSON.parse(require("fs").readFileSync(0, "utf8")); const p = Array.isArray(j) ? j[0] : Object.values(j)[0]; // npm 11 imprime una lista; npm 12, un objeto por paquete
             const files = p.files.map((f) => f.path);
             if (!files.includes("npm-shrinkwrap.json")) { console.error("falta npm-shrinkwrap.json en el paquete:", files); process.exit(1); }
             if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$|npm-shrinkwrap\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
