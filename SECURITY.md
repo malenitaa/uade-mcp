@@ -24,7 +24,7 @@ No abras un issue público para temas de seguridad.
 | Rutas de SharePoint ancladas a la carpeta habilitada; `folder` no acepta `..`, `.` ni segmentos vacíos | `src/sources/sharepoint/index.ts`, `src/tools/materiales.ts` | `test/materiales.test.ts` |
 | Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo contando bytes reales (xlsx, docx, pptx) y por PDF escaneado (imágenes, con tope por imagen); los PDFs se recorren en tiempo lineal | `src/sources/docs/`, `src/sources/webcampus/previos.ts` | `test/previos.test.ts`, `test/materiales.test.ts`, `test/pdf-imagenes.test.ts` |
 | Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página); el mensaje viaja solo de errores técnicos y tapado (mails, números largos, rutas, comillas); de los errores que nombran materias, archivos o carreras (`ErrorDeUso`) va solo el tipo; un envío por tool, tipo y página por día; único path permitido en planuade.ar | `src/report/errores.ts`, `src/error-de-uso.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
-| Sin telemetría; dependencias con versión exacta y lockfile dentro del paquete (`npm-shrinkwrap.json`); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
+| Sin telemetría; dependencias directas con versión exacta (npm 12 ignora `npm-shrinkwrap.json`, así que las transitivas las fija el lockfile solo en desarrollo y CI); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
 
 La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en
 [docs/AUDITORIA.md](docs/AUDITORIA.md).
@@ -49,8 +49,9 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
   secretos de GitHub, con protección al push, bloquea tokens que intenten entrar.
 - **Dependencias con versión exacta** y `package-lock.json`; `npm ci --ignore-scripts` en CI: ninguna
   dependencia corre código al instalarse. Al publicar, el lockfile viaja dentro del paquete como
-  `npm-shrinkwrap.json` (el workflow verifica que esté): `npx -y uade-mcp` instala exactamente las mismas
-  versiones, también las transitivas, que pasaron el CI.
+Límite conocido: npm 12, que es el que exige la publicación en staging, no incluye ni respeta
+`npm-shrinkwrap.json`, así que `npx -y uade-mcp` fija las dependencias directas (versión exacta en
+`package.json`) pero resuelve las transitivas al instalar. `npm audit` corre en cada commit y en CI.
 
 ## Lo que queda fuera de estas garantías
 

@@ -36,7 +36,7 @@ sin secretos ni datos personales (solo valores ficticios de tests); licencias MI
 | M6 | Se guarda `rtFa` (cookie de Microsoft 365 de todo el tenant) y la sesión persistente de Microsoft en el perfil | ⚠️ Aceptado: sin `rtFa` SharePoint responde 403 (verificado). Mitigado: el MCP solo la usa en sitios habilitados; vive en el llavero, y el perfil se cifra con el llavero del sistema desde la 0.2.1 (S4); `logout` borra todo; alcance real documentado en `SECURITY.md` | `cli/login.ts`, `sharepoint/index.ts`, `auth/login.ts` | — |
 | M7 | Con el MCP abierto, `logout` no borraba la sesión en memoria | ✅ Corregido: el llavero es la fuente de verdad en cada pedido | `net/session.ts` | `auditoria.test.ts` M7 |
 | M8 | El tope anti zip-bomb confiaba en tamaños declarados | ✅ Corregido: se descomprime contando bytes reales, tope 60 MB | `webcampus/previos.ts` | `previos.test.ts` |
-| M9 | Dependencias con rangos `^` | ✅ Corregido: versiones exactas; `files` en `package.json`; `npm-shrinkwrap.json` dentro del paquete desde la 0.2.1 (S11) | `package.json`, `publicar.yml` | CI |
+| M9 | Dependencias con rangos `^` | ✅ Corregido en parte: versiones exactas y `files` en `package.json`; el lockfile dentro del paquete no es posible (S11) | `package.json`, `publicar.yml` | CI |
 | L1 | Otro programa local puede leer el llavero sin aviso | ⚠️ Aceptado: inherente a un MCP local; documentado | `SECURITY.md` | — |
 | L2 | La lista negra no veía el control de los postbacks | ✅ Corregido | `net/session.ts` | `auditoria.test.ts` L2 |
 | L3 | Body y headers seguían redirecciones a otro host | ✅ Corregido | `net/http.ts` | `auditoria.test.ts` L3 |
@@ -68,7 +68,7 @@ dependencias) no se tocó. Todo lo de abajo quedó corregido en la 0.2.1, con un
 | S8 | `uade_open_enrollment_site` con `readOnlyHint: true` abre una ventana con sesión (baja) | `readOnlyHint: false` | `tools/pia.ts` | `auditoria.test.ts` §8 |
 | S9 | Teams aceptaba links a `*.azureedge.net`, `*.msecnd.net`, `*.live.com`, `*microsoft` con el perfil con sesión (media) | Solo `teams.microsoft.com` y `teams.cloud.microsoft`, https | `teams/index.ts` | `auditoria.test.ts` §9 |
 | S10 | `decodeURIComponent` tiraba `URIError` con un `%` mal formado en una `Location` (baja) | Se trata como URL inválida (`PolicyError`) | `net/policy.ts` | `policy.test.ts` |
-| S11 | Sin `npm-shrinkwrap.json`: `npx -y uade-mcp` resolvía las transitivas flotantes (media, cadena de suministro) | `npm shrinkwrap` en `publicar.yml` antes de publicar, `files` lo incluye, y el workflow verifica que el paquete lo traiga y nada más | `publicar.yml`, `package.json` | CI |
+| S11 | Sin `npm-shrinkwrap.json`: `npx -y uade-mcp` resuelve las transitivas flotantes (media, cadena de suministro) | ⚠️ No corregible hoy: npm 12 (obligatorio para `npm stage publish`) ignora `npm-shrinkwrap.json` (verificado el 21/10/2026 con `npm pack`). Queda: dependencias directas exactas, `npm audit` en cada commit y CI, Dependabot. Revisar si npm vuelve a soportarlo | `package.json`, `publicar.yml` |
 
 Pendiente de verificar en vivo tras S4: que la renovación silenciosa no dispare un diálogo del Llavero
 en cada corrida (el ítem "Chrome Safe Storage" ya existe si la persona usa Chrome; con Edge/Brave/Chromium

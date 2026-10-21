@@ -29,8 +29,7 @@
     "dist",
     "README.md",
     "LICENSE",
-    "SECURITY.md",
-    "npm-shrinkwrap.json"
+    "SECURITY.md"
   ],
   "engines": {
     "node": ">=20"

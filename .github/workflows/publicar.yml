@@ -35,17 +35,15 @@ jobs:
           v="$(node -p "require('./package.json').version")"
           [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} ≠ package.json $v"; exit 1; }
           grep -q "version: '$v'" src/index.ts || { echo "src/index.ts no dice la versión $v"; exit 1; }
-      # npm-shrinkwrap.json: el lockfile viaja dentro del paquete, así `npx -y uade-mcp` instala exactamente
-      # las mismas versiones (también las transitivas) que se probaron acá, con su integridad.
-      # npm 12 ya no trae `npm shrinkwrap`; es lo mismo que copiar el lockfile con ese nombre.
-      - run: cp package-lock.json npm-shrinkwrap.json
-      - name: El paquete tiene que incluir npm-shrinkwrap.json
+      # npm 12 (el que trae la publicación en staging) ignora npm-shrinkwrap.json, así que el lockfile
+      # no puede viajar dentro del paquete: las dependencias directas van con versión exacta en
+      # package.json y acá se verifica que el paquete no lleve nada de más.
+      - name: El paquete lleva solo dist, README, LICENSE, SECURITY y package.json
         run: |
           npm pack --dry-run --json | node -e '
             const j = JSON.parse(require("fs").readFileSync(0, "utf8")); const p = Array.isArray(j) ? j[0] : Object.values(j)[0]; // npm 11 imprime una lista; npm 12, un objeto por paquete
             const files = p.files.map((f) => f.path);
-            if (!files.includes("npm-shrinkwrap.json")) { console.error("falta npm-shrinkwrap.json en el paquete:", files); process.exit(1); }
-            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$|npm-shrinkwrap\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
-            console.log(files.length, "archivos, con npm-shrinkwrap.json");
+            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
+            console.log(files.length, "archivos");
           '
       - run: npm stage publish . --provenance --access public
