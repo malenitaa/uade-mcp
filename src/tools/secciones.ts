@@ -8,6 +8,7 @@ import { WebCampus } from '../sources/webcampus/index.js';
 import { fragmentos, SECCIONES, Secciones, type Seccion } from '../sources/webcampus/secciones.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { CON_IMAGENES, READ_ONLY, run } from './common.js';
+import { ErrorDeUso } from '../error-de-uso.js';
 
 export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<Permission>, sec = new Secciones(), wc = new WebCampus()): void {
   const nombres = Object.keys(SECCIONES) as [Seccion, ...Seccion[]];
@@ -36,7 +37,7 @@ export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<P
           consulta = propia;
         }
         const encontradas = buscarCarrera(a, consulta);
-        if (!encontradas.length) throw new Error(`No encontré "${consulta}" en la tabla de aranceles (${a.carreras.length} carreras).`);
+        if (!encontradas.length) throw new ErrorDeUso(`No encontré "${consulta}" en la tabla de aranceles (${a.carreras.length} carreras).`);
         const { carreras: _todas, ...resto } = a;
         return { actualizado, ...resto, consulta: propia ? `tu carrera: ${propia}` : consulta, carreras: encontradas, aviso: UNTRUSTED_NOTE };
       }),

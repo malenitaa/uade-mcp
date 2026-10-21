@@ -12,8 +12,9 @@ import { aBase64, imagenesDePdf } from '../sources/docs/pdf-imagenes.js';
 import { SharePointClient, SHAREPOINT } from '../sources/sharepoint/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { textoPagina } from '../sources/webcampus/secciones.js';
-import { UNTRUSTED_NOTE } from '../untrusted.js';
+import { untrusted, UNTRUSTED_NOTE } from '../untrusted.js';
 import { CON_IMAGENES, READ_ONLY, run, type Imagen } from './common.js';
+import { ErrorDeUso } from '../error-de-uso.js';
 
 const MAX_TEXTO = 8000;
 
@@ -24,13 +25,13 @@ export async function leerBytes(nombre: string, bytes: Uint8Array): Promise<stri
   for (const c of candidatos) {
     try {
       const { texto } = await leerDocumento(c, bytes);
-      if (texto.trim()) return texto.length > MAX_TEXTO ? texto.slice(0, MAX_TEXTO) + ' …(recortado)' : texto;
+      if (texto.trim()) return untrusted(nombre, texto.length > MAX_TEXTO ? texto.slice(0, MAX_TEXTO) + ' …(recortado)' : texto);
       if (/\.pdf$/i.test(c)) return '(PDF sin texto: es una imagen escaneada; abrilo vos para verlo)';
     } catch (err) {
       ultimo = (err as Error).message;
     }
   }
-  throw new Error(`No pude leer ${nombre}${ultimo ? `: ${ultimo}` : ''}.`);
+  throw new ErrorDeUso(`No pude leer ${nombre}${ultimo ? `: ${ultimo}` : ''}.`);
 }
 
 export interface Lectura {

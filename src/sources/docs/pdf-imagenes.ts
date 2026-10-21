@@ -21,30 +21,83 @@ interface Cruda {
 
 const MAX_IMAGENES = 6;
 const MIN_LADO = 200; // íconos y logos chicos no sirven para leer nada
-const MAX_PIXELES = 30_000_000;
+// 20 megapíxeles en RGB son 60 MB crudos: el mismo tope que los demás formatos (SECURITY.md).
+const MAX_PIXELES = 20_000_000;
+export const MAX_CRUDO = 60 * 1024 * 1024; // bytes descomprimidos por PDF, entre todas sus imágenes
+const MAX_OBJETOS = 20_000; // objetos revisados por PDF
+const MAX_DICT = 4096; // un diccionario de imagen mide unas decenas de bytes; más es otra cosa
+
+// Un objeto "N 0 obj << … >> stream\n" con su diccionario y dónde empiezan sus datos.
+interface ObjetoStream {
+  n: string;
+  dict: string;
+  inicio: number;
+}
+
+// Recorre el PDF objeto por objeto con indexOf y un diccionario acotado: lineal en el tamaño del
+// archivo, aunque el PDF esté armado a propósito con miles de "N 0 obj <<" sin cerrar.
+function* objetosConStream(s: string): Generator<ObjetoStream> {
+  let pos = 0;
+  for (let vistos = 0; vistos < MAX_OBJETOS; vistos++) {
+    const i = s.indexOf(' 0 obj', pos);
+    if (i < 0) return;
+    pos = i + 6;
+    // Número del objeto: los dígitos justo antes de " 0 obj", y antes de ellos nada que sea un dígito.
+    let d = i;
+    while (d > 0 && s.charCodeAt(d - 1) >= 48 && s.charCodeAt(d - 1) <= 57) d--;
+    if (d === i) continue;
+    const n = s.slice(d, i);
+    let j = saltarBlancos(s, pos);
+    if (s.startsWith('<<', j)) {
+      const fin = finDeDiccionario(s, j);
+      if (fin < 0) continue;
+      const dict = s.slice(j + 2, fin - 2);
+      j = saltarBlancos(s, fin);
+      if (!s.startsWith('stream', j)) continue;
+      j += 6;
+      if (s[j] === '\r') j++;
+      if (s[j] !== '\n') continue;
+      yield { n, dict, inicio: j + 1 };
+    }
+  }
+}
+
+function saltarBlancos(s: string, i: number): number {
+  while (i < s.length && /\s/.test(s[i]!)) i++;
+  return i;
+}
+
+// Índice justo después del ">>" que cierra el diccionario que empieza en `i` (anidados incluidos),
+// o -1 si no cierra dentro del tope.
+function finDeDiccionario(s: string, i: number): number {
+  const tope = Math.min(s.length, i + MAX_DICT);
+  let prof = 0;
+  for (let k = i; k < tope - 1; k++) {
+    if (s[k] === '<' && s[k + 1] === '<') { prof++; k++; }
+    else if (s[k] === '>' && s[k + 1] === '>') { prof--; k++; if (prof === 0) return k + 1; }
+  }
+  return -1;
+}
 
 export function imagenesDePdf(bytes: Uint8Array, max = MAX_IMAGENES): ImagenPdf[] {
   const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const s = buf.toString('latin1');
   const out: ImagenPdf[] = [];
   let tiras: Cruda[] = [];
+  let presupuesto = MAX_CRUDO;
   const cerrarTiras = () => {
     if (tiras.length) out.push(pngDe(pegar(tiras)));
     tiras = [];
   };
   // Las máscaras de transparencia (/SMask N 0 R) son imágenes aparte que no hay que mostrar.
   const mascaras = new Set([...s.matchAll(/\/SMask\s+(\d+) 0 R/g)].map((x) => x[1]));
-  // El diccionario de un objeto termina en ">> stream"; "(?!endobj)" evita saltar al objeto siguiente.
-  const re = /(\d+) 0 obj\s*<<((?:(?!endobj)[\s\S])*?)>>\s*stream\r?\n/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(s)) && out.length + (tiras.length ? 1 : 0) < max) {
-    const dict = m[2]!;
+  for (const { n, dict, inicio } of objetosConStream(s)) {
+    if (out.length + (tiras.length ? 1 : 0) >= max) break;
     // Una imagen con su propia máscara (/SMask) es un gráfico compuesto (fondos de un diseño, no un
     // escaneo): sola, sin la máscara, se vería como una mancha de color. Se saltea.
-    if (!/\/Subtype\s*\/Image\b/.test(dict) || /\/ImageMask\s+true/.test(dict) || /\/SMask\s+\d+ 0 R/.test(dict) || mascaras.has(m[1]!)) continue;
+    if (!/\/Subtype\s*\/Image\b/.test(dict) || /\/ImageMask\s+true/.test(dict) || /\/SMask\s+\d+ 0 R/.test(dict) || mascaras.has(n)) continue;
     const ancho = num(dict, 'Width'), alto = num(dict, 'Height'), largo = num(dict, 'Length');
     if (!ancho || !alto || !largo || ancho < MIN_LADO || alto < 50 || ancho * alto > MAX_PIXELES) continue;
-    const inicio = m.index + m[0].length;
     const datos = buf.subarray(inicio, inicio + largo);
     const filtro = dict.match(/\/Filter\s*\[?\s*\/(\w+)/)?.[1];
     if (filtro === 'DCTDecode') {
@@ -55,8 +108,13 @@ export function imagenesDePdf(bytes: Uint8Array, max = MAX_IMAGENES): ImagenPdf[
     if (filtro !== 'FlateDecode' || num(dict, 'BitsPerComponent') !== 8) continue;
     const cs = colorSpace(dict, s);
     if (!cs) continue;
+    // Tope de salida: lo que mide la imagen declarada (y nunca más que el presupuesto del PDF). Un
+    // stream chico que infla a cientos de MB corta acá, sin reservar memoria.
+    const esperado = ancho * alto * (cs.tipo === 'rgb' ? 3 : 1);
+    if (esperado > presupuesto) break;
     let raw: Buffer;
-    try { raw = inflateSync(datos); } catch { continue; }
+    try { raw = inflateSync(datos, { maxOutputLength: esperado + 1024 }); } catch { continue; }
+    presupuesto -= raw.length;
     const cruda = aRgb(raw, ancho, alto, cs);
     if (!cruda) continue;
     if (tiras.length && tiras[0]!.ancho !== ancho) cerrarTiras();
@@ -81,21 +139,46 @@ function colorSpace(dict: string, pdf: string): ColorSpace | null {
   return tabla ? { tipo: 'paleta', tabla } : null;
 }
 
-// Cuerpo (sin stream) de "N 0 obj".
-function objeto(pdf: string, ref: string): string | null {
-  const n = ref.split(' ')[0];
-  const m = pdf.match(new RegExp(`(?<![0-9])${n} 0 obj\\s*([\\s\\S]*?)\\s*(?:stream|endobj)`));
-  return m ? m[1]!.trim() : null;
+// Objeto "N 0 obj" (el primero con ese número), con su diccionario si lo tiene, por indexOf.
+function buscarObjeto(pdf: string, n: string): { dict: string | null; cuerpo: string; inicioStream: number } | null {
+  let pos = 0;
+  for (let intentos = 0; intentos < 100; intentos++) {
+    const i = pdf.indexOf(`${n} 0 obj`, pos);
+    if (i < 0) return null;
+    pos = i + 1;
+    if (i > 0 && /\d/.test(pdf[i - 1]!)) continue;
+    const j = saltarBlancos(pdf, i + n.length + 6);
+    if (pdf.startsWith('<<', j)) {
+      const fin = finDeDiccionario(pdf, j);
+      if (fin < 0) return null;
+      let k = saltarBlancos(pdf, fin);
+      const dict = pdf.slice(j + 2, fin - 2);
+      if (!pdf.startsWith('stream', k)) return { dict, cuerpo: dict, inicioStream: -1 };
+      k += 6;
+      if (pdf[k] === '\r') k++;
+      return pdf[k] === '\n' ? { dict, cuerpo: dict, inicioStream: k + 1 } : null;
+    }
+    // Sin diccionario (un array de ColorSpace, por ejemplo): el cuerpo hasta endobj, acotado.
+    const fin = pdf.indexOf('endobj', j);
+    return { dict: null, cuerpo: pdf.slice(j, fin < 0 ? Math.min(pdf.length, j + MAX_DICT) : Math.min(fin, j + MAX_DICT)).trim(), inicioStream: -1 };
+  }
+  return null;
 }
 
+// Cuerpo (sin stream) de "N 0 obj".
+function objeto(pdf: string, ref: string): string | null {
+  return buscarObjeto(pdf, ref.split(' ')[0]!)?.cuerpo ?? null;
+}
+
+const MAX_PALETA = 256 * 3 + 64; // una tabla /Indexed de 8 bits tiene a lo sumo 256 colores RGB
+
 function streamDe(pdf: string, ref: string): Buffer | null {
-  const n = ref.split(' ')[0];
-  const m = pdf.match(new RegExp(`(?<![0-9])${n} 0 obj\\s*<<((?:(?!endobj)[\\s\\S])*?)>>\\s*stream\\r?\\n`));
-  if (!m) return null;
-  const largo = num(m[1]!, 'Length');
-  const datos = Buffer.from(pdf.slice(m.index! + m[0].length, m.index! + m[0].length + largo), 'latin1');
-  if (!/\/FlateDecode/.test(m[1]!)) return datos;
-  try { return inflateSync(datos); } catch { return null; }
+  const o = buscarObjeto(pdf, ref.split(' ')[0]!);
+  if (!o || !o.dict || o.inicioStream < 0) return null;
+  const largo = Math.min(num(o.dict, 'Length'), MAX_DICT * 4);
+  const datos = Buffer.from(pdf.slice(o.inicioStream, o.inicioStream + largo), 'latin1');
+  if (!/\/FlateDecode/.test(o.dict)) return datos.subarray(0, MAX_PALETA);
+  try { return inflateSync(datos, { maxOutputLength: MAX_PALETA }); } catch { return null; }
 }
 
 function aRgb(raw: Buffer, ancho: number, alto: number, cs: ColorSpace): Cruda | null {

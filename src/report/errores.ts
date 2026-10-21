@@ -1,6 +1,8 @@
 // Reporte de errores al proyecto, SOLO si la persona prendió el permiso `reportes.errores`.
 // Qué se manda: versión del MCP, nombre de la tool, tipo de error, qué página de UADE cambió (si
-// aplica), un detalle corto con números largos y mails tapados, sistema operativo y versión de Node.
+// aplica), sistema operativo y versión de Node. Solo de los errores técnicos (TypeError, fetch, JSON,
+// librerías) va además un detalle corto con mails, números largos, rutas y textos entre comillas
+// tapados; de un ErrorDeUso (mensajes que nombran materias, archivos, carreras) no va el mensaje.
 // Qué NO se manda nunca: la pregunta, datos de la persona, contenido de páginas, cookies.
 // Se manda a https://planuade.ar/api/mcp-error (único path permitido en ese host), a lo sumo una
 // vez por día por cada error, y si falla no molesta: el reporte es lo menos importante.
@@ -8,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { configDir, type Permission } from '../auth/permissions.js';
 import { ConfirmationError } from '../auth/confirm.js';
+import { ErrorDeUso } from '../error-de-uso.js';
 import { PermissionError } from '../auth/permissions.js';
 import { safeFetch } from '../net/http.js';
 import { PolicyError } from '../net/policy.js';
@@ -16,7 +19,7 @@ import { PageChangedError } from '../sources/webcampus/parse.js';
 import { toolActual } from './contexto.js';
 
 export const REPORT_URL = 'https://planuade.ar/api/mcp-error';
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 export interface Reporte {
   version: string;
@@ -31,13 +34,21 @@ export interface Reporte {
 // Errores esperables que no son bugs del MCP ni cambios de UADE: no se reportan.
 const ESPERADOS = [SessionExpiredError, PermissionError, PolicyError, ConfirmationError];
 
-// Tapa lo que podría identificar a alguien: mails, números largos (legajo, ids), rutas con usuario.
+// Tapa lo que podría identificar a alguien: mails, números largos (legajo, ids), rutas con usuario,
+// y lo que va entre comillas (nombres de archivos, materias o carreras citados en un mensaje).
 export function tapar(s: string): string {
   return s
+    .replace(/"[^"]*"|“[^”]*”/g, '"…"')
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '<mail>')
     .replace(/\d{5,}/g, '<n>')
     .replace(/\/Users\/[^/\s]+|C:\\Users\\[^\\\s]+|\/home\/[^/\s]+/g, '<home>')
     .slice(0, 200);
+}
+
+// Errores técnicos: de los que vale la pena saber el mensaje (un bug del MCP, una respuesta rara de
+// UADE, una librería). Un ErrorDeUso lleva datos del estudiante en el mensaje; de él va solo el tipo.
+export function esTecnico(err: Error): boolean {
+  return !(err instanceof ErrorDeUso) && !(err instanceof PageChangedError);
 }
 
 export function armarReporte(err: Error, tool: string): Reporte {
@@ -47,14 +58,15 @@ export function armarReporte(err: Error, tool: string): Reporte {
     tool,
     tipo: err.name || 'Error',
     pagina,
-    // De un cambio de página alcanza con saber cuál; de otros errores, el mensaje tapado.
-    detalle: pagina ? '' : tapar(err.message),
+    // De un cambio de página alcanza con saber cuál; de un error de uso, el tipo; del resto, el mensaje tapado.
+    detalle: esTecnico(err) ? tapar(err.message) : '',
     os: process.platform,
     node: process.version,
   };
 }
 
-const clave = (r: Reporte) => `${r.tool}|${r.tipo}|${r.pagina ?? ''}|${r.detalle}`;
+// La clave de "ya se mandó hoy" no lleva el detalle: en disco tampoco quedan mensajes.
+const clave = (r: Reporte) => `${r.tool}|${r.tipo}|${r.pagina ?? ''}`;
 
 function yaReportadoHoy(r: Reporte, dir: string): boolean {
   const archivo = join(dir, 'reportes.json');

@@ -1,7 +1,8 @@
 # Auditoría de seguridad y privacidad — uade-mcp
 
 **Fecha:** 18/10/2026 · **Versión revisada:** 0.1.0 (commit posterior a `c11ae12`) · **Alcance:** todo `src/`,
-dependencias y el historial de git.
+dependencias y el historial de git. **Segunda revisión:** 21/10/2026 sobre la 0.2.0, con foco OWASP
+(ver [Revisión del 21/10/2026](#revisión-del-21102026-versión-020--corregida-en-la-021)).
 
 **Qué es y qué no es.** Es una autoevaluación técnica: una revisión independiente del código
 (hecha por un agente que no escribió el código), chequeos automáticos y pruebas contra una cuenta
@@ -32,10 +33,10 @@ sin secretos ni datos personales (solo valores ficticios de tests); licencias MI
 | M3 | Mostrar adjuntos permitía atajos (symlinks) y `~/Library` | ✅ Corregido: `realpath`, solo Escritorio/Documentos/Descargas/iCloud Drive y tipos de documento | `net/open-browser.ts` | `common.test.ts` |
 | M4 | Datos de compañeros filtrados por lista negra (`/alumn/`) | ✅ Corregido: lista blanca de roles docentes; cualquier otro rol no sale | `webcampus/parse.ts` | `auditoria.test.ts` M4 |
 | M5 | Un link `//otro-host` de SharePoint mandaba las cookies a otro host | ✅ Corregido: `SessionClient` rechaza todo destino fuera de su origen; SharePoint solo en sitios habilitados | `net/session.ts`, `sharepoint/index.ts` | `auditoria.test.ts` M5 |
-| M6 | Se guarda `rtFa` (cookie de Microsoft 365 de todo el tenant) | ⚠️ Aceptado: sin `rtFa` SharePoint responde 403 (verificado). Mitigado: el MCP solo la usa en el sitio de aranceles; vive en el llavero; `logout` la borra | `cli/login.ts`, `sharepoint/index.ts` | — |
+| M6 | Se guarda `rtFa` (cookie de Microsoft 365 de todo el tenant) y la sesión persistente de Microsoft en el perfil | ⚠️ Aceptado: sin `rtFa` SharePoint responde 403 (verificado). Mitigado: el MCP solo la usa en sitios habilitados; vive en el llavero, y el perfil se cifra con el llavero del sistema desde la 0.2.1 (S4); `logout` borra todo; alcance real documentado en `SECURITY.md` | `cli/login.ts`, `sharepoint/index.ts`, `auth/login.ts` | — |
 | M7 | Con el MCP abierto, `logout` no borraba la sesión en memoria | ✅ Corregido: el llavero es la fuente de verdad en cada pedido | `net/session.ts` | `auditoria.test.ts` M7 |
 | M8 | El tope anti zip-bomb confiaba en tamaños declarados | ✅ Corregido: se descomprime contando bytes reales, tope 60 MB | `webcampus/previos.ts` | `previos.test.ts` |
-| M9 | Dependencias con rangos `^` | ✅ Corregido: versiones exactas; `files` en `package.json`. Al publicar: `npm-shrinkwrap.json` | `package.json` | — |
+| M9 | Dependencias con rangos `^` | ✅ Corregido: versiones exactas; `files` en `package.json`; `npm-shrinkwrap.json` dentro del paquete desde la 0.2.1 (S11) | `package.json`, `publicar.yml` | CI |
 | L1 | Otro programa local puede leer el llavero sin aviso | ⚠️ Aceptado: inherente a un MCP local; documentado | `SECURITY.md` | — |
 | L2 | La lista negra no veía el control de los postbacks | ✅ Corregido | `net/session.ts` | `auditoria.test.ts` L2 |
 | L3 | Body y headers seguían redirecciones a otro host | ✅ Corregido | `net/http.ts` | `auditoria.test.ts` L3 |
@@ -48,6 +49,31 @@ Info: el hash del link de Plan UADE es de integridad, no una firma (corregido en
 registro de auditoría de escrituras y la confirmación por elicitation todavía no existen porque no
 hay ninguna tool que escriba en UADE.
 
+## Revisión del 21/10/2026 (versión 0.2.0 → corregida en la 0.2.1)
+
+Dos revisores independientes (uno sobre el MCP, otro sobre planuade.ar) repasaron la 0.2.0 con la
+guía OWASP; cada hallazgo se verificó contra el código antes de corregirlo. Lo que la revisión dio por
+bien (allowlist y redirecciones, rutas de archivos generados, caché cifrada, CLI, esquemas zod,
+dependencias) no se tocó. Todo lo de abajo quedó corregido en la 0.2.1, con un test cada uno.
+
+| ID | Hallazgo (severidad) | Corrección | Dónde | Test |
+|---|---|---|---|---|
+| S1 | Descompresión sin tope: `inflateSync` de imágenes de PDF sin `maxOutputLength`, docx/pptx sin contar bytes, xlsx de materiales sin el chequeo anti zip-bomb (alta, DoS/OOM) | Tope de salida por imagen (lo que mide la imagen declarada) y presupuesto de 60 MB por PDF; `partesDeZip` cuenta bytes reales y corta a 60 MB; `assertXlsxRazonable` también en `leer.ts`; el tope de 20 megapíxeles por imagen equivale a los mismos 60 MB | `docs/pdf-imagenes.ts`, `docs/leer.ts`, `webcampus/previos.ts` | `pdf-imagenes.test.ts`, `materiales.test.ts` |
+| S2 | Regex cuadrática sobre el PDF entero al buscar objetos con stream: un PDF de 1,4 MB armado a propósito tardaba 37 s y bloqueaba el MCP (alta, DoS) | Recorrido lineal objeto por objeto con `indexOf`, diccionario acotado a 4 KB (anidados incluidos), tope de 20.000 objetos; lo mismo para resolver referencias de paleta | `docs/pdf-imagenes.ts` | `pdf-imagenes.test.ts` (PDF hostil < 1 s) |
+| S3 | El reporte de errores opcional mandaba el mensaje de cualquier `Error`: viajaban nombres de materias que faltan aprobar, códigos, nombres de archivos, carrera, texto de PIA; la clave de deduplicación en disco también (alta, privacidad) | `ErrorDeUso` para todo mensaje con datos del estudiante: de él va solo el tipo; el detalle (tapado, ahora también lo entre comillas) solo de errores técnicos; dedupe por `tool|tipo|página`. Un test estático exige `ErrorDeUso` en cada `new Error(\`…${…}\`)` fuera de una lista corta | `error-de-uso.ts`, `report/errores.ts`, `pia/*`, `tools/*`, `sharepoint/index.ts` | `reportes.test.ts` |
+| S4 | Perfil de navegador cifrado con clave fija: Playwright agrega `--use-mock-keychain` / `--password-store=basic`, así que `browser-profile/Default/Cookies` (sesión persistente de Microsoft) se descifraba sin pasar por el llavero (media) | `ignoreDefaultArgs` con esos dos flags en los tres `launchPersistentContext`: el navegador usa "Chrome Safe Storage" del llavero, como el Chrome de la persona. Al actualizar hay que correr `uade-mcp login` una vez (las cookies viejas quedan ilegibles para el navegador, que las descarta). Alcance real de la sesión documentado en `SECURITY.md` (M6: `ESTSAUTHPERSISTENT` y `rtFa` valen para todo M365) | `auth/login.ts`, `teams/index.ts` | `auditoria.test.ts` §4 |
+| S5 | `webcampus_course_materials` escribía en `~/Downloads` sin que lo pidieran (con `read=` de un tipo no legible, aunque `save=false`), pisando lo que hubiera, con el nombre remoto, sin `mode`, anunciada como solo lectura (media) | La tool de lectura ya no escribe nunca; nueva `webcampus_save_material` (`readOnlyHint: false`) guarda en `Downloads/uade-mcp` con nombre saneado, solo tipos de documento, `wx` + sufijo " (2)" si existe y `mode 0o600` | `tools/materiales.ts`, `net/open-browser.ts` | `materiales.test.ts`, `auditoria.test.ts` §5 |
+| S6 | `folder` admitía `..` y las regex de sitios de SharePoint no estaban ancladas (media) | Segmentos `.`/`..`/vacíos/`\\`/`%` rechazados, la ruta tiene que seguir debajo de la raíz; regex anclada con `^`; `rutaSana` rechaza `..` también escapado | `tools/materiales.ts`, `sharepoint/index.ts` | `materiales.test.ts` |
+| S7 | `untrusted()` existía pero no se usaba: `SECURITY.md` citaba un control que no corría (baja, documentación) | Se usa: texto de documentos (materiales, adjuntos de novedades) y `textoSinEstructura` del modo degradado van en `<contenido_externo>`; los resultados estructurados siguen con el campo `aviso` | `tools/common.ts`, `tools/materiales.ts`, `tools/novedades.ts` | `auditoria.test.ts` §7, `novedades.test.ts` |
+| S8 | `uade_open_enrollment_site` con `readOnlyHint: true` abre una ventana con sesión (baja) | `readOnlyHint: false` | `tools/pia.ts` | `auditoria.test.ts` §8 |
+| S9 | Teams aceptaba links a `*.azureedge.net`, `*.msecnd.net`, `*.live.com`, `*microsoft` con el perfil con sesión (media) | Solo `teams.microsoft.com` y `teams.cloud.microsoft`, https | `teams/index.ts` | `auditoria.test.ts` §9 |
+| S10 | `decodeURIComponent` tiraba `URIError` con un `%` mal formado en una `Location` (baja) | Se trata como URL inválida (`PolicyError`) | `net/policy.ts` | `policy.test.ts` |
+| S11 | Sin `npm-shrinkwrap.json`: `npx -y uade-mcp` resolvía las transitivas flotantes (media, cadena de suministro) | `npm shrinkwrap` en `publicar.yml` antes de publicar, `files` lo incluye, y el workflow verifica que el paquete lo traiga y nada más | `publicar.yml`, `package.json` | CI |
+
+Pendiente de verificar en vivo tras S4: que la renovación silenciosa no dispare un diálogo del Llavero
+en cada corrida (el ítem "Chrome Safe Storage" ya existe si la persona usa Chrome; con Edge/Brave/Chromium
+el sistema puede pedir permiso una vez).
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
@@ -58,10 +84,10 @@ hay ninguna tool que escriba en UADE.
 | V2/V3 Autenticación y sesión | La contraseña nunca pasa por el código; sesiones en el llavero; logout efectivo | `cli/login.ts`, `auth/store.ts`, M7 |
 | V5 Validación | IDs numéricos, enums, regex de rutas, esquemas zod | `tools/*.ts` |
 | V6 Criptografía y almacenamiento | Secretos en el llavero del SO; nada en disco en claro | `auth/store.ts` |
-| V7 Errores y logs | Errores sin detalles internos; cero logs con datos | `tools/common.ts` |
+| V7 Errores y logs | Errores sin detalles internos; cero logs con datos; el reporte opcional no lleva mensajes con datos (`ErrorDeUso`) | `tools/common.ts`, S3 |
 | V8 Protección de datos | Minimización (resúmenes, sin compañeros), nada sale de la compu | M4, `docs/COBERTURA.md` |
 | V10 Código malicioso | Sin telemetría; dependencias fijas; scripts de instalación bloqueados | M9 |
-| V12 Archivos | Topes de tamaño, páginas y descompresión; rutas validadas | M3, M8, L4 |
+| V12 Archivos | Topes de tamaño, páginas y descompresión (bytes reales, todos los formatos); rutas validadas; escritura solo en `Downloads/uade-mcp` sin pisar | M3, M8, L4, S1, S5, S6 |
 | V13/V14 Configuración | Allowlist de hosts, lista negra, https obligatorio, cookies por host | `net/policy.ts`, `net/http.ts` |
 
 ### OWASP Top 10 para aplicaciones con LLM (2025)
@@ -73,7 +99,7 @@ hay ninguna tool que escriba en UADE.
 | LLM05 Manejo inseguro de la salida | Parsers estrictos; `execFile` sin shell; URLs y rutas validadas |
 | LLM06 Agencia excesiva | Solo lectura; permisos con nombre; lista negra en el cliente HTTP y en postbacks; login y permisos solo desde la terminal |
 | LLM07 Filtración de instrucciones | Las instrucciones no tienen secretos |
-| LLM10 Consumo sin límite | Topes de tamaño, tiempo, redirecciones, páginas, PDFs por recorrida; cachés de 1 h |
+| LLM10 Consumo sin límite | Topes de tamaño, tiempo, redirecciones, páginas, descompresión y objetos por PDF (recorrido lineal); cachés de 1 h |
 
 ### NIST SSDF (SP 800-218)
 

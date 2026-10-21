@@ -1,6 +1,7 @@
 // Encuentra un navegador Chromium instalado (Chrome, Edge, Brave o Chromium), para el login y
 // para leer Teams. Se puede forzar con UADE_MCP_BROWSER=/ruta/al/navegador.
 import { existsSync } from 'node:fs';
+import { ErrorDeUso } from '../error-de-uso.js';
 
 const CANDIDATES: Record<string, string[]> = {
   darwin: [
@@ -20,7 +21,7 @@ const CANDIDATES: Record<string, string[]> = {
 export function findBrowser(): string {
   const override = process.env.UADE_MCP_BROWSER;
   if (override) {
-    if (!existsSync(override)) throw new Error(`UADE_MCP_BROWSER apunta a un archivo que no existe: ${override}`);
+    if (!existsSync(override)) throw new ErrorDeUso(`UADE_MCP_BROWSER apunta a un archivo que no existe: ${override}`);
     return override;
   }
   const found = (CANDIDATES[process.platform] ?? []).find((p) => existsSync(p));

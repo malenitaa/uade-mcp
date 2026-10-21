@@ -35,4 +35,16 @@ jobs:
           v="$(node -p "require('./package.json').version")"
           [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} ≠ package.json $v"; exit 1; }
           grep -q "version: '$v'" src/index.ts || { echo "src/index.ts no dice la versión $v"; exit 1; }
+      # npm-shrinkwrap.json: el lockfile viaja dentro del paquete, así `npx -y uade-mcp` instala exactamente
+      # las mismas versiones (también las transitivas) que se probaron acá, con su integridad.
+      - run: npm shrinkwrap
+      - name: El paquete tiene que incluir npm-shrinkwrap.json
+        run: |
+          npm pack --dry-run --json | node -e '
+            const [p] = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const files = p.files.map((f) => f.path);
+            if (!files.includes("npm-shrinkwrap.json")) { console.error("falta npm-shrinkwrap.json en el paquete:", files); process.exit(1); }
+            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$|npm-shrinkwrap\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
+            console.log(files.length, "archivos, con npm-shrinkwrap.json");
+          '
       - run: npm stage publish . --provenance --access public

@@ -4,6 +4,7 @@
 import type { VentanaInscripcion } from '../inscripciones/index.js';
 import type { ExamenPrevio } from '../webcampus/previos.js';
 import type { ClaseOfertada } from '../webcampus/parse.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
 
 export interface FuentesClase {
   ventanas(): Promise<VentanaInscripcion[]>;
@@ -32,7 +33,7 @@ export async function resumenClase(fuentes: FuentesClase, materia: string, clase
   const elegida = clases.find((c) => c.clase === clase);
   if (!elegida) {
     const lista = clases.map((c) => `${c.clase} (${c.sede}, ${c.turno}, ${c.dias.join('/')} ${c.horario ?? ''})`).join('; ');
-    throw new Error(`No encontré la clase ${clase} de ${materia}. Clases programadas: ${lista || 'ninguna'}.`);
+    throw new ErrorDeUso(`No encontré la clase ${clase} de ${materia}. Clases programadas: ${lista || 'ninguna'}.`);
   }
   return [
     'INSCRIPCIÓN A MATERIA: todavía no se hizo nada.',
@@ -49,9 +50,9 @@ export async function resumenPrevio(fuentes: FuentesPrevio, materia: string): Pr
   const ventana = (await fuentes.ventanas()).find((v) => v.tipo === 'examenes' && v.abierta);
   if (!ventana) throw new Error('No hay ninguna ventana de inscripción a exámenes previos abierta ahora.');
   const puede = await fuentes.puedeRendir(materia);
-  if (!puede.ok) throw new Error(`Según tu historial y las correlativas no podés rendir ${materia}: ${puede.motivo}.`);
+  if (!puede.ok) throw new ErrorDeUso(`Según tu historial y las correlativas no podés rendir ${materia}: ${puede.motivo}.`);
   const examenes = await fuentes.examenes(materia);
-  if (!examenes.length) throw new Error(`No encontré ${materia} en el cronograma de previos publicado.`);
+  if (!examenes.length) throw new ErrorDeUso(`No encontré ${materia} en el cronograma de previos publicado.`);
   const lineas = examenes.map((e) => `${e.sede} · ${ddmmaaaa(e.fecha)}${e.hora ? ` ${e.hora}` : ''}${e.clase ? ` · clase ${e.clase}` : ''}${e.aula ? ` · aula ${e.aula}` : ''}`);
   return [
     'INSCRIPCIÓN A EXAMEN PREVIO: todavía no se hizo nada.',

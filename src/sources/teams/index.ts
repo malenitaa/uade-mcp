@@ -7,7 +7,7 @@
 import { createInterface } from 'node:readline/promises';
 import { chromium, type BrowserContext } from 'playwright-core';
 import { findBrowser } from '../../net/browser.js';
-import { browserProfileDir, browserProfileExists } from '../../auth/login.js';
+import { browserProfileDir, browserProfileExists, SIN_LLAVERO_FALSO } from '../../auth/login.js';
 
 // Mismo perfil que el login general: la sesión de Microsoft es una sola para WebCampus, Teams y el resto.
 export function teamsProfileDir(): string {
@@ -31,12 +31,14 @@ export interface PostCanal {
   texto: string;
 }
 
-const MICROSOFT = /(^|\.)(microsoft\.com|office\.com|office365\.com|office\.net|microsoftonline\.com|sharepoint\.com|teams\.microsoft\.us|azureedge\.net|msecnd\.net|skypeforbusiness\.com|live\.com|microsoft)$/i;
+// Solo el Teams web: con el perfil del MCP (sesión de Microsoft) no se abre ningún otro sitio.
+export const TEAMS_HOST = /^teams\.(microsoft\.com|cloud\.microsoft)$/i;
 
 async function abrir(headless: boolean): Promise<BrowserContext> {
   return chromium.launchPersistentContext(teamsProfileDir(), {
     executablePath: findBrowser(),
     headless,
+    ignoreDefaultArgs: SIN_LLAVERO_FALSO,
     args: ['--no-first-run', '--no-default-browser-check'],
   });
 }
@@ -62,7 +64,7 @@ export class Teams {
   // Novedades del canal General de un equipo, de la más nueva a la más vieja.
   async novedades(teamUrl: string, limite = 10): Promise<PostCanal[]> {
     const u = new URL(teamUrl);
-    if (!MICROSOFT.test(u.hostname)) throw new Error('El link no es de Teams.');
+    if (u.protocol !== 'https:' || !TEAMS_HOST.test(u.hostname)) throw new Error('El link no es de Teams.');
     if (!teamsProfileExists()) throw new TeamsLoginError();
 
     // El link /l/team/... abre una página "launcher" que quiere la app de escritorio. Con /v2/#/l/...

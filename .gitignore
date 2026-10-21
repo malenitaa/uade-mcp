@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Lo genera publicar.yml al publicar (npm shrinkwrap); en el repo manda package-lock.json
+npm-shrinkwrap.json
 coverage/
 .env
 .env.*

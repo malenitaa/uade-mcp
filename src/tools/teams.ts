@@ -7,6 +7,7 @@ import { Teams } from '../sources/teams/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
+import { ErrorDeUso } from '../error-de-uso.js';
 
 export function registerTeamsTools(
   server: McpServer,
@@ -29,8 +30,8 @@ export function registerTeamsTools(
         const { value: cursada } = await cache.get('cursada:', TTL.corto, () => wc.cursada());
         const aulas = cursada.aulas;
         const aula = aulas.find((a) => a.idAula === idAula);
-        if (!aula) throw new Error(`No encontré el aula ${idAula} en tus cursos.`);
-        if (!aula.links.teams) throw new Error(`La materia "${aula.materia}" no tiene un equipo de Teams enlazado en WebCampus.`);
+        if (!aula) throw new ErrorDeUso(`No encontré el aula ${idAula} en tus cursos.`);
+        if (!aula.links.teams) throw new ErrorDeUso(`La materia "${aula.materia}" no tiene un equipo de Teams enlazado en WebCampus.`);
         const r = await cache.get(`teams:${idAula}`, TTL.corto, () => teams.novedades(aula.links.teams!, limit));
         return {
           actualizado: r.actualizado,

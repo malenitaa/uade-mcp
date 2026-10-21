@@ -13,16 +13,18 @@ No abras un issue público para temas de seguridad.
 | Bloqueos fijos (pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión) en URLs y postbacks | `src/net/policy.ts`, `src/net/session.ts` | `test/policy.test.ts`, `test/auditoria.test.ts` |
 | Cookies y headers solo al host que corresponde; nada sale del origen de cada sitio | `src/net/http.ts`, `src/net/session.ts` | `test/webcampus-client.test.ts` |
 | Nunca ve la contraseña: el login lo hace la persona en la página de Microsoft | `src/auth/login.ts` | — |
-| Sesiones en el llavero; perfil de navegador propio en `~/.uade-mcp/browser-profile`; `logout` borra todo | `src/auth/`, `src/cli/index.ts` | `test/auditoria.test.ts` |
+| Sesiones en el llavero; perfil de navegador propio en `~/.uade-mcp/browser-profile`, cifrado con el llavero del sistema (sin el llavero de mentira de Playwright); `logout` borra todo | `src/auth/`, `src/cli/index.ts` | `test/auditoria.test.ts` |
 | Renovación automática de sesión: una por pedido vencido, sin bucles | `src/net/session.ts` | `test/login.test.ts` |
 | Copia local cifrada (AES-256-GCM, clave en el llavero) | `src/cache/cache.ts` | `test/cache.test.ts` |
 | Nunca datos de compañeros (lista blanca de roles docentes) | `src/sources/webcampus/parse.ts` | `test/auditoria.test.ts` |
-| Texto de terceros marcado como información, no instrucciones | `src/untrusted.ts`, `src/tools/*` | `test/auditoria.test.ts` |
+| Texto de terceros marcado como información, no instrucciones: campo `aviso` en los resultados estructurados y bloque `<contenido_externo>` alrededor del texto plano (documentos, adjuntos, modo degradado) | `src/untrusted.ts`, `src/tools/*` | `test/auditoria.test.ts` |
 | No envía inscripciones: el resumen es de lectura y la ventana de Inscripciones la usa la persona | `src/sources/pia/alta.ts`, `src/tools/pia.ts` | `test/pia.test.ts` |
 | Mails solo como borrador a @uade.edu.ar; adjuntos solo de carpetas de documentos | `src/sources/mail/draft.ts`, `src/net/open-browser.ts` | `test/common.test.ts` |
-| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo | varios | `test/previos.test.ts` |
-| Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página), mails y números largos tapados, un envío por error por día, único path permitido en planuade.ar | `src/report/errores.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
-| Sin telemetría; dependencias con versión exacta; `npm audit` en cada commit | `package.json`, `scripts/revisar.mjs` | hook pre-commit |
+| Lo único que escribe en tu disco va a `Downloads/uade-mcp`: nombre saneado, solo tipos de documento, nunca pisa un archivo, legible solo por vos; las tools que escriben o abren una ventana no se anuncian como solo lectura | `src/net/open-browser.ts`, `src/tools/materiales.ts`, `src/tools/pia.ts` | `test/materiales.test.ts`, `test/auditoria.test.ts` |
+| Rutas de SharePoint ancladas a la carpeta habilitada; `folder` no acepta `..`, `.` ni segmentos vacíos | `src/sources/sharepoint/index.ts`, `src/tools/materiales.ts` | `test/materiales.test.ts` |
+| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo contando bytes reales (xlsx, docx, pptx) y por PDF escaneado (imágenes, con tope por imagen); los PDFs se recorren en tiempo lineal | `src/sources/docs/`, `src/sources/webcampus/previos.ts` | `test/previos.test.ts`, `test/materiales.test.ts`, `test/pdf-imagenes.test.ts` |
+| Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página); el mensaje viaja solo de errores técnicos y tapado (mails, números largos, rutas, comillas); de los errores que nombran materias, archivos o carreras (`ErrorDeUso`) va solo el tipo; un envío por tool, tipo y página por día; único path permitido en planuade.ar | `src/report/errores.ts`, `src/error-de-uso.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
+| Sin telemetría; dependencias con versión exacta y lockfile dentro del paquete (`npm-shrinkwrap.json`); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
 
 La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en
 [docs/AUDITORIA.md](docs/AUDITORIA.md).
@@ -46,7 +48,9 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 - **Dependabot** avisa (y propone el PR) ante vulnerabilidades en dependencias o acciones; el escaneo de
   secretos de GitHub, con protección al push, bloquea tokens que intenten entrar.
 - **Dependencias con versión exacta** y `package-lock.json`; `npm ci --ignore-scripts` en CI: ninguna
-  dependencia corre código al instalarse.
+  dependencia corre código al instalarse. Al publicar, el lockfile viaja dentro del paquete como
+  `npm-shrinkwrap.json` (el workflow verifica que esté): `npx -y uade-mcp` instala exactamente las mismas
+  versiones, también las transitivas, que pasaron el CI.
 
 ## Lo que queda fuera de estas garantías
 
@@ -54,6 +58,12 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
   y git la ignora. Lo que corras ahí corre con tus credenciales y bajo tu responsabilidad.
 - **Teams** se lee corriendo el Teams web real en el navegador del MCP: contacta dominios de Microsoft,
   como si lo abrieras vos, y puede dejar de funcionar si Microsoft cambia la interfaz.
+- **La sesión persistente de Microsoft** ("¿Mantener la sesión iniciada?" → Sí) vive en el perfil de
+  navegador del MCP, cifrada con el llavero del sistema. Esa sesión (`ESTSAUTHPERSISTENT`) y la cookie
+  `rtFa` de SharePoint no son solo de WebCampus: valen para todo Microsoft 365 de tu cuenta de UADE (mail,
+  Teams, OneDrive). El MCP solo las usa en los sitios de su allowlist, pero quien controle tu usuario de la
+  compu puede usarlas igual que vos. Por eso `uade-mcp logout` borra el perfil y el llavero, y conviene
+  correrlo en una compu compartida.
 
 ## Reglas para contribuir
 

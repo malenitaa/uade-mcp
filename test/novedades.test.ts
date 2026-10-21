@@ -72,11 +72,13 @@ describe('leer links', () => {
 
   it('PDF de dre.uade.edu.ar: lo lee; adjunto de WebCampus: por el cliente con sesión', async () => {
     vi.stubGlobal('fetch', async () => new Response(new TextEncoder().encode('hola pdf'), { headers: { 'content-type': 'text/plain' } }));
-    expect((await leerLink('https://dre.uade.edu.ar/nota.txt', deps)).texto).toBe('hola pdf');
-    expect((await leerLink('https://www.webcampus.uade.edu.ar/DocsDownload/Novedades/1.txt', deps)).texto).toBe('adjunto');
+    expect((await leerLink('https://dre.uade.edu.ar/nota.txt', deps)).texto).toContain('hola pdf');
+    expect((await leerLink('https://www.webcampus.uade.edu.ar/DocsDownload/Novedades/1.txt', deps)).texto).toContain('adjunto');
   });
 
   it('leerBytes adivina por los primeros bytes cuando el nombre no dice el tipo', async () => {
-    expect(await leerBytes('cualquiera', new TextEncoder().encode('texto plano'))).toBe('texto plano');
+    const t = await leerBytes('cualquiera', new TextEncoder().encode('texto plano'));
+    expect(t).toContain('texto plano');
+    expect(t).toMatch(/^<contenido_externo origen="cualquiera">/); // texto de terceros, marcado
   });
 });

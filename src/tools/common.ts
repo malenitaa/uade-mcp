@@ -2,6 +2,7 @@
 import { requirePermission, type Permission } from '../auth/permissions.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
 import { reportarError } from '../report/errores.js';
+import { untrusted } from '../untrusted.js';
 
 // Only readOnlyHint: the other annotations would repeat defaults and cost tokens on every message.
 export const READ_ONLY = { readOnlyHint: true } as const;
@@ -74,7 +75,7 @@ export async function run(
           aviso: `${err.message} Mientras tanto, abajo va el texto de la página sin procesar: leelo con cuidado y decile al estudiante que la respuesta puede estar incompleta.`,
           modoDegradado: true,
           pagina: err.pagina,
-          textoSinEstructura: err.texto,
+          textoSinEstructura: untrusted(err.pagina, err.texto),
         }) }],
       };
     }
