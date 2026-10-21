@@ -70,7 +70,7 @@ dependencias) no se tocó. Todo lo de abajo quedó corregido en la 0.2.1, con un
 | S10 | `decodeURIComponent` tiraba `URIError` con un `%` mal formado en una `Location` (baja) | Se trata como URL inválida (`PolicyError`) | `net/policy.ts` | `policy.test.ts` |
 | S11 | Sin `npm-shrinkwrap.json`: `npx -y uade-mcp` resuelve las transitivas flotantes (media, cadena de suministro) | ⚠️ No corregible hoy: npm 12 (obligatorio para `npm stage publish`) ignora `npm-shrinkwrap.json` (verificado el 21/10/2026 con `npm pack`). Queda: dependencias directas exactas, `npm audit` en cada commit y CI, Dependabot. Revisar si npm vuelve a soportarlo | `package.json`, `publicar.yml` |
 
-Pendiente de verificar en vivo tras S4: que la renovación silenciosa no dispare un diálogo del Llavero
+Verificado en vivo tras S4 (21/10/2026): el login guardó WebCampus, Inscripciones y SharePoint, y la renovación silenciosa anda sin ventana ni diálogo del Llavero (`doctor`: 41 OK).
 en cada corrida (el ítem "Chrome Safe Storage" ya existe si la persona usa Chrome; con Edge/Brave/Chromium
 el sistema puede pedir permiso una vez).
 

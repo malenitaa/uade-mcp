@@ -48,10 +48,10 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 - **Dependabot** avisa (y propone el PR) ante vulnerabilidades en dependencias o acciones; el escaneo de
   secretos de GitHub, con protección al push, bloquea tokens que intenten entrar.
 - **Dependencias con versión exacta** y `package-lock.json`; `npm ci --ignore-scripts` en CI: ninguna
-  dependencia corre código al instalarse. Al publicar, el lockfile viaja dentro del paquete como
-Límite conocido: npm 12, que es el que exige la publicación en staging, no incluye ni respeta
-`npm-shrinkwrap.json`, así que `npx -y uade-mcp` fija las dependencias directas (versión exacta en
-`package.json`) pero resuelve las transitivas al instalar. `npm audit` corre en cada commit y en CI.
+  dependencia corre código al instalarse. Límite conocido: npm 12, que es el que exige la publicación
+  en staging, no incluye ni respeta `npm-shrinkwrap.json`, así que `npx -y uade-mcp` fija las
+  dependencias directas (versión exacta en `package.json`) pero resuelve las transitivas al instalar.
+  `npm audit` corre en cada commit y en CI.
 
 ## Lo que queda fuera de estas garantías
 
