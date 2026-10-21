@@ -57,7 +57,8 @@ export function elegibilidad(historial: MateriaHistorial[], plan: Correlativas):
     if (s === 'cursando') { r.cursando.push(`${m.codigo} ${m.nombre}`); continue; }
     if (s === 'final_pendiente') {
       if (noAprobadas.length) r.rendirBloqueadas.push({ ...base(m), faltan: noAprobadas.map(etiqueta) });
-      else r.rendir.push({ ...base(m), regularizada: h?.fechaRegularizacion ?? null, venceRegularidad: dosAnios(h?.fechaRegularizacion ?? null) });
+      // El vencimiento lo publica WebCampus (mes/año); si no está, se calculan los 2 años desde la regularización.
+      else r.rendir.push({ ...base(m), regularizada: h?.fechaRegularizacion ?? null, venceRegularidad: h?.vencimientoRegularidad ?? dosAnios(h?.fechaRegularizacion ?? null) });
       continue;
     }
     if (!noAprobadas.length) r.cursar.push(base(m));

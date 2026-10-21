@@ -26,6 +26,14 @@ describe('texto plano', () => {
   });
 });
 
+describe('run con imágenes', () => {
+  const granted = new Set(['webcampus.leer'] as const);
+  it('las imágenes salen como contenido de imagen, después del JSON (y no dentro de él)', async () => {
+    const r = await run(granted, 'webcampus.leer', async () => ({ fuente: 'x', imagenes: [{ mimeType: 'image/jpeg', base64: 'AAAA' }, { roto: true }] }));
+    expect(r.content).toEqual([{ type: 'text', text: '{"fuente":"x"}' }, { type: 'image', data: 'AAAA', mimeType: 'image/jpeg' }]);
+  });
+});
+
 describe('run en modo degradado', () => {
   const granted = new Set(['webcampus.leer'] as const);
   it('con texto: responde sin error, marcado como degradado y con el texto', async () => {

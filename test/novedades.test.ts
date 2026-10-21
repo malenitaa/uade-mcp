@@ -1,7 +1,7 @@
 // Home de WebCampus (banners, novedades, agenda), una novedad con adjuntos y la lectura de links.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fechaAgenda, parseHome, parseNovedad } from '../src/sources/webcampus/novedades.js';
+import { fechaAgenda, parseEvento, parseEventos, parseHome, parseNovedad } from '../src/sources/webcampus/novedades.js';
 import { leerBytes, leerLink } from '../src/tools/novedades.js';
 import type { WebCampus } from '../src/sources/webcampus/index.js';
 import type { SharePointClient } from '../src/sources/sharepoint/index.js';
@@ -31,6 +31,21 @@ describe('home', () => {
     expect(parseNovedad(fx('novedad.html'), '1001')).toEqual({
       id: '1001', titulo: 'Novedad ficticia uno', texto: 'Novedad ficticia uno Texto completo de la novedad ficticia, con detalle. Adjunto Guía otra página',
       adjuntos: ['/DocsDownload/Novedades/1001_1_adjunto.xlsx', 'https://dre.uade.edu.ar/guia.pdf'],
+    });
+  });
+});
+
+describe('agenda completa y detalle de evento', () => {
+  it('eventos con categoría, fecha ISO, hora e id', () => {
+    expect(parseEventos(fx('eventos.html'), new Date('2030-10-19'))).toEqual([
+      { categoria: 'Charlas', titulo: 'Charla ficticia (19/10)', fecha: '2030-10-19', hora: 'De 14:00 a 17:00', id: '777' },
+      { categoria: 'Talleres', titulo: 'Taller ficticio', fecha: '2030-11-02', hora: 'De 09:00 a 18:00', id: '778' },
+    ]);
+  });
+  it('un evento: quién organiza, fecha, hora, lugar y texto (sin la lista de "más eventos")', () => {
+    expect(parseEvento(fx('agenda.html'), '777')).toEqual({
+      id: '777', titulo: 'Charla ficticia (19/10)', organiza: 'Facultad Ficticia (Charlas)', fechaTexto: 'Sabado 19 de octubre', hora: 'De 14:00 a 17:00', lugar: 'Sede Ficticia',
+      texto: 'Descripción ficticia de la charla. Escribí a ficticio@uade.edu.ar para coordinar.',
     });
   });
 });

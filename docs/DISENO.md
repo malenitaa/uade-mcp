@@ -141,6 +141,10 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | Marcaciones (ingresos al edificio) | `/Contenidos/Marcaciones.aspx` | Filtro por rango de fechas (postback) |
 | Novedades / agenda generales | `/MiContenido/Novedades.aspx`, `/MiContenido/Agenda.aspx?Id=` | |
 | Fechas de exámenes | Novedades ("Exámenes previos…"), PDF Calendario académico (`MenuItemId=403`), PDF Cronogramas (`MenuItemId=428`) | Hay que parsear los PDFs |
+| Asignaturas previas / detalle del historial | `Historial_academico.aspx?asig_previas=1` y las filas ocultas `tr_grilla_hide` del historial | Por materia: actas (`tr_tbl_int`: fecha, condición, nota, situación), "Fecha De Vencimiento: mm/aaaa" para A FINAL, correlativas anteriores |
+| Agenda de eventos | `/MiContenido/Eventos.aspx?EsActiv=False`, `/MiContenido/Agenda.aspx?Id=` | `.card.agenda`; detalle en `Pnl_Agenda` |
+| Clases de consulta | `/Contenidos/MisClasesApoyo.aspx` | `ddlCarrera` → `ddlMateria` (postbacks) → `RadGrid1` |
+| Imágenes de PDFs escaneados | cualquier PDF sin texto | `src/sources/docs/pdf-imagenes.ts`: JPEG tal cual; FlateDecode 8 bits (gris, RGB, paleta) a PNG; tiras consecutivas pegadas; se saltean máscaras y gráficos compuestos (SMask) |
 
 ### Inscripciones (`inscripciones.uade.edu.ar`): ASP.NET MVC, login con Microsoft Entra (tenant UADE)
 
@@ -149,6 +153,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `GET /Home/ValidarUsuario` | JSON `boolean` | Sesión válida |
 | `GET /Home/ObtenerInscripciones` | HTML parcial | Ventanas de inscripción disponibles. Cada una es un link `data-linkid` a PIA con `param` cifrado y `data-tipolink` (`InscripcionAsignatura`, `CambioAsignaturaPack`) |
 | `GET /Home/Logout` | | No se expone |
+| `GET /` | HTML | Pestañas: Importante (`#menuImportante`, avisos), Inscribite (`#menu3`, carga `ObtenerInscripciones`), Cronograma inscripción (`#menu2`, imagen + link a la Programación de Clases), Instructivos (`#home`, links a YouTube) y Preguntas Frecuentes (`#menu1`, acordeón). Ayuda va a `help.uade.edu.ar` (SPA con API autenticada: fuera) |
 
 ### PIA (`inscripcionespia.uade.edu.ar`)
 
@@ -183,6 +188,10 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `webcampus_account_balance` | Deuda vencida, próximos vencimientos, pagos. **Sin pagar** |
 | `webcampus_fechas_examen` | Lo que sale de novedades y PDFs |
 | `uade_enrollment_windows` (✅) | Ventanas de inscripción con fechas (sitio de inscripciones, misma sesión de Microsoft) |
+| `uade_enrollment_schedule` (✅) | Cronograma de inscripción por turno y aprobadas: UADE lo publica como imagen (`/Content/images/cuadro_inscripciones01.jpg` en la pestaña "Cronograma inscripción"). Se baja con la sesión y se devuelve como contenido de imagen del MCP (`{type:'image'}`), con la cantidad de aprobadas del historial y el turno inferido de los horarios actuales. OCR evaluado y descartado (tesseract.js lee mal los números grandes y baja datos de un host externo) |
+| `uade_enrollment_guide` (✅) | Pestañas Importante (avisos), Instructivos (links) y Preguntas Frecuentes (acordeón `.panel-group`) del home de inscripciones |
+| `webcampus_consultation_classes` (✅) | `Contenidos/MisClasesApoyo.aspx`: postback de carrera, postback de materia, grilla RadGrid devuelta por encabezados |
+| `webcampus_news` eventos (✅) | `MiContenido/Eventos.aspx?EsActiv=False` (todas las `.card.agenda`) y `MiContenido/Agenda.aspx?Id=` (`Pnl_Agenda`: título, organiza, fecha, hora, lugar, texto) |
 | `webcampus_class_offering` (✅) | Programación de Clases: sede, turno, días (celda gris), horario, fechas. El link con `IdUsuario` lo da el sitio de inscripciones |
 | `webcampus_schedule_planner` (✅) | Puro sobre la oferta cacheada (`src/sources/planificador`): backtracking con poda, choque = mismo día + horario pisado + cursadas que coinciden en fechas; tope de 500.000 nodos explorados; puntaje = días×3 + horas de hueco + (sedes−1)×2 |
 | `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |

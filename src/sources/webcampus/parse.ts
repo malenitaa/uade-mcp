@@ -287,6 +287,18 @@ export interface MateriaHistorial {
   fechaAprobacion: string | null;
   // Para final pendiente: fecha en que quedó regularizada la cursada (corre el vencimiento de 2 años).
   fechaRegularizacion: string | null;
+  // Para final pendiente: "Fecha De Vencimiento" que publica WebCampus (yyyy-mm), si la muestra.
+  vencimientoRegularidad: string | null;
+  // Cada acta de la materia (cursadas y exámenes), la más reciente primero: sirve para ver recursadas,
+  // ausentes y finales desaprobados anteriores.
+  intentos: IntentoHistorial[];
+}
+
+export interface IntentoHistorial {
+  fecha: string | null; // ISO
+  condicion: string; // ASIGNATURA, EXAMEN REGULAR…
+  nota: string | null;
+  situacion: string; // APROBADO, REPROBADO, RECURSA, AUSENTE, A FINAL…
 }
 
 export interface Historial {
@@ -336,6 +348,18 @@ export function parseHistorial(html: string): Historial {
       .first()
       .text();
 
+    const vencimiento = detalle.text().match(/Fecha De Vencimiento:?\s*(\d{1,2})\/(\d{4})/i);
+    const intentos: IntentoHistorial[] = detalle
+      .find('tr.tr_tbl_int')
+      .map((_, r) => {
+        const c = $(r).children('td').map((_, x) => clean($(x).text())).get();
+        // Las filas de "Correlativas Anteriores" tienen otra forma (código, nombre): no son actas.
+        if (c.length < 5) return null;
+        return { fecha: parseFechaMDY(c[0] ?? ''), condicion: c[2] ?? '', nota: orNull(c[3] ?? ''), situacion: c[4] ?? '' };
+      })
+      .get()
+      .filter((x): x is IntentoHistorial => !!x);
+
     materias.push({
       codigo: td[0] ?? '',
       nombre: clean(horas ? nombreRaw.slice(0, horas.index) : nombreRaw),
@@ -348,6 +372,8 @@ export function parseHistorial(html: string): Historial {
       // El historial usa mes/día/año (verificado: en 43 fechas reales el segundo número pasa de 12).
       fechaAprobacion: situacion === 'aprobada' ? parseFechaMDY(fechaActa) : null,
       fechaRegularizacion: situacion === 'final_pendiente' ? parseFechaMDY(regularizada) : null,
+      vencimientoRegularidad: vencimiento ? `${vencimiento[2]}-${vencimiento[1]!.padStart(2, '0')}` : null,
+      intentos,
     });
   });
 

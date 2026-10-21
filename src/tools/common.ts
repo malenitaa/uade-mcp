@@ -6,7 +6,17 @@ import { reportarError } from '../report/errores.js';
 // Only readOnlyHint: the other annotations would repeat defaults and cost tokens on every message.
 export const READ_ONLY = { readOnlyHint: true } as const;
 
-export type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
+export type ToolContent = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+export type ToolResult = { content: ToolContent[]; isError?: boolean };
+
+// Una tool puede devolver, además del JSON, imágenes para que el modelo las mire (cronograma de
+// inscripción, PDFs escaneados): van como contenido de imagen del MCP, después del texto.
+export interface Imagen {
+  mimeType: string;
+  base64: string;
+}
+export const CON_IMAGENES = 'imagenes';
+
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}:\d{2}))?$/;
 
@@ -48,8 +58,12 @@ export async function run(
 ): Promise<ToolResult> {
   try {
     requirePermission(granted, permission);
-    const data = compact(toArgentineDates(await fn()));
-    return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data) }] };
+    const resultado = await fn();
+    const imagenes = sacarImagenes(resultado);
+    const data = compact(toArgentineDates(resultado));
+    const content: ToolContent[] = [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data) }];
+    for (const i of imagenes) content.push({ type: 'image', data: i.base64, mimeType: i.mimeType });
+    return { content };
   } catch (err) {
     // Modo degradado: si UADE cambió una página, se devuelve igual su texto plano, marcado como
     // sin estructura, para que el agente pueda responder mientras se actualiza el parser.
@@ -69,4 +83,14 @@ export async function run(
     // Error messages are already in Spanish: they are meant to be relayed to the student as is.
     return { content: [{ type: 'text', text: (err as Error).message }], isError: true };
   }
+}
+
+// Saca (y devuelve) las imágenes de un resultado, para mandarlas como contenido aparte.
+function sacarImagenes(resultado: unknown): Imagen[] {
+  if (!resultado || typeof resultado !== 'object' || Array.isArray(resultado)) return [];
+  const r = resultado as Record<string, unknown>;
+  const xs = r[CON_IMAGENES];
+  if (!Array.isArray(xs)) return [];
+  delete r[CON_IMAGENES];
+  return xs.filter((i): i is Imagen => !!i && typeof i === 'object' && typeof (i as Imagen).base64 === 'string' && typeof (i as Imagen).mimeType === 'string');
 }

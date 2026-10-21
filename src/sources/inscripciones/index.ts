@@ -1,5 +1,7 @@
-// Sitio de inscripciones (inscripciones.uade.edu.ar): ventanas de inscripción con sus fechas y
-// el link a la Programación de Clases de WebCampus. Solo lectura: no abre PIA ni inscribe.
+// Sitio de inscripciones (inscripciones.uade.edu.ar): ventanas de inscripción con sus fechas, el
+// cronograma por turno y cantidad de aprobadas (una imagen), el link a la Programación de Clases
+// de WebCampus, y las pestañas Importante e Instructivos (avisos, tutoriales, preguntas
+// frecuentes). Solo lectura: no abre PIA ni inscribe.
 import * as cheerio from 'cheerio';
 import { keychainStore, renovarSesion, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
 import { PageChangedError, parseFecha } from '../webcampus/parse.js';
@@ -78,6 +80,63 @@ export function parseLinkProgramacion(html: string): string | null {
   return u.pathname + u.search;
 }
 
+// Pestaña "Cronograma inscripción": la grilla de fechas por turno y cantidad de materias aprobadas
+// es una imagen (UADE la cambia cada cuatrimestre). Se devuelve su ruta para bajarla con la sesión.
+export interface Cronograma {
+  imagen: string; // path en el sitio
+  alt: string | null;
+}
+
+export function parseCronograma(html: string): Cronograma {
+  const $ = cheerio.load(html);
+  const img = $('#menu2 img').first();
+  const src = img.attr('src');
+  if (!src) throw new PageChangedError('cronograma de inscripción (imagen)', $.html());
+  const u = new URL(src.replace(/^~/, ''), INSCRIPCIONES);
+  if (u.origin !== INSCRIPCIONES) throw new PageChangedError('cronograma de inscripción (imagen)', $.html());
+  return { imagen: u.pathname + u.search, alt: clean(img.attr('alt')) || null };
+}
+
+// Pestañas Importante (avisos del momento), Instructivos (tutoriales) y Preguntas Frecuentes.
+export interface GuiaInscripciones {
+  importante: string[];
+  instructivos: { titulo: string; link: string }[];
+  preguntasFrecuentes: { pregunta: string; respuesta: string }[];
+  ayuda: string | null; // link externo (help.uade.edu.ar), fuera del MCP
+}
+
+export function parseGuia(html: string): GuiaInscripciones {
+  const $ = cheerio.load(html);
+  if (!$('.nav-tabs').length || !$('#home, #menuImportante').length) throw new PageChangedError('guía del sitio de inscripciones', $.html());
+  $('script, style, noscript, img').remove();
+  $('p, div, li, br, h1, h2, h3, h4, h5, td, tr').append(' ');
+
+  const importante: string[] = [];
+  $('#menuImportante .alert').each((_, a) => {
+    $(a).find('ol li, ul li').each((_, li) => { $(li).prepend('• '); });
+    $(a).find('a, button').filter((_, b) => /^(ver m[aá]s|inscribite)/i.test(clean($(b).text()))).remove();
+    const t = clean($(a).text());
+    if (t) importante.push(t);
+  });
+
+  const instructivos: { titulo: string; link: string }[] = [];
+  $('#home a[href]').each((_, a) => {
+    const titulo = clean($(a).text());
+    const link = $(a).attr('href') ?? '';
+    if (titulo && /^https?:\/\//.test(link)) instructivos.push({ titulo, link });
+  });
+
+  const preguntasFrecuentes: { pregunta: string; respuesta: string }[] = [];
+  $('.panel-group .panel').each((_, p) => {
+    const pregunta = clean($(p).find('.panel-title').text());
+    const respuesta = clean($(p).find('.panel-body').text());
+    if (pregunta && respuesta) preguntasFrecuentes.push({ pregunta, respuesta });
+  });
+
+  const ayuda = $('.nav-tabs a[href^="http"]').first().attr('href') ?? null;
+  return { importante, instructivos, preguntasFrecuentes, ayuda };
+}
+
 export class InscripcionesClient extends SessionClient {
   constructor(store: SessionStore = keychainStore(INSCRIPCIONES_ACCOUNT)) {
     super(
@@ -110,6 +169,21 @@ export class Inscripciones {
     } catch {
       return false;
     }
+  }
+
+  // La imagen del cronograma, tal cual (JPEG/PNG), con su URL.
+  async cronograma(): Promise<{ url: string; alt: string | null; mimeType: string; bytes: Uint8Array }> {
+    const home = await this.client.get('/');
+    const c = parseCronograma(home.html);
+    const img = await this.client.get(c.imagen);
+    const b = img.bytes;
+    const mimeType = b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png' : null;
+    if (!mimeType) throw new PageChangedError('cronograma de inscripción (imagen)');
+    return { url: INSCRIPCIONES + c.imagen, alt: c.alt, mimeType, bytes: b };
+  }
+
+  async guia(): Promise<GuiaInscripciones> {
+    return parseGuia((await this.client.get('/')).html);
   }
 
   async linkProgramacion(): Promise<string> {

@@ -111,7 +111,21 @@ describe('WebCampus', () => {
     ]);
     expect(h.materias[0]).toMatchObject({ nombre: 'MATERIA APROBADA', horas: 68, fechaAprobacion: '2028-12-15' });
     expect(h.materias[1]?.fechaAprobacion).toBe('2029-03-05'); // día sin cero adelante
-    expect(h.materias[3]).toMatchObject({ notaTexto: 'A FINAL PREVIO', fechaRegularizacion: '2029-12-02' });
+    expect(h.materias[3]).toMatchObject({ notaTexto: 'A FINAL PREVIO', fechaRegularizacion: '2029-12-02', vencimientoRegularidad: '2031-12' });
+  });
+
+  it('historial: cada acta de la materia (intentos), sin las filas de correlativas', () => {
+    const h = parseHistorial(fx('historial.html'));
+    expect(h.materias[3]?.intentos).toEqual([
+      { fecha: '2029-12-02', condicion: 'EXAMEN REGULAR', nota: '2', situacion: 'REPROBADO' },
+      { fecha: '2029-12-02', condicion: 'ASIGNATURA', nota: '6', situacion: 'A FINAL' },
+    ]);
+    expect(h.materias[4]?.intentos).toEqual([
+      { fecha: '2029-07-20', condicion: 'ASIGNATURA', nota: 'AU', situacion: 'AUSENTE' },
+      { fecha: '2028-12-10', condicion: 'ASIGNATURA', nota: 'RECURSA', situacion: 'RECURSA' },
+    ]);
+    expect(h.materias[0]?.vencimientoRegularidad).toBeNull();
+    expect(h.materias[5]?.intentos).toEqual([]);
   });
 
   it('cuenta corriente: sin deuda, vencimientos y pagos', () => {

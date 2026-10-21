@@ -14,7 +14,10 @@ import { join } from 'node:path';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { ClaseOfertada } from '../sources/webcampus/parse.js';
 import { cache, TTL } from '../cache/cache.js';
-import { READ_ONLY, run } from './common.js';
+import { aBase64 } from '../sources/docs/pdf-imagenes.js';
+import { fragmentos } from '../sources/webcampus/secciones.js';
+import { UNTRUSTED_NOTE } from '../untrusted.js';
+import { CON_IMAGENES, READ_ONLY, run } from './common.js';
 
 export function registerInscripcionesTools(
   server: McpServer,
@@ -36,6 +39,85 @@ export function registerInscripcionesTools(
       // El link a PIA lleva la sesión: se usa por dentro (pia_class_search), no sale al modelo.
       return { actualizado: r.actualizado, ventanas: r.value.map(({ link: _link, ...v }) => v) };
     }),
+  );
+
+  server.registerTool(
+    'uade_enrollment_schedule',
+    {
+      title: 'Enrollment schedule: which day I enroll',
+      description:
+        'The enrollment calendar UADE publishes as an IMAGE on inscripciones.uade.edu.ar ("Cronograma inscripción"): one column per modality (Campus Costa / online / virtual / MRI, presencial mañana, tarde, noche) and, on the right, a scale of passed subjects (+de 30, 20, 10, 0) that decides each student\'s day; the bottom rows are "Inscripción a Ausente / Recursa / A Final" and "Inscripción a Optativas". Returns the image itself (read it), the student\'s number of passed subjects (transcript), their inferred current shift and the open enrollment windows, so you can answer "¿qué día me toco anotarme?" directly: find the column of the shift, then the row whose band on the right scale contains the number of passed subjects. file=true also saves the image to Downloads/uade-mcp (for clients that cannot see images).',
+      inputSchema: {
+        file: z.boolean().default(false).describe('also save the image to Downloads/uade-mcp'),
+      },
+      annotations: READ_ONLY,
+    },
+    ({ file }) =>
+      read(async () => {
+        const img = await cache.get('cronograma-imagen', TTL.medio, async () => {
+          const c = await insc.cronograma();
+          return { url: c.url, alt: c.alt, mimeType: c.mimeType, base64: aBase64(c.bytes) };
+        });
+        let aprobadas: Record<string, unknown> = { aviso: 'No pude leer el historial para contar las aprobadas; preguntale a la persona cuántas tiene.' };
+        try {
+          const h = await cache.get('historial:', TTL.dia, () => wc.historial());
+          const ap = h.value.materias.filter((m) => m.situacion === 'aprobada').length;
+          const eq = h.value.materias.filter((m) => m.situacion === 'equivalencia').length;
+          aprobadas = { total: ap + eq, aprobadas: ap, porEquivalencia: eq, finalesPendientes: h.value.materias.filter((m) => m.situacion === 'final_pendiente').length, carrera: h.value.carrera };
+        } catch { /* se responde igual con la imagen */ }
+        let turno: string | null = null;
+        try {
+          const c = await cache.get('cursada:', TTL.corto, () => wc.cursada());
+          turno = turnoDeCursada(c.value.aulas.filter((a) => /cursada regular/i.test(a.seccion)).map((a) => a.horario));
+        } catch { /* sin cursada no hay turno que inferir */ }
+        let ventanas: unknown = undefined;
+        try {
+          const v = await cache.get('ventanas', TTL.corto, () => insc.ventanas());
+          ventanas = v.value.map(({ link: _l, ...x }) => x);
+        } catch { /* opcional */ }
+        const salida: Record<string, unknown> = {
+          actualizado: img.actualizado,
+          fuente: img.value.url,
+          descripcion: img.value.alt,
+          aprobadas,
+          turnoActualInferido: turno ? `${turno} (por los horarios de las materias que cursa ahora; si va a cambiar de turno, usá el nuevo)` : null,
+          comoLeerLaImagen: 'Columnas: modalidad/turno. A la derecha, la escala "Cantidad de materias aprobadas" (0, 10, 20, +de 30): cada celda abarca las cantidades que quedan a su altura. La fecha de la persona es la celda de su columna cuya franja incluye su total de aprobadas. Las filas de abajo (Ausente/Recursa/A Final y Optativas) tienen su propia fecha por columna. Si la imagen no se ve o es de un cuatrimestre pasado (mirá el mes), decilo y pasá el link.',
+          ventanasDeInscripcion: ventanas,
+          aviso: UNTRUSTED_NOTE,
+          [CON_IMAGENES]: [{ mimeType: img.value.mimeType, base64: img.value.base64 }],
+        };
+        if (file) {
+          const ext = img.value.mimeType === 'image/png' ? 'png' : 'jpg';
+          salida.archivo = guardarSalidaBytes(`cronograma-inscripcion.${ext}`, Buffer.from(img.value.base64, 'base64'));
+        }
+        return salida;
+      }),
+  );
+
+  server.registerTool(
+    'uade_enrollment_guide',
+    {
+      title: 'Enrollment site: notices, tutorials and FAQ',
+      description:
+        'What inscripciones.uade.edu.ar says besides the windows: the "Importante" notices of the moment (e.g. notebook requirements, Campus Costa modality), the tutorial links (Instructivos) and the official FAQ (when must I enroll, "adeuda correlativas", "las reglas de validación impiden continuar", packs, optativas, MRI, inglés/ENI, teachers not published). query: only the matching notices and questions. Use it for any "cómo me inscribo / por qué no puedo inscribirme" question before answering from general knowledge.',
+      inputSchema: { query: z.string().min(3).max(80).optional() },
+      annotations: READ_ONLY,
+    },
+    ({ query }) =>
+      read(async () => {
+        const g = await cache.get('guia-inscripciones', TTL.dia, () => insc.guia());
+        const v = g.value;
+        if (!query) return { actualizado: g.actualizado, aviso: UNTRUSTED_NOTE, ...v, ayuda: v.ayuda ? `${v.ayuda} (sitio de ayuda de UADE, fuera del MCP: abrilo vos)` : null };
+        const coincide = (t: string) => fragmentos(t, query, 1000).length > 0;
+        return {
+          actualizado: g.actualizado,
+          aviso: UNTRUSTED_NOTE,
+          consulta: query,
+          importante: v.importante.filter(coincide),
+          instructivos: v.instructivos.filter((i) => coincide(i.titulo)),
+          preguntasFrecuentes: v.preguntasFrecuentes.filter((p) => coincide(p.pregunta + ' ' + p.respuesta)),
+        };
+      }),
   );
 
   server.registerTool(
@@ -265,12 +347,28 @@ export function registerPlanCuatrimestreTools(
   );
 }
 
-export function guardarSalida(nombre: string, contenido: string): string {
+export function guardarSalida(nombre: string, contenido: string | Uint8Array): string {
   const dir = carpetaSalida();
   mkdirSync(dir, { recursive: true });
   const ruta = join(dir, nombre.replace(/[^\w.-]/g, '_'));
   writeFileSync(ruta, contenido, { mode: 0o600 });
   return ruta;
+}
+const guardarSalidaBytes = guardarSalida;
+
+// Turno de cursada según la hora de inicio de las clases (mañana hasta las 12, tarde hasta las 18).
+export function turnoDeCursada(horarios: (string | null)[]): string | null {
+  const votos: Record<string, number> = {};
+  for (const h of horarios) {
+    const m = h?.match(/(\d{1,2}):(\d{2})/);
+    if (!m) continue;
+    const hora = Number(m[1]);
+    const t = hora < 12 ? 'mañana' : hora < 18 ? 'tarde' : 'noche';
+    votos[t] = (votos[t] ?? 0) + 1;
+  }
+  const orden = Object.entries(votos).sort((a, b) => b[1] - a[1]);
+  if (!orden.length) return null;
+  return orden.length > 1 && orden[1]![1] === orden[0]![1] ? `${orden[0]![0]} y ${orden[1]![0]}` : orden[0]![0];
 }
 
 // De qué cuatrimestre es la programación de clases: WebCampus muestra la del cuatrimestre en curso

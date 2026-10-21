@@ -19,8 +19,8 @@ describe('secciones de WebCampus', () => {
 });
 
 describe('guías enlazadas', () => {
-  it('toma solo los PDF de /Docs/ de WebCampus', () => {
-    const html = '<a href="https://www.webcampus.uade.edu.ar/Docs/Configuracion_WiFi_UADE_OSX.pdf">mac</a><a href="/Docs/Configuracion_WiFi_UADE_iOS.pdf">ios</a><a href="https://dre.uade.edu.ar/emergencia.pdf">x</a><a href="https://evil.com/Docs/a.pdf">y</a>';
-    expect(guiasEnlazadas(html)).toEqual(['/Docs/Configuracion_WiFi_UADE_OSX.pdf', '/Docs/Configuracion_WiFi_UADE_iOS.pdf']);
+  it('toma los PDF de /Docs/ de WebCampus y los públicos de dre.uade.edu.ar, solo del contenido (no del pie)', () => {
+    const html = '<div id="ctl00_ContentPlaceHolderMain_p"><a href="https://www.webcampus.uade.edu.ar/Docs/Configuracion_WiFi_UADE_OSX.pdf">mac</a><a href="/Docs/Configuracion_WiFi_UADE_iOS.pdf">ios</a><a href="https://dre.uade.edu.ar/ayues.pdf">talleres</a><a href="https://evil.com/Docs/a.pdf">y</a><a href="mailto:x@uade.edu.ar">m</a></div><footer><a href="https://dre.uade.edu.ar/emergencia.pdf">pie</a></footer>';
+    expect(guiasEnlazadas(html)).toEqual(['/Docs/Configuracion_WiFi_UADE_OSX.pdf', '/Docs/Configuracion_WiFi_UADE_iOS.pdf', 'https://dre.uade.edu.ar/ayues.pdf']);
   });
 });

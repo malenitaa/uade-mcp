@@ -7,7 +7,7 @@ import { PageChangedError, type MateriaHistorial } from '../src/sources/webcampu
 
 const c = parseCorrelativas(readFileSync(new URL('./fixtures/webcampus/correlativas.html', import.meta.url), 'utf8'));
 const h = (codigo: string, situacion: MateriaHistorial['situacion'], fechaRegularizacion: string | null = null): MateriaHistorial => ({
-  codigo, nombre: codigo, horas: 68, anio: '', situacion, situacionTexto: '', nota: null, notaTexto: null, fechaAprobacion: null, fechaRegularizacion,
+  codigo, nombre: codigo, horas: 68, anio: '', situacion, situacionTexto: '', nota: null, notaTexto: null, fechaAprobacion: null, fechaRegularizacion, vencimientoRegularidad: null, intentos: [],
 });
 
 describe('correlativas', () => {
@@ -48,5 +48,13 @@ describe('elegibilidad', () => {
     expect(f.cursarSiTerminasLoActual).toEqual([{ codigo: '9.9.011', nombre: 'Otra Avanzada', anio: '2° Año', faltan: ['9.9.002 Base Dos (cursando)'] }]);
     expect(f.cursarBloqueadas.map((x) => x.codigo)).toEqual(['9.9.020']);
     expect(e.aprobadas).toBe(1);
+  });
+});
+
+describe('vencimiento de la regularidad', () => {
+  it('usa la fecha que publica WebCampus; si no está, calcula dos años desde la regularización', () => {
+    const plan = { plan: '1', carrera: 'x', materias: [{ codigo: 'A', nombre: 'A', anio: '1', anteriores: [] }, { codigo: 'B', nombre: 'B', anio: '1', anteriores: [] }] } as unknown as Parameters<typeof elegibilidad>[1];
+    const e = elegibilidad([{ ...h('A', 'final_pendiente', '2029-07-21'), vencimientoRegularidad: '2031-07' }, h('B', 'final_pendiente', '2029-07-21')], plan);
+    expect(e.rendir.map((m) => m.venceRegularidad)).toEqual(['2031-07', '2031-07-21']);
   });
 });
