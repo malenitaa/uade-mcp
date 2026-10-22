@@ -51,6 +51,17 @@ describe('planificar', () => {
     expect(pasaFiltros(clase('9', '90', ['S'], '09:00 - 13:00'), { dias: ['L'] })).toBe(false);
   });
 
+  it('una clase online cuenta como mañana, tarde o noche por su horario', () => {
+    const online = (h: string | null) => clase('9', '91', ['MI'], h, { turno: 'ONLINE', sede: 'UADE ONLINE' });
+    expect(pasaFiltros(online('18:30 - 22:30'), { turnos: ['noche'] })).toBe(true);
+    expect(pasaFiltros(online('18:30 - 22:30'), { turnos: ['mañana'] })).toBe(false);
+    expect(pasaFiltros(online('08:00 - 12:00'), { turnos: ['mañana'] })).toBe(true);
+    expect(pasaFiltros(online('14:00 - 17:00'), { turnos: ['tarde'] })).toBe(true);
+    expect(pasaFiltros(online(null), { turnos: ['noche'] })).toBe(true); // asincrónica: no tiene turno
+    expect(pasaFiltros(online('18:30 - 22:30'), { turnos: ['online'] })).toBe(true);
+    expect(pasaFiltros(clase('9', '92', ['MI'], '18:30 - 22:30'), { turnos: ['noche'] })).toBe(false); // presencial de mañana sigue fuera
+  });
+
   it('más de seis materias se rechaza, y respeta el máximo de resultados', () => {
     const muchas = new Map([...Array(7)].map((_, i) => [String(i), [clase(String(i), String(i), ['L'], null)]]));
     expect(() => planificar(muchas)).toThrow('6 materias');

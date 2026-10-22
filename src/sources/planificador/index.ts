@@ -63,6 +63,13 @@ const norm = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').t
 
 // Los cursos intensivos (Campus Costa Argentina, en verano) no se mezclan con la cursada semanal:
 // solo entran si se piden por turno (INTENSIVO) o por sede (Pinamar / Costa).
+// Mañana, tarde o noche según la hora de inicio; null si la clase no tiene horario.
+export function turnoPorHora(c: ClaseOfertada): 'MAÑANA' | 'TARDE' | 'NOCHE' | null {
+  const r = rangoHorario(c);
+  if (!r) return null;
+  return r[0] < 13 * 60 ? 'MAÑANA' : r[0] < 18 * 60 ? 'TARDE' : 'NOCHE';
+}
+
 export function esIntensivo(c: ClaseOfertada): boolean {
   return /INTENSIV/.test(norm(c.turno)) || /PINAMAR|COSTA/.test(norm(c.sede));
 }
@@ -70,7 +77,12 @@ export function esIntensivo(c: ClaseOfertada): boolean {
 export function pasaFiltros(c: ClaseOfertada, f: Filtros): boolean {
   const pideIntensivo = f.turnos?.some((t) => /INTENSIV/.test(norm(t))) || f.sedes?.some((s) => /PINAMAR|COSTA/.test(norm(s)));
   if (esIntensivo(c) && !pideIntensivo) return false;
-  if (f.turnos?.length && !f.turnos.some((t) => norm(c.turno).includes(norm(t)))) return false;
+  if (f.turnos?.length && !f.turnos.some((t) => norm(c.turno).includes(norm(t)))) {
+    // WebCampus clasifica las clases online con turno "ONLINE": pedir "noche" tiene que incluir la
+    // online de 18:30. Pasa por su horario; sin horario (asincrónica), pasa cualquier turno pedido.
+    const th = /ONLINE|VIRTUAL/.test(norm(c.turno)) ? turnoPorHora(c) : 'NO';
+    if (th === 'NO' || (th !== null && !f.turnos.some((t) => norm(t) === norm(th)))) return false;
+  }
   if (f.sedes?.length && !f.sedes.some((s) => norm(c.sede).includes(norm(s)))) return false;
   if (f.dias?.length) {
     const permitidos = new Set(f.dias.map(norm));

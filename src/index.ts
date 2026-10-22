@@ -32,7 +32,7 @@ if (args.length) {
   }
 } else {
   const server = new McpServer(
-    { name: 'uade-mcp', version: '0.2.1' },
+    { name: 'uade-mcp', version: '0.2.2' },
     {
       instructions: [
         'Unofficial MCP for UADE (Universidad Argentina de la Empresa, Buenos Aires). All tools are read-only and read live data; prefer them over memory.',
