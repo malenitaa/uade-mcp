@@ -35,19 +35,21 @@ describe('renovación automática', () => {
 });
 
 describe('uade_login', () => {
-  type Handler = () => Promise<{ content: { text: string }[]; isError?: boolean }>;
+  type Handler = (args: Record<string, never>) => Promise<{ content: { text: string }[]; isError?: boolean }>;
+  // Con un navegador presente: el caso sin navegador está en navegador.test.ts.
+  const deps = { navegador: () => ({ ruta: '/x/Google Chrome', origen: 'instalado' as const, nombre: 'Google Chrome' }), descargar: async () => {}, descripcion: () => '' };
   const armar = (login: (op: { interactivo: boolean }) => Promise<{ ok: boolean; guardadas: string[]; motivo?: string }>) => {
     const tools: Record<string, Handler> = {};
     const prompts: string[] = [];
     const fake = { registerTool: (n: string, _c: unknown, cb: Handler) => { tools[n] = cb; }, registerPrompt: (n: string) => prompts.push(n) } as unknown as McpServer;
-    registerLoginTools(fake, login);
+    registerLoginTools(fake, login, deps);
     return { tool: tools.uade_login!, prompts };
   };
 
   it('primero intenta sin ventana; si alcanza, no abre nada', async () => {
     const login = vi.fn(async () => ({ ok: true, guardadas: ['WebCampus', 'Inscripciones'] }));
     const { tool, prompts } = armar(login);
-    const r = await tool();
+    const r = await tool({});
     expect(r.content[0]!.text).toContain('sin ventana');
     expect(login).toHaveBeenCalledWith({ interactivo: false });
     expect(login).toHaveBeenCalledTimes(1);
@@ -58,10 +60,10 @@ describe('uade_login', () => {
     let terminar!: (r: { ok: boolean; guardadas: string[] }) => void;
     const login = vi.fn(async (op: { interactivo: boolean }) => op.interactivo ? new Promise<{ ok: boolean; guardadas: string[] }>((res) => { terminar = res; }) : { ok: false, guardadas: [], motivo: 'Microsoft pidió clave' });
     const { tool } = armar(login);
-    const r1 = await tool();
+    const r1 = await tool({});
     expect(r1.content[0]!.text).toMatch(/Microsoft pidió clave.*Se abrió la ventana/s);
     expect(r1.content[0]!.text).toContain('Nunca tu contraseña');
-    const r2 = await tool();
+    const r2 = await tool({});
     expect(r2.content[0]!.text).toContain('ya está abierta');
     expect(login).toHaveBeenCalledTimes(2);
     terminar({ ok: true, guardadas: ['WebCampus'] });

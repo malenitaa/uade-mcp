@@ -99,8 +99,9 @@ export async function abrirInscripciones(): Promise<void> {
 
 async function correr(op: Opciones): Promise<Resultado> {
   const log = op.log ?? (() => {});
-  const executablePath = findBrowser();
   if (!op.interactivo && !browserProfileExists()) return { ok: false, guardadas: [], motivo: 'todavía no iniciaste sesión nunca' };
+  // Chrome/Edge/Brave instalado o el Chromium propio del MCP; sin ninguno, NavegadorFaltante dice cómo descargarlo.
+  const executablePath = findBrowser();
   const propia = !ventana;
   const ctx: BrowserContext = ventana ?? (await chromium.launchPersistentContext(browserProfileDir(), {
     executablePath,

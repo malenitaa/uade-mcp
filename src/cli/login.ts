@@ -1,9 +1,11 @@
 // `uade-mcp login`: la misma ventana que abre la tool uade_login, desde la terminal.
 import { browserProfileExists, iniciarSesion, mensajeVentana } from '../auth/login.js';
-import { findBrowser } from '../net/browser.js';
+import { elegirNavegador } from '../net/browser.js';
+import { instalarNavegadorConConfirmacion } from './navegador.js';
 
 export async function login(): Promise<void> {
-  const navegador = findBrowser().split('/').pop()?.replace(/\.exe$/i, '') ?? 'navegador';
+  // Sin Chrome, Edge ni Brave: se ofrece descargar el Chromium propio (pregunta en la terminal).
+  const navegador = elegirNavegador()?.nombre ?? (await instalarNavegadorConConfirmacion(), 'Chromium propio del MCP');
   // Primero sin ventana: si Microsoft todavía recuerda la sesión, alcanza.
   if (browserProfileExists()) {
     console.log('Probando renovar la sesión sin pedirte nada…');
