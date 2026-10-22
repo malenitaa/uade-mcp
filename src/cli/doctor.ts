@@ -10,6 +10,7 @@ import { SECCIONES, Secciones, type Seccion } from '../sources/webcampus/seccion
 import { SessionExpiredError } from '../net/session.js';
 import { Teams, teamsProfileExists } from '../sources/teams/index.js';
 import { SharePointClient } from '../sources/sharepoint/index.js';
+import { describirNavegador, elegirNavegador } from '../net/browser.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
 interface Resultado {
@@ -53,6 +54,9 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   };
 
   log('uade-mcp doctor — prueba cada capacidad. No muestra datos personales.\n');
+
+  // Qué navegador usa el MCP para el login (sin rutas: una ruta lleva el nombre de usuario de la compu).
+  await push('navegador', async () => [elegirNavegador() ? 'ok' : 'aviso', describirNavegador()]);
 
   let idAula: string | undefined;
   await push('períodos', async () => {

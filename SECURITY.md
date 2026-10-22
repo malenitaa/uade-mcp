@@ -15,6 +15,7 @@ No abras un issue público para temas de seguridad.
 | Nunca ve la contraseña: el login lo hace la persona en la página de Microsoft | `src/auth/login.ts` | — |
 | Sesiones en el llavero; perfil de navegador propio en `~/.uade-mcp/browser-profile`, cifrado con el llavero del sistema (sin el llavero de mentira de Playwright); `logout` borra todo | `src/auth/`, `src/cli/index.ts` | `test/auditoria.test.ts` |
 | Renovación automática de sesión: una por pedido vencido, sin bucles | `src/net/session.ts` | `test/login.test.ts` |
+| Navegador: Chrome, Edge o Brave instalados, o un Chromium propio que el MCP baja solo si no hay ninguno y la persona lo confirma (en la terminal o diciéndoselo al agente); las URLs de descarga se verifican antes de bajar (https a `cdn.playwright.dev` o `playwright.download.prss.microsoft.com`, fuera de la allowlist del cliente HTTP); queda en `~/.uade-mcp/browsers` y se borra con `borrar-navegador` | `src/net/browser.ts`, `src/net/descargar-navegador.ts`, `src/net/policy.ts` | `test/navegador.test.ts` |
 | Copia local cifrada (AES-256-GCM, clave en el llavero) | `src/cache/cache.ts` | `test/cache.test.ts` |
 | Nunca datos de compañeros (lista blanca de roles docentes) | `src/sources/webcampus/parse.ts` | `test/auditoria.test.ts` |
 | Texto de terceros marcado como información, no instrucciones: campo `aviso` en los resultados estructurados y bloque `<contenido_externo>` alrededor del texto plano (documentos, adjuntos, modo degradado) | `src/untrusted.ts`, `src/tools/*` | `test/auditoria.test.ts` |
@@ -59,6 +60,15 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
   y git la ignora. Lo que corras ahí corre con tus credenciales y bajo tu responsabilidad.
 - **Teams** se lee corriendo el Teams web real en el navegador del MCP: contacta dominios de Microsoft,
   como si lo abrieras vos, y puede dejar de funcionar si Microsoft cambia la interfaz.
+- **El Chromium propio** (solo si no tenés Chrome, Edge ni Brave y lo confirmás): se baja "Chrome for
+  Testing" en la versión que fija `playwright-core` (`browsers.json`), más el ffmpeg que su instalador
+  agrega siempre, desde los servidores de Playwright (`cdn.playwright.dev`, con
+  `playwright.download.prss.microsoft.com` como alternativa), unos 190 MB (~370 MB en disco), a
+  `~/.uade-mcp/browsers`. Playwright no publica checksums de esos archivos: su instalador verifica el
+  tamaño sobre HTTPS, y el MCP además corre el binario con `--version` y compara con la versión
+  declarada (si no coincide, lo borra). Lo baja el instalador de `playwright-core` en un proceso aparte,
+  sin heredar las variables con las que Playwright cambiaría de host o de carpeta. No tiene datos tuyos;
+  `logout` no lo toca, `uade-mcp borrar-navegador` lo borra.
 - **La sesión persistente de Microsoft** ("¿Mantener la sesión iniciada?" → Sí) vive en el perfil de
   navegador del MCP, cifrada con el llavero del sistema. Esa sesión (`ESTSAUTHPERSISTENT`) y la cookie
   `rtFa` de SharePoint no son solo de WebCampus: valen para todo Microsoft 365 de tu cuenta de UADE (mail,

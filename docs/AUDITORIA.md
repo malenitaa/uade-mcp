@@ -74,6 +74,26 @@ Verificado en vivo tras S4 (21/10/2026): el login guardó WebCampus, Inscripcion
 en cada corrida (el ítem "Chrome Safe Storage" ya existe si la persona usa Chrome; con Edge/Brave/Chromium
 el sistema puede pedir permiso una vez).
 
+## Cambio del 22/10/2026 (versión 0.3.0): Chromium propio para quien solo tiene Safari
+
+Hasta la 0.2.2 el MCP exigía Chrome, Edge o Brave instalados para la ventana de inicio de sesión
+(Safari no se puede automatizar y las cookies de WebCampus son de solo servidor). Desde la 0.3.0, si
+no hay ninguno, el MCP puede bajar un Chromium propio. Lo que suma y cómo queda acotado:
+
+| Qué | Dónde | Test |
+|---|---|---|
+| **Nuevo host de red, solo en ese paso:** `cdn.playwright.dev` (alternativa `playwright.download.prss.microsoft.com`), los servidores de Playwright. No entran en `ALLOWED_HOSTS`: el cliente HTTP del MCP sigue sin poder hablarles. La descarga la hace el instalador de `playwright-core` en un proceso aparte; antes se corre en `--dry-run` y cada URL que declara tiene que ser https a uno de esos dos hosts, si no, no se baja nada | `net/policy.ts` (`HOSTS_DESCARGA_NAVEGADOR`), `net/descargar-navegador.ts` | `navegador.test.ts` |
+| **Consentimiento:** nunca se baja solo. En la terminal (`login` o `instalar-navegador`) pide escribir "si" y exige TTY; desde la tool `uade_login` devuelve qué bajaría (qué, tamaño, de dónde, a dónde, cómo se borra) para que el agente pregunte, y recién con `descargarNavegador: true` descarga | `cli/navegador.ts`, `tools/login.ts` | `navegador.test.ts` |
+| **Nuevo archivo en disco:** `~/.uade-mcp/browsers/` (modo 0700), ~370 MB: "Chrome for Testing" en la versión que fija `playwright-core` más ffmpeg. Sin datos de la persona. `logout` no lo borra (avisa); `borrar-navegador` sí | `net/browser.ts`, `cli/index.ts` | — |
+| **Elección del navegador:** `UADE_MCP_BROWSER` > instalado en el sistema > descargado (solo si terminó: marcador `INSTALLATION_COMPLETE` y ejecutable presentes). Si no hay ninguno, `NavegadorFaltante` dice cómo conseguirlo; nada descarga por su cuenta (ni la renovación silenciosa ni Teams) | `net/browser.ts` | `navegador.test.ts` |
+| **Entorno del instalador:** no se heredan `PLAYWRIGHT_DOWNLOAD_HOST`, `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST`, `PLAYWRIGHT_CDN_MIRRORS`, `PLAYWRIGHT_BROWSERS_PATH` ni sus variantes `npm_config_*`: la descarga sale siempre de los hosts documentados y va a la carpeta del MCP | `net/descargar-navegador.ts` | `navegador.test.ts` |
+| **Integridad (límite conocido):** Playwright no publica checksums de sus navegadores; su instalador verifica `Content-Length` sobre HTTPS. El MCP además corre el binario con `--version` y lo compara con la versión que declara `playwright-core`; si no coincide, lo borra. Es un chequeo de sanidad, no una verificación criptográfica: la confianza está en TLS hacia el CDN de Playwright/Microsoft. Si Playwright publica checksums, hay que usarlos | `net/descargar-navegador.ts` | — |
+| `doctor` y `estado` dicen qué navegador se usa (nombre y origen, sin rutas: una ruta lleva el nombre de usuario de la compu) | `cli/doctor.ts`, `cli/index.ts` | — |
+
+Verificado en vivo el 22/10/2026 (macOS arm64, `playwright-core` 1.64.1): descarga de 186 MB + 1,4 MB
+de ffmpeg a una carpeta temporal, 366 MB en disco, versión confirmada, lanzado con Playwright con los
+mismos flags del login (sin llavero de mentira); la carpeta temporal se borró después.
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)

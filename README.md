@@ -24,7 +24,9 @@ Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu cont
 ## Requisitos
 
 - Node.js 20 o más nuevo.
-- Chrome, Edge o Brave instalado (para iniciar sesión con tu cuenta de UADE).
+- Chrome, Edge o Brave (para la ventana donde iniciás sesión con tu cuenta de UADE). Si no tenés ninguno
+  (solo Safari), el MCP te ofrece bajar un Chromium propio (~190 MB) que queda en `~/.uade-mcp/browsers`
+  y no toca nada más; lo borrás con `uade-mcp borrar-navegador`.
 - macOS, Windows o Linux (probado en macOS).
 
 ## Instalación
@@ -61,7 +63,9 @@ llama `uade_login` (o escribís `/uade:login`) y se abre la ventana para que la 
 | `estado` | Qué sesiones hay guardadas y qué permisos están activos |
 | `doctor` | Prueba cada función contra tu cuenta y muestra solo cantidades |
 | `permitir <permiso>` / `revocar <permiso>` | Prende o apaga un permiso (solo desde una terminal, escribiéndolo vos) |
-| `logout` | Borra sesiones, la copia local cifrada, su clave y el perfil del navegador |
+| `logout` | Borra sesiones, la copia local cifrada, su clave y el perfil del navegador (el Chromium propio, si lo bajaste, queda) |
+| `instalar-navegador` | Si no tenés Chrome, Edge ni Brave: baja un Chromium solo para el MCP (~190 MB, te pide confirmación) |
+| `borrar-navegador` | Borra ese Chromium propio |
 
 ## Herramientas
 
@@ -156,7 +160,7 @@ actualizar el MCP (`npx` usa siempre la última versión publicada; con `npm i -
 ## Privacidad y seguridad
 
 - **Local.** Corre en tu compu por stdio; no hay ningún servidor del proyecto en el medio.
-- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código (salvo el reporte de errores, si lo activás vos).
+- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código (salvo el reporte de errores, si lo activás vos, y la descarga del Chromium propio desde los servidores de Playwright, solo si no tenés Chrome, Edge ni Brave y la confirmás).
 - **Sin contraseñas.** Iniciás sesión vos, en la página de Microsoft. Se guardan cookies de sesión en el
   llavero del sistema y la sesión de Microsoft en un perfil de navegador propio (`~/.uade-mcp/browser-profile`).
 - **Copia local cifrada** (AES-256-GCM, clave en el llavero) para no pedir lo mismo dos veces. Cada respuesta dice de cuándo es.

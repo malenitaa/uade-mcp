@@ -15,6 +15,8 @@ import { borrarPerfil, iniciarSesion } from '../auth/login.js';
 import { setRenovador } from '../net/session.js';
 import { login } from './login.js';
 import { loginTeams, teamsProfileDir } from '../sources/teams/index.js';
+import { describirNavegador, navegadorDescargado } from '../net/browser.js';
+import { borrarNavegadorCli, instalarNavegadorConConfirmacion } from './navegador.js';
 
 const USO = `uade-mcp — MCP no oficial de UADE
 
@@ -23,6 +25,8 @@ Uso:
   uade-mcp login               iniciás sesión en WebCampus con tu cuenta de UADE
   uade-mcp login-teams         iniciás sesión en Teams (solo si querés leer novedades de los canales)
   uade-mcp logout              borra la sesión guardada del llavero
+  uade-mcp instalar-navegador  descarga un Chromium propio (~190 MB) si no tenés Chrome, Edge ni Brave
+  uade-mcp borrar-navegador    borra ese Chromium propio
   uade-mcp estado              muestra sesión y permisos
   uade-mcp doctor [--json]     prueba todas las capacidades contra tu cuenta (sin mostrar datos personales); --json para programarlo
   uade-mcp permitir <permiso>  habilita un permiso (te explica qué permite y pide confirmación)
@@ -60,6 +64,12 @@ export async function runCli(args: string[]): Promise<void> {
     case 'login-teams':
       return loginTeams();
 
+    case 'instalar-navegador':
+      return instalarNavegadorConConfirmacion();
+
+    case 'borrar-navegador':
+      return borrarNavegadorCli();
+
     case 'doctor':
       // Programado (cron, launchd): renueva las sesiones sin ventana antes de probar, como hace el servidor.
       setRenovador(async () => (await iniciarSesion({ interactivo: false })).ok);
@@ -72,6 +82,8 @@ export async function runCli(args: string[]): Promise<void> {
       rmSync(teamsProfileDir(), { recursive: true, force: true });
       borrarPerfil();
       console.log('Copia local (caché), su clave, el perfil del navegador (sesión de Microsoft) y el perfil de Teams borrados.');
+      // El Chromium propio no tiene datos tuyos y pesa: queda, salvo que lo borres.
+      if (navegadorDescargado()) console.log('El Chromium propio del MCP queda (no tiene datos tuyos). Para borrarlo: uade-mcp borrar-navegador.');
       return;
     }
 
@@ -82,6 +94,7 @@ export async function runCli(args: string[]): Promise<void> {
         const x = loadSession(cuenta);
         console.log(x ? `Sesión de ${nombre} guardada el ${x.savedAt}.` : `Sin sesión de ${nombre}. Corré: uade-mcp login`);
       }
+      console.log(`Navegador para el login: ${describirNavegador()}.`);
       const granted = await loadGranted();
       for (const [p, d] of Object.entries(PERMISSIONS)) console.log(`${granted.has(p as Permission) ? '✅' : '⛔'} ${p}: ${d}`);
       return;

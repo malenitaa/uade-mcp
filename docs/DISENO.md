@@ -97,6 +97,7 @@ dre.uade.edu.ar, www.dre.uade.edu.ar (PDFs públicos: calendario académico, cro
 graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
 teams.microsoft.com, teams.cloud.microsoft, *.office.net … (Teams web, dentro del navegador propio del MCP)
 api.github.com                       (opcional)
+cdn.playwright.dev, playwright.download.prss.microsoft.com (solo la descarga del Chromium propio, si no hay Chrome/Edge/Brave y la persona confirma; nunca desde el cliente HTTP)
 (PlanUADE no: el MCP solo arma un link local, ver sección 8)
 ```
 

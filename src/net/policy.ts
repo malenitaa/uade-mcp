@@ -18,6 +18,13 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'graph.microsoft.com',
 ]);
 
+// Hosts de los que el MCP descarga su Chromium propio (uade-mcp instalar-navegador / uade_login con
+// descargarNavegador), solo en ese paso y solo si la persona lo confirma. Son los servidores de
+// Playwright (su CDN y el de Microsoft detrás). No están en ALLOWED_HOSTS: el cliente HTTP del MCP
+// (safeFetch) sigue sin poder hablarles; los usa src/net/descargar-navegador.ts para verificar las URLs
+// que el instalador de playwright-core dice que va a bajar, antes de bajar nada.
+export const HOSTS_DESCARGA_NAVEGADOR: ReadonlySet<string> = new Set(['cdn.playwright.dev', 'playwright.download.prss.microsoft.com']);
+
 interface DenyRule {
   readonly pattern: RegExp;
   readonly motivo: string;

@@ -1,6 +1,6 @@
 {
   "name": "uade-mcp",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
   "keywords": [
     "mcp",
