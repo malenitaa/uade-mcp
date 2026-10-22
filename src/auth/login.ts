@@ -25,6 +25,10 @@ const INTERACTIVO_MS = 10 * 60 * 1000;
 // abrís vos. Las cookies de UADE (WebCampus, Inscripciones, SharePoint) ya iban al llavero; esto cubre
 // la sesión persistente de Microsoft que vive en el perfil.
 export const SIN_LLAVERO_FALSO = ['--use-mock-keychain', '--password-store=basic'];
+// Flags comunes a todos los lanzamientos. --disable-notifications apaga las notificaciones web (no hacen
+// falta para el login ni para leer Teams) y evita que el navegador pida permiso de notificaciones al
+// sistema (en macOS, el aviso "… Notifications" que apareció al probar el Chromium propio).
+export const ARGS_NAVEGADOR = ['--no-first-run', '--no-default-browser-check', '--disable-notifications'];
 const SILENCIOSO_MS = 45 * 1000;
 
 // Cookies de analytics que no hacen falta para la sesión y no guardamos.
@@ -84,7 +88,7 @@ export async function abrirInscripciones(): Promise<void> {
       headless: false,
       viewport: null,
       ignoreDefaultArgs: SIN_LLAVERO_FALSO,
-      args: ['--no-first-run', '--no-default-browser-check', '--start-maximized'],
+      args: [...ARGS_NAVEGADOR, '--start-maximized'],
     });
     ventana.on('close', () => { ventana = null; });
   }
@@ -107,7 +111,7 @@ async function correr(op: Opciones): Promise<Resultado> {
     executablePath,
     headless: !op.interactivo,
     ignoreDefaultArgs: SIN_LLAVERO_FALSO,
-    args: ['--no-first-run', '--no-default-browser-check'],
+    args: ARGS_NAVEGADOR,
   }));
   const guardadas: string[] = [];
   const page = propia ? (ctx.pages()[0] ?? (await ctx.newPage())) : await ctx.newPage();

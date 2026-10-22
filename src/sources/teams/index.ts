@@ -7,7 +7,7 @@
 import { createInterface } from 'node:readline/promises';
 import { chromium, type BrowserContext } from 'playwright-core';
 import { findBrowser } from '../../net/browser.js';
-import { browserProfileDir, browserProfileExists, SIN_LLAVERO_FALSO } from '../../auth/login.js';
+import { ARGS_NAVEGADOR, browserProfileDir, browserProfileExists, SIN_LLAVERO_FALSO } from '../../auth/login.js';
 
 // Mismo perfil que el login general: la sesión de Microsoft es una sola para WebCampus, Teams y el resto.
 export function teamsProfileDir(): string {
@@ -39,7 +39,7 @@ async function abrir(headless: boolean): Promise<BrowserContext> {
     executablePath: findBrowser(),
     headless,
     ignoreDefaultArgs: SIN_LLAVERO_FALSO,
-    args: ['--no-first-run', '--no-default-browser-check'],
+    args: ARGS_NAVEGADOR,
   });
 }
 
