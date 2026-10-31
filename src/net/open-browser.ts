@@ -97,8 +97,16 @@ export function nombreSeguro(nombre: string): string {
   return base + ext;
 }
 
-export async function guardarEnSalida(nombre: string, bytes: Uint8Array, home = homedir()): Promise<string> {
-  const dir = carpetaSalida(home);
+// Nombre de una subcarpeta dentro de Downloads/uade-mcp (la carpeta de Teams que se baja entera):
+// mismas reglas que el nombre de archivo, sin exigir extensión.
+export function segmentoSeguro(nombre: string): string {
+  const plano = basename(nombre.replace(/[\\/]/g, '_')).replace(/[\x00-\x1f\x7f]/g, '').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').slice(0, 100);
+  if (!plano) throw new ErrorDeUso(`No puedo usar "${nombre}" como nombre de carpeta.`);
+  return plano;
+}
+
+export async function guardarEnSalida(nombre: string, bytes: Uint8Array, home = homedir(), subcarpetas: readonly string[] = []): Promise<string> {
+  const dir = join(carpetaSalida(home), ...subcarpetas.map(segmentoSeguro));
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const seguro = nombreSeguro(nombre);
   const ext = extname(seguro);

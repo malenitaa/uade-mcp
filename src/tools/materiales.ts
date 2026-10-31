@@ -1,12 +1,14 @@
 // webcampus_course_materials: lista y lee los apuntes que el docente comparte en Teams
 // (biblioteca "Materiales de clase" de SharePoint), por la API limpia de SharePoint.
-// webcampus_save_material: guarda uno en Downloads/uade-mcp (la única tool de las dos que escribe).
+// webcampus_save_material: guarda uno en Downloads/uade-mcp; webcampus_save_folder, una carpeta entera
+// (las dos únicas que escriben, siempre dentro de Downloads/uade-mcp).
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
 import { cache, TTL } from '../cache/cache.js';
 import { ErrorDeUso } from '../error-de-uso.js';
-import { guardarEnSalida } from '../net/open-browser.js';
+import { extname } from 'node:path';
+import { EXTENSIONES_DOCUMENTO, guardarEnSalida } from '../net/open-browser.js';
 import { leerDocumento, tipoLegible } from '../sources/docs/leer.js';
 import { SharePointClient, type EntradaSP } from '../sources/sharepoint/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
@@ -39,6 +41,44 @@ export function carpetaDentroDe(root: string, folder: string | undefined): strin
   return ruta;
 }
 
+export const MAX_ARCHIVOS_CARPETA = 40;
+const MAX_PROFUNDIDAD = 4;
+
+export interface ArchivoParaGuardar extends EntradaSP {
+  subcarpetas: string[]; // relativas a la carpeta pedida
+}
+
+// Recorre una carpeta (y, si recursivo, sus subcarpetas hasta MAX_PROFUNDIDAD niveles) y separa qué se
+// guarda de qué se saltea y por qué. `tipos` son extensiones sin punto ("pdf", "pptx"); lo que no coincide
+// se omite en silencio porque fue un pedido explícito.
+export async function recorrerCarpeta(
+  listar: (ruta: string) => Promise<EntradaSP[]>,
+  carpeta: string,
+  opts: { tipos?: string[]; recursivo: boolean },
+): Promise<{ guardar: ArchivoParaGuardar[]; salteados: string[] }> {
+  const quiere = opts.tipos?.map((t) => `.${t.toLowerCase()}`);
+  const guardar: ArchivoParaGuardar[] = [];
+  const salteados: string[] = [];
+  const pendientes = [{ ruta: carpeta, subcarpetas: [] as string[] }];
+  while (pendientes.length) {
+    const actual = pendientes.shift()!;
+    for (const e of await listar(actual.ruta)) {
+      const donde = actual.subcarpetas.length ? `${actual.subcarpetas.join('/')}/${e.nombre}` : e.nombre;
+      if (e.tipo === 'carpeta') {
+        if (opts.recursivo && actual.subcarpetas.length < MAX_PROFUNDIDAD) pendientes.push({ ruta: e.ruta, subcarpetas: [...actual.subcarpetas, e.nombre] });
+        else if (opts.recursivo) salteados.push(`${donde}/ (demasiados niveles de subcarpetas)`);
+        continue;
+      }
+      if (quiere && !quiere.includes(extname(e.nombre).toLowerCase())) continue;
+      if (!EXTENSIONES_DOCUMENTO.test(e.nombre)) { salteados.push(`${donde} (no es un documento)`); continue; }
+      if (e.tamanoKB && e.tamanoKB > MAX_BAJA_KB) { salteados.push(`${donde} (${e.tamanoKB} KB, demasiado grande)`); continue; }
+      if (guardar.length >= MAX_ARCHIVOS_CARPETA) { salteados.push(`${donde} (tope de ${MAX_ARCHIVOS_CARPETA} archivos por llamada)`); continue; }
+      guardar.push({ ...e, subcarpetas: actual.subcarpetas });
+    }
+  }
+  return { guardar, salteados };
+}
+
 export function registerMaterialesTools(
   server: McpServer,
   granted: ReadonlySet<Permission>,
@@ -64,10 +104,13 @@ export function registerMaterialesTools(
     throw new ErrorDeUso(`No encontré la carpeta de materiales de "${aula.materia}" (ni "Materiales de clase" ni "Class Materials").`);
   }
 
+  const listarCacheado = (idAula: string, root: string, carpeta: string) =>
+    cache.get(`materiales:${idAula}:${carpeta.slice(root.length)}`, TTL.medio, () => sp.listar(carpeta));
+
   async function entradas(idAula: string, folder: string | undefined) {
     const { root, materia } = await raiz(idAula);
     const carpeta = carpetaDentroDe(root, folder);
-    const { value, actualizado } = await cache.get(`materiales:${idAula}:${carpeta.slice(root.length)}`, TTL.medio, () => sp.listar(carpeta));
+    const { value, actualizado } = await listarCacheado(idAula, root, carpeta);
     return { materia, actualizado, entradas: value as EntradaSP[] };
   }
 
@@ -134,6 +177,41 @@ export function registerMaterialesTools(
         const bytes = await sp.bajarArchivo(file.ruta);
         const destino = await guardarEnSalida(file.nombre, bytes);
         return { materia, archivo: file.nombre, guardado: `Lo guardé en ${destino}` };
+      }),
+  );
+
+  server.registerTool(
+    'webcampus_save_folder',
+    {
+      title: 'Save a whole folder of course materials to Downloads/uade-mcp',
+      description:
+        `Downloads every document in one folder of the course's 'Materiales de clase' library and saves them in Downloads/uade-mcp/<folder name>/ on the student's computer (never overwrites: adds (2), (3)… if a name exists). Pass idAula and folder (omit folder for the library root). Optional types=["pdf","pptx"] keeps only those extensions; recursive=true also walks subfolders and recreates them inside the destination. Only document types (PDF, Office, images, zip): code and other files are skipped and listed. At most ${MAX_ARCHIVOS_CARPETA} files per call. Use it when the student asks to download a whole class or several files at once.`,
+      inputSchema: {
+        idAula,
+        folder,
+        types: z.array(z.string().regex(/^[a-z0-9]{1,5}$/i)).max(10).optional().describe('extensions to keep, without the dot, e.g. ["pdf","pptx"]'),
+        recursive: z.boolean().default(false),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    ({ idAula, folder, types, recursive }) =>
+      run(granted, 'webcampus.leer', async () => {
+        const { root, materia } = await raiz(idAula);
+        const carpeta = carpetaDentroDe(root, folder);
+        const nombreCarpeta = carpeta.slice(carpeta.lastIndexOf('/') + 1);
+        const listar = async (ruta: string) => (await listarCacheado(idAula, root, ruta)).value as EntradaSP[];
+        const { guardar, salteados } = await recorrerCarpeta(listar, carpeta, { tipos: types, recursivo: recursive });
+        const guardados: string[] = [];
+        for (const a of guardar) {
+          const bytes = await sp.bajarArchivo(a.ruta);
+          guardados.push(await guardarEnSalida(a.nombre, bytes, undefined, [nombreCarpeta, ...a.subcarpetas]));
+        }
+        return {
+          materia,
+          carpeta: folder ?? 'Materiales de clase',
+          guardados: guardados.length ? guardados : 'No había archivos para guardar con ese filtro.',
+          salteados: salteados.length ? salteados : undefined,
+        };
       }),
   );
 }

@@ -94,6 +94,18 @@ Verificado en vivo el 22/10/2026 (macOS arm64, `playwright-core` 1.64.1): descar
 de ffmpeg a una carpeta temporal, 366 MB en disco, versión confirmada, lanzado con Playwright con los
 mismos flags del login (sin llavero de mentira); la carpeta temporal se borró después.
 
+## Cambio del 31/10/2026 (versión 0.3.1): bajar una carpeta entera de materiales
+
+`webcampus_save_folder` baja todos los documentos de una carpeta de "Materiales de clase" en una sola
+llamada (antes era un archivo por llamada con `webcampus_save_material`). Misma superficie de escritura,
+acotada igual:
+
+| Qué | Dónde | Test |
+|---|---|---|
+| Escribe solo en `Downloads/uade-mcp/<carpeta>/<subcarpetas>`: el nombre de cada carpeta pasa por `segmentoSeguro` (mismas reglas que el nombre de archivo: sin `/`, `\`, `..`, control ni punto inicial), las carpetas van con modo 0700 y los archivos con `wx` + " (2)" y 0600 como siempre | `net/open-browser.ts` | `materiales.test.ts` |
+| Qué baja lo decide `recorrerCarpeta`, pura y testeada aparte: solo tipos de documento (`EXTENSIONES_DOCUMENTO`; código, `.rar`, video se saltean y se informan), tope de 25 MB por archivo, tope de 40 archivos por llamada, recursión opcional hasta 4 niveles. La carpeta pedida pasa por `carpetaDentroDe` y cada listado y descarga por `SITIOS_PERMITIDOS` del cliente de SharePoint, como antes | `tools/materiales.ts` | `materiales.test.ts` |
+| Anunciada como escritura (`readOnlyHint: false`) | `tools/materiales.ts` | `auditoria.test.ts` §5 |
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
