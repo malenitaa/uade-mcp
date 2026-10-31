@@ -4,10 +4,11 @@ import writeXlsxFile from 'write-excel-file/node';
 import { mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { guardarEnSalida, nombreSeguro } from '../src/net/open-browser.js';
+import { guardarEnSalida, nombreSeguro, segmentoSeguro } from '../src/net/open-browser.js';
 import { leerDocumento, tipoLegible } from '../src/sources/docs/leer.js';
 import { rutaSana, SITIOS_PERMITIDOS } from '../src/sources/sharepoint/index.js';
-import { carpetaDentroDe } from '../src/tools/materiales.js';
+import { carpetaDentroDe, MAX_ARCHIVOS_CARPETA, recorrerCarpeta } from '../src/tools/materiales.js';
+import type { EntradaSP } from '../src/sources/sharepoint/index.js';
 
 const permite = (p: string) => rutaSana(p) && SITIOS_PERMITIDOS.some((r) => r.test(p));
 
@@ -58,6 +59,47 @@ describe('guardar en Downloads/uade-mcp', () => {
     expect(b).toBe(join(home, 'Downloads', 'uade-mcp', 'TP 1 (2).pdf'));
     expect(statSync(a).mode & 0o777).toBe(0o600);
     expect(readdirSync(join(home, 'Downloads'))).toEqual(['uade-mcp']); // nada en Downloads directo
+  });
+
+  it('una carpeta entera va a Downloads/uade-mcp/<carpeta>/<subcarpeta>, con nombres saneados', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'home-'));
+    const a = await guardarEnSalida('t.pdf', new Uint8Array([1]), home, ['CLASE 14 30-10', 'Teoría']);
+    expect(a).toBe(join(home, 'Downloads', 'uade-mcp', 'CLASE 14 30-10', 'Teoría', 't.pdf'));
+    expect(statSync(join(home, 'Downloads', 'uade-mcp', 'CLASE 14 30-10')).mode & 0o777).toBe(0o700);
+    expect(segmentoSeguro('../../.ssh')).toBe('_.._.ssh');
+    expect(segmentoSeguro('a/b\\c')).toBe('a_b_c');
+    for (const malo of ['..', '.', '', '   ', '\u0000']) expect(() => segmentoSeguro(malo), malo).toThrow('carpeta');
+  });
+});
+
+describe('bajar una carpeta entera', () => {
+  const f = (nombre: string, ruta: string, kb = 10): EntradaSP => ({ nombre, tipo: 'archivo', ruta, tamanoKB: kb });
+  const d = (nombre: string, ruta: string): EntradaSP => ({ nombre, tipo: 'carpeta', ruta });
+  const arbol: Record<string, EntradaSP[]> = {
+    '/r/CLASE 14': [d('src', '/r/CLASE 14/src'), f('teoria.pptx', '/r/CLASE 14/teoria.pptx'), f('guia.pdf', '/r/CLASE 14/guia.pdf'), f('sqlite.rar', '/r/CLASE 14/sqlite.rar'), f('video.mp4', '/r/CLASE 14/video.mp4', 900_000)],
+    '/r/CLASE 14/src': [f('Main.java', '/r/CLASE 14/src/Main.java'), f('notas.pdf', '/r/CLASE 14/src/notas.pdf')],
+  };
+  const listar = async (ruta: string) => arbol[ruta] ?? [];
+
+  it('sin recursivo: solo los documentos del nivel pedido; lo que no es documento o pesa de más se informa', async () => {
+    const r = await recorrerCarpeta(listar, '/r/CLASE 14', { recursivo: false });
+    expect(r.guardar.map((a) => a.nombre)).toEqual(['teoria.pptx', 'guia.pdf']);
+    expect(r.guardar.every((a) => a.subcarpetas.length === 0)).toBe(true);
+    expect(r.salteados).toEqual(['sqlite.rar (no es un documento)', 'video.mp4 (no es un documento)']);
+  });
+
+  it('types filtra en silencio (fue pedido) y recursivo entra a las subcarpetas conservando la ruta relativa', async () => {
+    const r = await recorrerCarpeta(listar, '/r/CLASE 14', { tipos: ['PDF'], recursivo: true });
+    expect(r.guardar.map((a) => [a.nombre, a.subcarpetas])).toEqual([['guia.pdf', []], ['notas.pdf', ['src']]]);
+    expect(r.salteados).toEqual([]);
+  });
+
+  it('un zip demasiado grande se saltea con el peso, y hay un tope de archivos por llamada', async () => {
+    const muchos = Array.from({ length: MAX_ARCHIVOS_CARPETA + 2 }, (_, i) => f(`a${i}.pdf`, `/r/X/a${i}.pdf`));
+    const r = await recorrerCarpeta(async () => [f('grande.zip', '/r/X/grande.zip', 30 * 1024), ...muchos], '/r/X', { recursivo: false });
+    expect(r.guardar).toHaveLength(MAX_ARCHIVOS_CARPETA);
+    expect(r.salteados[0]).toBe('grande.zip (30720 KB, demasiado grande)');
+    expect(r.salteados.slice(1)).toEqual([`a${MAX_ARCHIVOS_CARPETA}.pdf (tope de ${MAX_ARCHIVOS_CARPETA} archivos por llamada)`, `a${MAX_ARCHIVOS_CARPETA + 1}.pdf (tope de ${MAX_ARCHIVOS_CARPETA} archivos por llamada)`]);
   });
 });
 

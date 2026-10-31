@@ -83,6 +83,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `webcampus_teachers` | Nombre y mail del equipo docente (nunca datos de compañeros) |
 | `webcampus_course_materials` | Lista y lee (PDF, Word, Excel, PowerPoint) los apuntes de "Materiales de clase"; no escribe nada |
 | `webcampus_save_material` | Guarda una copia de un apunte en `Downloads/uade-mcp` (nunca pisa un archivo) |
+| `webcampus_save_folder` | Baja una carpeta entera de "Materiales de clase" (una clase, por ejemplo) a `Downloads/uade-mcp/<carpeta>`; filtra por tipo (`pdf`, `pptx`) y opcionalmente entra a subcarpetas |
 | `teams_channel_news` | Lo último que se publicó en el canal General de una materia (experimental) |
 | `webcampus_consultation_classes` | Clases de consulta programadas para tu carrera: materias, días y horarios |
 

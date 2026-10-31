@@ -105,6 +105,7 @@ describe('auditoría', () => {
     registerMaterialesTools(fake, granted);
     expect(anot['uade_open_enrollment_site']?.readOnlyHint).toBe(false);
     expect(anot['webcampus_save_material']?.readOnlyHint).toBe(false);
+    expect(anot['webcampus_save_folder']?.readOnlyHint).toBe(false);
     expect(anot['webcampus_course_materials']?.readOnlyHint).toBe(true);
     expect(anot['webcampus_course_materials']).toBeDefined();
   });
