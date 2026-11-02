@@ -24,3 +24,17 @@ describe('guías enlazadas', () => {
     expect(guiasEnlazadas(html)).toEqual(['/Docs/Configuracion_WiFi_UADE_OSX.pdf', '/Docs/Configuracion_WiFi_UADE_iOS.pdf', 'https://dre.uade.edu.ar/ayues.pdf']);
   });
 });
+
+describe('documento más pesado que el tope', () => {
+  it('devuelve el link a WebCampus con el texto fijo, sin tirar ni inventar contenido', async () => {
+    const { Secciones, TEXTO_DOCUMENTO_PESADO } = await import('../src/sources/webcampus/secciones.js');
+    const { PolicyError } = await import('../src/net/policy.js');
+    const client = { get: async () => { throw new PolicyError('respuesta demasiado grande'); } };
+    const s = new Secciones(client as never);
+    const d = await s.consultar('housing');
+    expect('texto' in d && d.texto).toBe(`${TEXTO_DOCUMENTO_PESADO} https://www.webcampus.uade.edu.ar/Principal.aspx?MenuItemId=200`);
+    expect(d.fuente).toBe('https://www.webcampus.uade.edu.ar/Principal.aspx?MenuItemId=200');
+    const otro = { get: async () => { throw new PolicyError('dirección fuera de WebCampus'); } };
+    await expect(new Secciones(otro as never).consultar('housing')).rejects.toThrow('fuera de WebCampus');
+  });
+});

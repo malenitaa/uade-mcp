@@ -305,7 +305,7 @@ a qué hosts se conecta, qué no hace nunca y cómo borrar todo (`uade-mcp logou
   - Una app propia multi-tenant registrada afuera (cuenta de Azure personal): sin probar. Es la prueba que decide;
     si UADE pide "aprobación del administrador", la única vía es que Sistemas de UADE apruebe la app.
   - Mientras tanto: borradores por deeplink de Outlook y adjuntos mostrados en Finder.
-- [ ] **PIA:** volver a mapear cuando abra una inscripción.
+- [ ] **PIA:** volver a mapear cuando abra una inscripción. Plan para dejar a la persona en la última pantalla, con el 401 y los límites, en `PIA-HANDOFF.md`.
 - [ ] **Stack:** propuesta TypeScript + `@modelcontextprotocol/sdk` + `undici` (HTTP con allowlist) + `cheerio` (parseo) + `keytar`/`@napi-rs/keyring` (llavero) + `@azure/msal-node`.
 - [ ] **Tests:** fixtures HTML **anonimizados**. Nunca commitear HTML real con datos personales.
 - [ ] Revisar normativa UADE sobre acceso automatizado (`MenuItemId=280`).

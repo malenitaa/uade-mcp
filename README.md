@@ -61,7 +61,7 @@ llama `uade_login` (o escribís `/uade:login`) y se abre la ventana para que la 
 |---|---|
 | `login` | Iniciar sesión (o renovarla sin ventana si se puede) |
 | `estado` | Qué sesiones hay guardadas y qué permisos están activos |
-| `doctor` | Prueba cada función contra tu cuenta y muestra solo cantidades |
+| `doctor` | Prueba cada función contra tu cuenta y muestra solo cantidades; al final dice qué tools quedaron afectadas si algo falló |
 | `permitir <permiso>` / `revocar <permiso>` | Prende o apaga un permiso (solo desde una terminal, escribiéndolo vos) |
 | `logout` | Borra sesiones, la copia local cifrada, su clave y el perfil del navegador (el Chromium propio, si lo bajaste, queda) |
 | `instalar-navegador` | Si no tenés Chrome, Edge ni Brave: baja un Chromium solo para el MCP (~190 MB, te pide confirmación) |

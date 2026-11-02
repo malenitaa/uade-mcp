@@ -54,7 +54,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Ventanas de inscripción con fechas | ✅ | `uade_enrollment_windows` |
 | Novedades, banners y agenda del home | ✅ | `webcampus_news` (+ lectura de lo enlazado) |
 | Avisar al proyecto cuando algo se rompe | ✅ opt-in | permiso `reportes.errores`; endpoint `api/mcp-error` en planuade.ar que manda el mail |
-| UADE cambia una página | 🟡 | modo degradado: la tool devuelve el texto plano marcado como sin estructura; `doctor --json` programable para detectarlo |
+| UADE cambia una página | 🟡 | modo degradado: la tool devuelve el texto plano marcado como sin estructura; `doctor --json` programable para detectarlo, y dice qué tools quedaron afectadas (`toolsRotas`) |
 | Sesión vencida (cada ~3 h) | ✅ | renovación automática sin ventana desde el perfil del navegador; `uade_login` / `/uade:login` si Microsoft pide algo |
 | Aranceles por carrera y turno | ✅ | `uade_tuition` (tabla parseada del PDF oficial; `webcampus_section aranceles_pdf` para el texto) |
 | Programación / disponibilidad de clases | ✅ | `webcampus_class_offering` |
@@ -66,7 +66,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Buscar clases en PIA (vacantes, condiciones) | 🟡 | `pia_class_search`: mapeado a partir de un registro de red de la autora (búsqueda, materias, clases, carrito, pantalla de finalizar con el resumen arancelario). Parsers y cliente con tests sobre fixtures; en vivo PIA responde 401 (HTTP Basic, realm uade.edu.ar) al link firmado: falta identificar qué credencial manda el navegador |
 | Armar el cuatrimestre y ver la semana | ✅ | `uade_plan_next_term`: elegibilidad + oferta + combinaciones; `view` abre planuade.ar/misemana (datos en el fragmento), `file` deja HTML + `.ics` en `~/Downloads/uade-mcp`. Avisa si la programación publicada es la del cuatrimestre en curso. La misma página arma la semana sin MCP (pegando la Programación de Clases), con el mismo planificador portado a JS |
 | Qué puedo cursar / rendir | ✅ | `uade_eligible_subjects` (historial + correlativas de WebCampus) |
-| Inscripción en PIA | 🟡 por diseño | `pia_prepare_enrollment` (resumen de materia o previo) + `uade_open_enrollment_site` (ventana con sesión). El MCP no recorre PIA ni envía inscripciones: la persona elige, agrega al carrito y aprieta Finalizar |
+| Inscripción en PIA | 🟡 por diseño | `pia_prepare_enrollment` (resumen de materia o previo) + `uade_open_enrollment_site` (ventana con sesión). El MCP no recorre PIA ni envía inscripciones: la persona elige, agrega al carrito y aprieta Finalizar. Llegar hasta la última pantalla (sin Finalizar) está pensado en `PIA-HANDOFF.md` |
 | Bajas y cambios | ⛔ | Decisión de producto |
 
 ### Administrativo
@@ -106,7 +106,7 @@ con permiso propio y confirmación por cada acción.
 
 - Cada parser exige un elemento de la página que siempre está: si UADE cambia el HTML, el MCP
   responde "UADE cambió la página X" en vez de devolver datos vacíos (`test/guards.test.ts`).
-- `uade-mcp doctor` prueba todo lo marcado ✅ contra una cuenta real y muestra solo conteos.
+- `uade-mcp doctor` prueba todo lo marcado ✅ contra una cuenta real y muestra solo conteos. Cada prueba dice qué tools cubre; un test (`test/doctor.test.ts`) exige que toda tool registrada tenga prueba o un motivo para no tenerla (`TOOLS_SIN_PRUEBA`), así una tool nueva no queda sin vigilar.
 - Lo que UADE publica como imagen (cronograma de inscripción, PDFs escaneados) se devuelve como
   contenido de imagen del MCP para que el modelo lo lea; no se transcribe con OCR ni se carga a mano.
 - Los fixtures de `test/fixtures/` son sintéticos: reproducen la estructura relevada con datos inventados.
