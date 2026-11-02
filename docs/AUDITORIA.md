@@ -151,6 +151,14 @@ inscribe ni factura; lo que factura es Finalizar, que sigue siendo exclusivament
 Riesgo que queda: el archivo contiene materias y fechas de la persona, como cualquier apunte que
 guarda en su propia carpeta de descargas; nada sale de su máquina.
 
+## Cambio del 02/11/2026 (versión 0.5.1): descripciones e instructions según el eval
+
+Solo texto que ve el modelo, sin código nuevo: la descripción de `pia_prepare_enrollment` arranca con
+el beneficio en palabras de alumno (cuánto cobran y hasta cuándo se puede dar de baja), la de
+`webcampus_class_offering` aclara que no dice eso, y las instructions del servidor piden repreguntar
+cuando el alumno dice "esa materia" o "la clase" sin decir cuál. Sin cambio de permisos, de red ni de
+superficie: mismas tools, mismos hosts, mismo `readOnlyHint`. Motivo y medición en `evals/`.
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)

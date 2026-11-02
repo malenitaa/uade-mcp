@@ -124,7 +124,7 @@ export function registerInscripcionesTools(
     'webcampus_class_offering',
     {
       title: 'Classes offered for a subject',
-      description: 'Class schedule published in WebCampus (usually next term; if the next one is not published yet, it is the current one: check the dates). No subject: subjects offered for the degree. With subject code: its classes (campus, shift, weekdays, time, dates, how it is passed).',
+      description: 'Class schedule published in WebCampus (usually next term; if the next one is not published yet, it is the current one: check the dates). No subject: subjects offered for the degree. With subject code: its classes (campus, shift, weekdays, time, dates, how it is passed). Does not say what a class costs or its withdrawal deadline: that is pia_prepare_enrollment.',
       inputSchema: {
         subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/).optional().describe('code, e.g. 3.4.071'),
         shift: z.enum(['MAÑANA', 'TARDE', 'NOCHE', 'ONLINE']).optional(),

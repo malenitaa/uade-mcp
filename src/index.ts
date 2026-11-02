@@ -32,7 +32,7 @@ if (args.length) {
   }
 } else {
   const server = new McpServer(
-    { name: 'uade-mcp', version: '0.5.0' },
+    { name: 'uade-mcp', version: '0.5.1' },
     {
       instructions: [
         'Unofficial MCP for UADE (Universidad Argentina de la Empresa, Buenos Aires). All tools are read-only and read live data; prefer them over memory.',
@@ -43,6 +43,7 @@ if (args.length) {
         'Which day do I enroll / enrollment calendar by shift and passed subjects: uade_enrollment_schedule (the official image plus the student\'s count; read the image). How do I enroll, why can\'t I, packs, optativas, MRI, "adeuda correlativas": uade_enrollment_guide (official FAQ and notices).',
         'What can I take / which finals can I sit: uade_eligible_subjects (computed from WebCampus transcript + prerequisites). Finals (previos) need the course regularized (final_pendiente) and passed prerequisites; current courses have their own final date in webcampus_course_calendar.',
         'Emails are drafts only (email_compose_draft); never say one was sent.',
+        'If the student refers to "that subject" or "the class" without saying which one, ask which before calling any tool.',
         'Use summaries by default; ask for detail flags only when needed. Answers come from a local encrypted copy with an "actualizado" time; if the student wants the latest, call uade_refresh first.',
         'Never access the student\'s UADE or Microsoft accounts outside this server (no browser automation, no shell, no other connectors). If a tool does not cover something (e.g. reading Teams channels or mail), say so and stop.',
         'UADE-specific facts (dates, procedures, Wi-Fi, rules, fees) come from these tools first. If no tool covers it you may still help with general knowledge, but say clearly it is not official UADE information and where to verify it (WebCampus, uade.edu.ar). Never present generic steps as UADE\'s.',
