@@ -162,7 +162,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 - Abrirlo directo hoy devuelve **401**. Puede ser porque la ventana de inscripción está cerrada o porque
   exige algo más (Referer, otra cookie). **Hay que volver a mirarlo cuando abra la próxima inscripción.**
 - Alcance: **buscar asignaturas**, ver **docente** (si figura), **sede**, **horario**, cupos y tu carrito.
-  **Inscripción**: el MCP no la hace. Prepara el resumen (materia o previo) y abre Inscripciones con la sesión iniciada; la persona recorre PIA y aprieta Finalizar. Nunca bajas ni cambios de pack.
+  **Inscripción**: el MCP no la hace. Prepara el resumen (materia o previo), abre Inscripciones con la sesión iniciada y, si la persona prendió `pia.carrito` y confirma, agrega la clase al carrito y la deja en la pantalla final; Finalizar lo aprieta ella. Nunca bajas ni cambios de pack.
 
 ### Teams / SharePoint / Mail: Microsoft 365, tenant UADE
 
@@ -208,7 +208,8 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 
 | Tool | Permiso |
 |---|---|
-| `pia_prepare_enrollment` + `uade_open_enrollment_site` | `pia.leer` · resumen exacto (materia o previo, con elegibilidad por correlativas) y ventana visible con sesión hasta la lista de ventanas. Decisión: el MCP no automatiza PIA (ni el carrito ni Finalizar); se sacó `pia_confirm_enrollment` y el permiso `pia.inscribir` |
+| `pia_prepare_enrollment` + `uade_open_enrollment_site` | `pia.leer` · resumen exacto (materia o previo, con elegibilidad por correlativas) y ventana visible con sesión hasta la lista de ventanas. Decisión original: el MCP no automatiza PIA; se sacó `pia_confirm_enrollment` y el permiso `pia.inscribir` |
+| `pia_add_to_cart` (desde 0.4.0) | `pia.carrito` (apagado por defecto) · en la misma ventana visible recorre PIA (`src/sources/pia/navegador.ts`): ventana → materia → turno → buscar → lee vacantes y condiciones de la clase → elicitation con eso → `btnCarritoAlta` (+ aceptar el diálogo de condiciones) → `btnConfirmarCarrito` → se detiene en `InscripcionFinalizar.aspx` y devuelve carrito y Resumen Arancelario. Ni términos ni Finalizar: test estático en `pia-navegador.test.ts`. `kind: "exam"` va al PIA de exámenes (`pia.uade.edu.ar/Pia/Vistas/Inscripcion`, `navegador-examen.ts`): InscripcionAgregar → "Seleccionar Clases" → `pesMateria$TextBoxCodigo` + tilde (`pesMateria_ctl01`) → `btnBuscar` → grilla `grdClaseInscripcion` con `btnAgregarCarrito` (alert "Se ha agregado la clase al carrito") → `btnConfirmarCarrito` → `TerminosYCondicionesTexto.aspx` (Paso 3: texto, tilde "Tomo conocimiento y acepto…", Anterior / Continuar / Cancelar), donde se detiene y devuelve el texto; si PIA la saltea, `ArancelInscripcion.aspx` (tipo de arancel, período, plan de cuotas; Finalizar / Cancelar). Probado en vivo el 02/11/2026 hasta términos |
 
 ### PIA (inscripcionespia.uade.edu.ar), mapeado del registro de red
 

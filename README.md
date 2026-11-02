@@ -109,6 +109,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `pia_class_search` | Clases en PIA con vacantes y condiciones (en verificación: PIA rechaza el acceso fuera del navegador) |
 | `pia_prepare_enrollment` | Resumen exacto de una inscripción a materia o a previo: qué, cuándo, cuánto y si tiene baja |
 | `uade_open_enrollment_site` | Abre Inscripciones con tu sesión iniciada; la inscripción y el Finalizar los hacés vos |
+| `pia_add_to_cart` | Con el permiso `pia.carrito` (apagado por defecto): en esa ventana recorre PIA, te muestra en un diálogo la clase (o el examen previo) y sus condiciones y, si confirmás, lo agrega al carrito y te deja en la pantalla final: la del Resumen Arancelario para materias, la de Términos y Condiciones para previos (un Continuar antes de "Cálculo de Aranceles"). Nunca marca los términos ni aprieta Continuar o Finalizar: eso lo hacés vos |
 
 **Plata y trámites**
 
@@ -165,7 +166,7 @@ actualizar el MCP (`npx` usa siempre la última versión publicada; con `npm i -
 - **Sin contraseñas.** Iniciás sesión vos, en la página de Microsoft. Se guardan cookies de sesión en el
   llavero del sistema y la sesión de Microsoft en un perfil de navegador propio (`~/.uade-mcp/browser-profile`).
 - **Copia local cifrada** (AES-256-GCM, clave en el llavero) para no pedir lo mismo dos veces. Cada respuesta dice de cuándo es.
-- **Solo lectura.** No inscribe, no paga, no da de baja, no manda mails, no toca datos personales.
+- **Solo lectura, salvo lo que prendés vos.** No inscribe, no paga, no da de baja, no manda mails, no toca datos personales. Lo único que escribe, con permiso aparte y confirmación cada vez, es agregar una clase al carrito de PIA; Finalizar siempre lo apretás vos.
 - **Reportes de errores, apagados por defecto.** Si activás `reportes.errores`, cuando UADE cambia una página
   o una tool falla el MCP le avisa al proyecto (`planuade.ar/api/mcp-error`, el único destino fuera de UADE y
   Microsoft) con la versión, el nombre de la tool, el tipo de error y qué página. Nunca tu pregunta, tus datos

@@ -309,3 +309,57 @@ export function parseFinalizar(html: string): Finalizar {
     puedeFinalizar: $(`input[name="${CONTROLES.finalizar}"]`).length > 0,
   };
 }
+
+// --- PIA de exámenes (pia.uade.edu.ar/Pia/Vistas/Inscripcion): otra app, con otras pantallas.
+// Relevada en vivo el 01/11/2026 (solo lectura). Después del carrito viene "Terminos y Condiciones"
+// (TerminosYCondicionesTexto.aspx, probada en vivo el 02/11/2026: texto, tilde "Tomo conocimiento y
+// acepto…", Anterior / Continuar / Cancelar) y recién después "Cálculo de Aranceles"
+// (ArancelInscripcion.aspx): tipo de arancel, período y plan de cuotas, con Finalizar / Cancelar.
+
+export interface TerminosExamen {
+  texto: string; // las condiciones que PIA pide aceptar
+  aceptado: boolean; // la tilde, tal como está: el MCP nunca la marca
+}
+
+export function parseTerminosExamen(html: string): TerminosExamen {
+  const $ = cheerio.load(html);
+  const tilde = $('input[type=checkbox]').filter((_, i) => /acepto/i.test($(i).parent().text() + $(`label[for="${$(i).attr('id')}"]`).text())).first();
+  if (!tilde.length) throw new PageChangedError('términos y condiciones de PIA (exámenes)', $.html());
+  $('script, style, input, a, button').remove();
+  const texto = clean($('body').text())
+    .replace(/Terminos y Condiciones/i, '')
+    .replace(/Tomo conocimiento y acepto[^.]*\./i, '')
+    .replace(/\b(Anterior|Continuar|Cancelar)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { texto, aceptado: tilde.is(':checked') };
+}
+
+export interface ArancelExamen {
+  tipo: string;
+  periodo: string;
+  planDeCuotas: string | null;
+}
+
+export interface FinalizarExamen {
+  aranceles: ArancelExamen[];
+  puedeFinalizar: boolean;
+}
+
+export function parseArancelExamen(html: string): FinalizarExamen {
+  const $ = cheerio.load(html);
+  const tabla = $('table').filter((_, t) => /plan de cuotas/i.test($(t).find('th').text())).first();
+  if (!tabla.length) throw new PageChangedError('cálculo de aranceles de PIA (exámenes)', $.html());
+  const headers = tabla.find('th').map((_, th) => clean($(th).text()).toLowerCase()).get();
+  const col = (h: string) => headers.findIndex((x) => x.includes(h));
+  const aranceles: ArancelExamen[] = [];
+  tabla.find('tr').slice(1).each((_, tr) => {
+    const td = $(tr).children('td');
+    const tipo = clean(td.eq(col('arancel')).text());
+    if (!tipo) return;
+    const plan = td.eq(col('plan'));
+    aranceles.push({ tipo, periodo: clean(td.eq(col('periodo')).text()), planDeCuotas: clean(plan.find('input[type=text]').attr('value') ?? plan.text()) || null });
+  });
+  // El botón Finalizar solo se mira, nunca se aprieta: el recorrido se detiene en esta pantalla.
+  return { aranceles, puedeFinalizar: $('[id$="_btnFinalizar"]').length > 0 };
+}

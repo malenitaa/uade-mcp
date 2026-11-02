@@ -9,7 +9,7 @@
 // hace falta la ventana. `logout` borra el perfil.
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { chromium, type BrowserContext } from 'playwright-core';
+import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import { findBrowser } from '../net/browser.js';
 import { INSCRIPCIONES, INSCRIPCIONES_ACCOUNT } from '../sources/inscripciones/index.js';
 import { SHAREPOINT, SHAREPOINT_ACCOUNT } from '../sources/sharepoint/index.js';
@@ -82,6 +82,14 @@ let ventana: BrowserContext | null = null;
 // Abre inscripciones.uade.edu.ar en una ventana visible, con la sesión ya iniciada, y la deja
 // abierta para que la persona siga. No navega más allá de la lista de ventanas de inscripción.
 export async function abrirInscripciones(): Promise<void> {
+  await paginaInscripciones();
+}
+
+// La misma ventana, devolviendo la pestaña: la usa pia_add_to_cart para recorrer PIA hasta la
+// pantalla final (src/sources/pia/navegador.ts). Sin un listener, Playwright descarta solo los
+// diálogos (confirm/alert) de la página; con uno que no hace nada, el navegador los muestra y los
+// contesta la persona, como en cualquier ventana suya.
+export async function paginaInscripciones(): Promise<Page> {
   if (!ventana) {
     ventana = await chromium.launchPersistentContext(browserProfileDir(), {
       executablePath: findBrowser(),
@@ -91,6 +99,8 @@ export async function abrirInscripciones(): Promise<void> {
       args: [...ARGS_NAVEGADOR, '--start-maximized'],
     });
     ventana.on('close', () => { ventana = null; });
+    ventana.on('page', (p) => p.on('dialog', () => {}));
+    for (const p of ventana.pages()) p.on('dialog', () => {});
   }
   const page = ventana.pages()[0] ?? (await ventana.newPage());
   await page.goto(`${INSCRIPCIONES}/`);
@@ -99,6 +109,7 @@ export async function abrirInscripciones(): Promise<void> {
     await page.waitForURL((u) => u.origin === INSCRIPCIONES && !/^\/account\//i.test(u.pathname), { timeout: 60_000 }).catch(() => {});
   }
   await page.bringToFront().catch(() => {});
+  return page;
 }
 
 async function correr(op: Opciones): Promise<Resultado> {

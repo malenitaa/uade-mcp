@@ -115,6 +115,25 @@ link de la ventana abierta, que no se imprime). Cada prueba declara qué tools c
 `webcampus_section` ya no falla ante un documento de más de 10 MB (tope de `MAX_BODY_BYTES`, que no
 se tocó): devuelve el link a WebCampus con un texto fijo, sin contenido del documento.
 
+## Cambio del 02/11/2026 (versión 0.4.0): hasta la pantalla final de PIA, sin Finalizar
+
+Primera escritura fuera del disco: `pia_add_to_cart` agrega una clase al carrito de PIA. Se hace dentro
+del navegador visible de la persona (el de `uade_open_enrollment_site`, con su sesión), no con el cliente
+HTTP, así que no toca el 401 ni mete la sesión de PIA en el MCP.
+
+| Qué | Dónde | Test |
+|---|---|---|
+| Permiso propio `pia.carrito`, apagado por defecto; la tool se anuncia con `readOnlyHint: false` | `auth/permissions.ts`, `tools/pia.ts` | `auditoria.test.ts` §5 |
+| Confirmación por elicitation del cliente antes de escribir, con la clase, las vacantes y las condiciones que PIA pide aceptar (leídas de la grilla real); sin la capacidad de elicitation la tool no abre nada; si la persona no confirma, no se mandó ningún alta | `tools/pia.ts`, `sources/pia/navegador.ts` | `pia-navegador.test.ts` |
+| Exámenes previos: otra app de PIA (`pia.uade.edu.ar`), relevada en vivo de solo lectura; mismo esquema (confirmación con la clase de examen leída de la grilla, alta, confirmar carrito) y se detiene en "Terminos y Condiciones" (Paso 3: tilde + Continuar, visto en vivo el 02/11/2026) o, si PIA la saltea, en "Cálculo de Aranceles"; `navegador-examen.ts` no marca la tilde ni nombra Continuar o Finalizar como acción (test estático) | `sources/pia/navegador-examen.ts`, `sources/inscripciones/index.ts` (link de la ventana de previos, solo si es de ese origen) | `pia-examen-navegador.test.ts` |
+| El recorrido se detiene en `InscripcionFinalizar.aspx`: no marca `chkTerminos` ni aprieta `btnFinalizar`. Test estático: `navegador.ts` no nombra `btnFinalizar` ni `CONTROLES.finalizar` y a `CONTROLES.terminos` solo lo espera; `CONTROLES.finalizar` aparece una sola vez en todo `src/`, en el parser, para saber si el botón está | `sources/pia/navegador.ts`, `sources/pia/parse.ts` | `pia-navegador.test.ts` |
+| Recorrido completo probado en un Chromium real contra un servidor local con fixtures sintéticas que anota cada POST: orden exacto de los postbacks, ninguno a la pantalla final | `test/fixtures/pia/*.html` | `pia-navegador.test.ts` |
+| El link firmado de la ventana sigue sin salir al modelo; el resultado devuelve carrito y aranceles sin `__VIEWSTATE` ni botones | `tools/pia.ts` | — |
+| Diálogos del navegador (`confirm`/`alert`): durante el alta se acepta el de condiciones (ya confirmadas por la persona) y el listener se saca enseguida; el resto del tiempo la ventana tiene un listener que no hace nada, para que el navegador los muestre y los conteste la persona (antes Playwright los descartaba solos, también en el Finalizar manual) | `auth/login.ts`, `sources/pia/navegador.ts` | — |
+
+Riesgo que queda: agregar al carrito es reversible (botón borrar en la misma pantalla, o Volver) y no
+inscribe ni factura; lo que factura es Finalizar, que sigue siendo exclusivamente de la persona.
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
