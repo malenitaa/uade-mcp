@@ -73,7 +73,11 @@ export class Teams {
 
     const ctx = await abrir(true);
     try {
-      const page = ctx.pages()[0] ?? (await ctx.newPage());
+      // Chrome y Brave reabren las pestañas de la corrida anterior ("continuar donde lo dejaste"), así
+      // que se acumulaban decenas de Teams abiertos en el perfil y el navegador terminaba cerrando la
+      // página. Se trabaja en una pestaña nueva y se cierran las demás; al cerrar queda solo esa.
+      const page = await ctx.newPage();
+      await Promise.all(ctx.pages().filter((p) => p !== page).map((p) => p.close().catch(() => undefined)));
       await page.goto(web, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       // Espera a que cargue el canal (o detecta que la sesión venció).
       for (let i = 0; i < 10; i++) {
