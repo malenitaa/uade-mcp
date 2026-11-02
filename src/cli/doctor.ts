@@ -33,6 +33,7 @@ export const TOOLS_SIN_PRUEBA: Readonly<Record<string, string>> = {
   email_compose_draft: 'abre Outlook en el navegador',
   planuade_import_transcript: 'arma un link; es puro y está testeado en planuade-link.test.ts',
   pia_prepare_enrollment: 'puro sobre oferta y ventanas; testeado en pia.test.ts',
+  pia_add_to_cart: 'escribe en el carrito de PIA en una ventana visible; el recorrido se prueba contra fixtures en pia-navegador.test.ts',
 };
 
 const ICONO: Record<Estado, string> = { ok: '✅', aviso: '⚠️ ', error: '❌' };

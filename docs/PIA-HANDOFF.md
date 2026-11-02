@@ -1,5 +1,12 @@
 # PIA: dejar a la persona en la última pantalla
 
+> **Estado (02/11/2026, 0.4.0):** hecho por el camino A. `pia_add_to_cart` (`src/sources/pia/navegador.ts`,
+> `src/tools/pia.ts`, permiso `pia.carrito`) recorre PIA en la ventana visible hasta `InscripcionFinalizar.aspx`
+> y se detiene. Probado contra fixtures en `test/pia-navegador.test.ts`. Lo que sigue abierto: la verificación
+> en vivo de los selectores del diálogo de condiciones (`abrirDialogConfirmacionOfertaAmpliada`) cuando haya
+> una clase con condiciones, y el 401 del cliente HTTP (`pia_class_search`), que este camino no necesita.
+> El resto del documento es el plan original, que sirve como contexto.
+
 Doc interno para quien tome este trabajo. Qué hay hecho, qué está trabado, cómo destrabarlo y qué
 no se puede tocar. Leer antes `DISENO.md` (sección "PIA, mapeado del registro de red") y `SECURITY.md`.
 
