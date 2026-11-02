@@ -80,6 +80,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `webcampus_current_courses` | Materias del cuatrimestre: día, horario, aula, sede, notas, fecha de final, links a Teams y apuntes |
 | `webcampus_attendance` | Presentes, faltas y detalle por clase |
 | `webcampus_course_calendar` | Fechas de parciales, recuperatorio y final de cada materia |
+| `webcampus_save_reminders` | Esas mismas fechas como recordatorios `.ics` en `Downloads/uade-mcp` (un evento por día, aviso el día anterior) para importar en tu calendario; no manda nada a UADE |
 | `webcampus_teachers` | Nombre y mail del equipo docente (nunca datos de compañeros) |
 | `webcampus_course_materials` | Lista y lee (PDF, Word, Excel, PowerPoint) los apuntes de "Materiales de clase"; no escribe nada |
 | `webcampus_save_material` | Guarda una copia de un apunte en `Downloads/uade-mcp` (nunca pisa un archivo) |

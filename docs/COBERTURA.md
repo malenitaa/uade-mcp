@@ -15,7 +15,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 |---|---|---|
 | Mis Cursos (materias del período, horario, aula, notas, fecha de final) | ✅ | `webcampus_current_courses` |
 | Asistencia por materia | ✅ | `webcampus_attendance` |
-| Mi Semana por materia (parciales, recuperatorio, final) | ✅ | `webcampus_course_calendar` |
+| Mi Semana por materia (parciales, recuperatorio, final) | ✅ | `webcampus_course_calendar`; `webcampus_save_reminders` las guarda como `.ics` en Downloads/uade-mcp (escribe solo en tu disco) |
 | Mi Semana general (`Misemanasel.aspx`) | ⛔ | Falla del lado de UADE; se usa la de cada materia |
 | Integrantes: equipo docente | ✅ | `webcampus_teachers` (nunca compañeros) |
 | Apuntes y materiales de la materia (Teams → "Materiales de clase") | ✅ | `webcampus_course_materials` (API de SharePoint; lee PDF, Word .docx/.doc, Excel .xlsx/.xls, PPT) y `webcampus_save_material` / `webcampus_save_folder` (guardan una copia, o una carpeta entera, en Downloads/uade-mcp) |

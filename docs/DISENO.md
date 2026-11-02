@@ -197,6 +197,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `webcampus_schedule_planner` (✅) | Puro sobre la oferta cacheada (`src/sources/planificador`): backtracking con poda, choque = mismo día + horario pisado + cursadas que coinciden en fechas; tope de 500.000 nodos explorados; puntaje = días×3 + horas de hueco + (sedes−1)×2 |
 | `webcampus_exam_schedule` (✅) | Excel adjunto a la novedad "Exámenes Previos": fecha, hora, aula, clase, docentes |
 | `webcampus_course_calendar` (✅) | Planificación de cada aula (`/PlanificacionClases/MiSemana.aspx?IdAula=`): parciales, recuperatorio y final con fecha (día/mes/año). El "Mi Semana" general del menú (`Misemanasel.aspx`) falla en UADE y no se usa |
+| `webcampus_save_reminders` (✅, desde 0.5.0) | Las fechas de `webcampus_course_calendar` como `.ics` (`src/sources/webcampus/recordatorios.ts`: evento de día entero, UID estable por aula+fecha+tipo, alarma a las 9 del día anterior) guardado con `guardarEnSalida` en Downloads/uade-mcp. Escribe solo en el disco de la persona, como `webcampus_save_material`: sin permiso propio ni diálogo, nada viaja a UADE |
 | `uade_academic_calendar` (✅) | Menú 403/428 → `dre.uade.edu.ar/calendario.pdf` y `cronogramasUADE.pdf` → PDFs de detalle (2 niveles, máx. 20, caché 1 h). Algunos PDFs son solo imagen y no tienen texto |
 | `email_compose_draft` (✅) | Borrador en Outlook web (deeplink de redacción) abierto en el navegador. No envía, no usa Graph, solo destinatarios @uade.edu.ar |
 | `webcampus_teachers` (✅) | Equipo docente de un aula. **Nunca** datos de compañeros (mail, legajo) |
@@ -204,7 +205,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | `pia_carrito` | Lo que tenés en el carrito o ya inscripto |
 | `planuade_import_transcript` | Arma un link de PlanUADE con tus aprobadas, que **abrís y confirmás vos** (sección 8) |
 
-**Escrituras (cada una con su permiso y confirmación por elicitation):**
+**Escrituras en UADE (cada una con su permiso y confirmación por elicitation).** Guardar en Downloads/uade-mcp (`webcampus_save_material`, `webcampus_save_folder`, `webcampus_save_reminders`) no cuenta como escritura: toca solo el disco de la persona, nunca pisa un archivo y no manda nada a UADE, así que va con `webcampus.leer`.
 
 | Tool | Permiso |
 |---|---|

@@ -134,6 +134,23 @@ HTTP, así que no toca el 401 ni mete la sesión de PIA en el MCP.
 Riesgo que queda: agregar al carrito es reversible (botón borrar en la misma pantalla, o Volver) y no
 inscribe ni factura; lo que factura es Finalizar, que sigue siendo exclusivamente de la persona.
 
+## Cambio del 02/11/2026 (versión 0.5.0): recordatorios .ics de parciales y finales
+
+`webcampus_save_reminders` escribe un `.ics` en Downloads/uade-mcp con las fechas que ya devuelve
+`webcampus_course_calendar`. Es escritura en el disco de la persona, no en UADE: mismo criterio que
+`webcampus_save_material`, sin permiso nuevo ni diálogo.
+
+| Qué | Dónde | Test |
+|---|---|---|
+| Función pura sobre la planificación cacheada: no hay pedido de red nuevo ni host nuevo | `sources/webcampus/recordatorios.ts` | `recordatorios.test.ts` |
+| Escapado iCalendar de texto que viene de WebCampus (comas, punto y coma, barras, saltos); el archivo no ejecuta nada al importarse | `sources/webcampus/recordatorios.ts` | `recordatorios.test.ts` ("texto escapado") |
+| Mismo guardado que los apuntes: `guardarEnSalida` (carpeta 700, archivo 600, `wx` nunca pisa, nombre saneado); `.ics` sumado a `EXTENSIONES_DOCUMENTO` | `net/open-browser.ts` | `materiales.test.ts` |
+| Sin fechas no se escribe ningún archivo | `tools/webcampus.ts` | `recordatorios.test.ts` |
+| `doctor` arma el `.ics` en memoria y cuenta los eventos; no escribe en Downloads | `cli/doctor.ts` | `doctor.test.ts` |
+
+Riesgo que queda: el archivo contiene materias y fechas de la persona, como cualquier apunte que
+guarda en su propia carpeta de descargas; nada sale de su máquina.
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)

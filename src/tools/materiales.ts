@@ -1,7 +1,7 @@
 // webcampus_course_materials: lista y lee los apuntes que el docente comparte en Teams
 // (biblioteca "Materiales de clase" de SharePoint), por la API limpia de SharePoint.
 // webcampus_save_material: guarda uno en Downloads/uade-mcp; webcampus_save_folder, una carpeta entera
-// (las dos únicas que escriben, siempre dentro de Downloads/uade-mcp).
+// (escriben, como webcampus_save_reminders, siempre dentro de Downloads/uade-mcp y nunca en UADE).
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
