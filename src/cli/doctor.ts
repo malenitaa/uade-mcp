@@ -4,6 +4,7 @@
 import { Calendario } from '../sources/calendario/index.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
+import { recordatorios, recordatoriosIcs } from '../sources/webcampus/recordatorios.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
 import { MIN_CARRERAS_ARANCEL, parseAranceles } from '../sources/webcampus/aranceles.js';
 import { SECCIONES, Secciones, TEXTO_DOCUMENTO_PESADO, type Seccion } from '../sources/webcampus/secciones.js';
@@ -90,11 +91,13 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     const a = await wc.asistencia(idAula);
     return ['ok', `${a.clases.length} clases, resumen ${a.resumen.totalClases !== null ? 'completo' : 'vacío'}`];
   });
-  await push('planificación (parciales)', ['webcampus_course_calendar'], async () => {
+  await push('planificación (parciales) y recordatorios', ['webcampus_course_calendar', 'webcampus_save_reminders'], async () => {
     const p = await wc.planificaciones();
     const ev = p.flatMap((x) => x.actividades).filter((a) => a.actividad !== 'cursada');
     if (!fechasValidas(ev.map((a) => a.fecha))) return ['error', 'hay fechas inválidas'];
-    return [ev.length ? 'ok' : 'aviso', `${p.length} materias, ${ev.length} evaluaciones/finales`];
+    // El .ics se arma en memoria (no se escribe nada en Downloads desde doctor).
+    const eventos = (recordatoriosIcs(recordatorios(p)).match(/BEGIN:VEVENT/g) ?? []).length;
+    return [ev.length ? 'ok' : 'aviso', `${p.length} materias, ${ev.length} evaluaciones/finales, ${eventos} recordatorios .ics`];
   });
   await push('equipo docente', ['webcampus_teachers'], async () => {
     if (!idAula) return ['aviso', 'sin cursos para probar'];

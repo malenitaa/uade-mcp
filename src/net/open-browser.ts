@@ -41,7 +41,7 @@ export function openInBrowser(raw: string, exec: typeof execFile = execFile): Pr
 // arrastrarlos a un borrador. No sube ni lee el archivo. Solo archivos comunes dentro de tu
 // carpeta personal y fuera de carpetas ocultas (.ssh, .config, …).
 const CARPETAS_DOCUMENTOS = ['Desktop', 'Documents', 'Downloads', ['Library', 'Mobile Documents', 'com~apple~CloudDocs'].join(sep)];
-export const EXTENSIONES_DOCUMENTO = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf|txt|csv|md|pages|numbers|key|png|jpe?g|gif|heic|zip)$/i;
+export const EXTENSIONES_DOCUMENTO = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf|txt|csv|md|pages|numbers|key|png|jpe?g|gif|heic|zip|ics)$/i;
 
 export function assertRevealablePath(raw: string, home = homedir()): string {
   const pedido = resolve(raw.replace(/^~(?=$|\/)/, home));

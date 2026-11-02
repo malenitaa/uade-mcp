@@ -1,10 +1,13 @@
-// WebCampus tools. All read-only and behind webcampus.leer. Descriptions are short on purpose:
-// they travel with every message the agent sends; shared rules live in the server instructions.
+// WebCampus tools. All read-only and behind webcampus.leer, except webcampus_save_reminders, which
+// writes a .ics in Downloads/uade-mcp (the student's disk, never UADE). Descriptions are short on
+// purpose: they travel with every message the agent sends; shared rules live in the server instructions.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
+import { guardarEnSalida } from '../net/open-browser.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { MateriaHistorial } from '../sources/webcampus/parse.js';
+import { recordatorios, recordatoriosIcs } from '../sources/webcampus/recordatorios.js';
 import { cache, TTL } from '../cache/cache.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { READ_ONLY, run } from './common.js';
@@ -142,6 +145,34 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
             fecha: a.fecha, dia: a.dia, horario: a.horario, actividad: a.actividad, aula: a.aula, sede: a.sede,
           })),
         })) };
+      }),
+  );
+
+  // Escribe, pero solo en el disco de la persona (Downloads/uade-mcp, nunca pisa un archivo): mismo
+  // criterio que webcampus_save_material, sin permiso propio ni diálogo. No manda nada a UADE.
+  server.registerTool(
+    'webcampus_save_reminders',
+    {
+      title: 'Save midterm and final dates as calendar reminders (.ics)',
+      description:
+        "Writes a .ics file in Downloads/uade-mcp with the student's own midterm, make-up and final dates (same data as webcampus_course_calendar): one all-day event per date with a reminder the day before, importable in Apple Calendar, Google Calendar or Outlook. Optional idAula: only that course. Only touches the student's disk; nothing is sent to UADE.",
+      inputSchema: { idAula: idAula.optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    ({ idAula: id }) =>
+      read(async () => {
+        const { value: planes, actualizado } = await cache.get(`planificacion:${id ?? 'todas'}`, TTL.medio, async () =>
+          id ? [{ idAula: id, ...(await wc.planificacion(id)) }] : await wc.planificaciones(),
+        );
+        const lista = recordatorios(planes);
+        if (!lista.length) return { actualizado, guardado: null, aviso: 'No hay parciales, recuperatorios ni finales con fecha en la planificación; no escribí ningún archivo.' };
+        const nombre = id ? `recordatorios ${lista[0]!.materia}.ics` : 'recordatorios UADE.ics';
+        const destino = await guardarEnSalida(nombre, new TextEncoder().encode(recordatoriosIcs(lista)));
+        return {
+          actualizado,
+          guardado: `Lo guardé en ${destino}; abrilo para importarlo en tu calendario.`,
+          eventos: lista.map((r) => `${r.fecha} ${r.titulo}: ${r.materia}${r.horario ? ` (${r.horario})` : ''}`),
+        };
       }),
   );
 
