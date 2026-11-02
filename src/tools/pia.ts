@@ -85,7 +85,7 @@ export function registerPiaTools(
     {
       title: 'Enrollment summary (nothing is sent)',
       description:
-        'Read-only. kind "class": checks an open subject window and returns the exact summary for that class (code + class number from webcampus_class_offering / the planner). kind "exam": checks the previos window is open, that the student can sit it (transcript + prerequisites) and returns the exam dates from the official schedule. Both say what happens on Finalizar (charges, seat, whether it can be withdrawn). Show the summary verbatim. Nothing is enrolled; to continue, uade_open_enrollment_site.',
+        'Read-only. What enrolling in a given class or exam would cost and until when it can be withdrawn, before enrolling. kind "class": checks an open subject window and returns the exact summary for that class (code + class number from webcampus_class_offering / the planner). kind "exam": checks the previos window is open, that the student can sit it (transcript + prerequisites) and returns the exam dates from the official schedule. Both say what happens on Finalizar (charges, seat, whether it can be withdrawn). Show the summary verbatim. Nothing is enrolled; to continue, uade_open_enrollment_site.',
       inputSchema: {
         kind: z.enum(['class', 'exam']),
         subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/),

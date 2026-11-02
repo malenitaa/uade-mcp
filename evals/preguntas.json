@@ -161,10 +161,11 @@
       "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "webcampus_teachers" }, { "tool": "email_compose_draft" }]
     },
     {
-      "id": "que-me-conviene-estudiar",
+      "id": "como-estudiar-para-un-final",
       "grupo": "sin-tool",
-      "pregunta": "¿Qué me conviene estudiar, Sistemas o Informática?",
-      "aceptables": []
+      "pregunta": "¿Qué técnica de estudio me recomendás para preparar un final oral?",
+      "aceptables": [],
+      "nota": "Reemplaza a \"¿Qué me conviene estudiar, Sistemas o Informática?\": esa comparaba carreras de UADE y lo correcto era consultar webcampus_section carreras, como piden las instructions. El formato no admite aceptar a la vez ninguna tool y una tool, así que la pregunta pasa a una sin ningún dato de UADE que buscar."
     },
     {
       "id": "saludo",
