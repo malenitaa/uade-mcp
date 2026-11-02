@@ -1,0 +1,184 @@
+{
+  "_comentario": "Preguntas de alumno para medir si el modelo elige la tool correcta. `aceptables` es la lista de llamadas válidas (tool + argumentos clave, chequeados de forma flexible: el valor esperado tiene que estar contenido en el real, sin distinguir mayúsculas ni tildes); vacía = lo correcto es no llamar ninguna tool (responder o repreguntar). `grupo` sirve para leer el reporte. Las materias y códigos son inventados.",
+  "preguntas": [
+    {
+      "id": "cuota-sistemas-noche",
+      "grupo": "directas",
+      "pregunta": "¿Cuánto sale la cuota de Sistemas turno noche?",
+      "aceptables": [{ "tool": "uade_tuition", "args": { "degree": "sistemas" } }]
+    },
+    {
+      "id": "cuando-me-inscribo",
+      "grupo": "directas",
+      "pregunta": "¿Cuándo me inscribo?",
+      "aceptables": [{ "tool": "uade_enrollment_schedule" }, { "tool": "uade_enrollment_windows" }]
+    },
+    {
+      "id": "que-dia-me-toca-noche",
+      "grupo": "directas",
+      "pregunta": "¿Qué día me toca inscribirme si curso de noche?",
+      "aceptables": [{ "tool": "uade_enrollment_schedule" }]
+    },
+    {
+      "id": "que-puedo-cursar",
+      "grupo": "directas",
+      "pregunta": "Aprobé Programación I y Matemática I, ¿qué materias puedo cursar ahora?",
+      "aceptables": [{ "tool": "uade_eligible_subjects" }, { "tool": "uade_plan_next_term" }]
+    },
+    {
+      "id": "materias-verano",
+      "grupo": "directas",
+      "pregunta": "¿Cuáles son las materias disponibles en Asignaturas Verano 2027?",
+      "aceptables": [{ "tool": "uade_enrollment_windows" }, { "tool": "pia_class_search", "args": { "window": "verano" } }, { "tool": "webcampus_class_offering" }]
+    },
+    {
+      "id": "finales-previos-puedo-rendir",
+      "grupo": "directas",
+      "pregunta": "¿Qué finales previos puedo rendir este llamado?",
+      "aceptables": [{ "tool": "uade_eligible_subjects" }]
+    },
+    {
+      "id": "adeuda-correlativas",
+      "grupo": "directas",
+      "pregunta": "Quise anotarme y me dice \"adeuda correlativas\", ¿qué significa?",
+      "aceptables": [{ "tool": "uade_enrollment_guide" }]
+    },
+    {
+      "id": "parcial-algebra",
+      "grupo": "calendarios",
+      "pregunta": "¿Cuándo es mi parcial de Álgebra?",
+      "aceptables": [{ "tool": "webcampus_course_calendar" }, { "tool": "webcampus_current_courses" }]
+    },
+    {
+      "id": "semanas-parciales-uade",
+      "grupo": "calendarios",
+      "pregunta": "¿En qué semanas son los parciales este cuatrimestre según el calendario de UADE?",
+      "aceptables": [{ "tool": "uade_academic_calendar", "args": { "topic": "calendario" } }]
+    },
+    {
+      "id": "final-previo-fecha",
+      "grupo": "calendarios",
+      "pregunta": "¿Cuándo se rinde el final previo de 3.4.071?",
+      "aceptables": [{ "tool": "webcampus_exam_schedule", "args": { "query": "3.4.071" } }, { "tool": "pia_prepare_enrollment", "args": { "kind": "exam", "subject": "3.4.071" } }]
+    },
+    {
+      "id": "clases-de-consulta",
+      "grupo": "calendarios",
+      "pregunta": "¿Hay clases de consulta de Álgebra este cuatrimestre?",
+      "aceptables": [{ "tool": "webcampus_consultation_classes", "args": { "subject": "lgebra" } }]
+    },
+    {
+      "id": "armar-semana-noche",
+      "grupo": "planificador",
+      "pregunta": "Armame la semana con 3.4.071, 3.4.072 y 3.4.073, solo de noche.",
+      "aceptables": [
+        { "tool": "uade_plan_next_term", "args": { "subjects": ["3.4.071", "3.4.072", "3.4.073"], "shifts": ["NOCHE"] } },
+        { "tool": "webcampus_schedule_planner", "args": { "subjects": ["3.4.071", "3.4.072", "3.4.073"], "shifts": ["NOCHE"] } }
+      ]
+    },
+    {
+      "id": "ver-semana-planuade",
+      "grupo": "planificador",
+      "pregunta": "Mostrame en planuade.ar/misemana las opciones de semana con 3.4.071 y 3.4.072.",
+      "aceptables": [{ "tool": "uade_plan_next_term", "args": { "subjects": ["3.4.071", "3.4.072"], "view": true } }]
+    },
+    {
+      "id": "horarios-de-una-materia",
+      "grupo": "planificador",
+      "pregunta": "¿Qué horarios tiene 3.4.071 el cuatrimestre que viene?",
+      "aceptables": [{ "tool": "webcampus_class_offering", "args": { "subject": "3.4.071" } }, { "tool": "uade_plan_next_term", "args": { "subjects": ["3.4.071"] } }, { "tool": "pia_class_search", "args": { "subjects": ["3.4.071"] } }]
+    },
+    {
+      "id": "cuanto-debo",
+      "grupo": "plata",
+      "pregunta": "¿Cuánto debo y cuándo vence la próxima cuota?",
+      "aceptables": [{ "tool": "webcampus_account_balance" }]
+    },
+    {
+      "id": "matricula-abogacia-manana",
+      "grupo": "plata",
+      "pregunta": "¿Cuánto sale la matrícula de Abogacía a la mañana?",
+      "aceptables": [{ "tool": "uade_tuition", "args": { "degree": "abogac" } }]
+    },
+    {
+      "id": "cuanto-me-cobran-por-la-clase",
+      "grupo": "plata",
+      "pregunta": "Si me anoto en la clase 2 de 3.4.071, ¿cuánto me cobran y hasta cuándo puedo darme de baja?",
+      "aceptables": [{ "tool": "pia_prepare_enrollment", "args": { "kind": "class", "subject": "3.4.071", "classNumber": "2" } }]
+    },
+    {
+      "id": "que-hay-de-nuevo",
+      "grupo": "informacion",
+      "pregunta": "¿Qué hay de nuevo en UADE?",
+      "aceptables": [{ "tool": "webcampus_news" }]
+    },
+    {
+      "id": "estacionamiento",
+      "grupo": "informacion",
+      "pregunta": "¿Dónde reservo el estacionamiento?",
+      "aceptables": [{ "tool": "webcampus_news" }]
+    },
+    {
+      "id": "wifi-mac",
+      "grupo": "informacion",
+      "pregunta": "¿Cómo me conecto al Wi-Fi de la facu desde la Mac?",
+      "aceptables": [{ "tool": "webcampus_section", "args": { "section": "wifi" } }]
+    },
+    {
+      "id": "faltas-regularidad",
+      "grupo": "informacion",
+      "pregunta": "¿Cuántas faltas puedo tener antes de perder la regularidad?",
+      "aceptables": [{ "tool": "webcampus_section", "args": { "section": "normativa_academica" } }]
+    },
+    {
+      "id": "apunte-teams",
+      "grupo": "materiales",
+      "pregunta": "Leeme el último apunte que subió el docente de Aplicaciones Interactivas.",
+      "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "webcampus_course_materials" }]
+    },
+    {
+      "id": "bajar-carpeta",
+      "grupo": "materiales",
+      "pregunta": "Bajame toda la carpeta CLASE 4 de Aplicaciones Interactivas a mi compu.",
+      "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "webcampus_save_folder", "args": { "folder": "clase 4" } }]
+    },
+    {
+      "id": "novedades-canal-teams",
+      "grupo": "materiales",
+      "pregunta": "¿Qué publicó el profe en el canal de Teams de Aplicaciones Interactivas esta semana?",
+      "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "teams_channel_news" }]
+    },
+    {
+      "id": "mail-revision-parcial",
+      "grupo": "utilidades",
+      "pregunta": "Armame un mail al docente de Álgebra pidiendo revisión del parcial.",
+      "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "webcampus_teachers" }, { "tool": "email_compose_draft" }]
+    },
+    {
+      "id": "que-me-conviene-estudiar",
+      "grupo": "sin-tool",
+      "pregunta": "¿Qué me conviene estudiar, Sistemas o Informática?",
+      "aceptables": []
+    },
+    {
+      "id": "saludo",
+      "grupo": "sin-tool",
+      "pregunta": "Hola, ¿qué podés hacer?",
+      "aceptables": []
+    },
+    {
+      "id": "inscribime-sin-decir-a-que",
+      "grupo": "sin-tool",
+      "pregunta": "Inscribime a la clase.",
+      "aceptables": [],
+      "nota": "Falta la materia y la clase: lo correcto es repreguntar."
+    },
+    {
+      "id": "pasame-la-info-sin-contexto",
+      "grupo": "sin-tool",
+      "pregunta": "Pasame la info de esa materia.",
+      "aceptables": [],
+      "nota": "No se sabe de qué materia habla: repreguntar."
+    }
+  ]
+}

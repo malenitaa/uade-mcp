@@ -107,6 +107,11 @@ con permiso propio y confirmación por cada acción.
 - Cada parser exige un elemento de la página que siempre está: si UADE cambia el HTML, el MCP
   responde "UADE cambió la página X" en vez de devolver datos vacíos (`test/guards.test.ts`).
 - `uade-mcp doctor` prueba todo lo marcado ✅ contra una cuenta real y muestra solo conteos. Cada prueba dice qué tools cubre; un test (`test/doctor.test.ts`) exige que toda tool registrada tenga prueba o un motivo para no tenerla (`TOOLS_SIN_PRUEBA`), así una tool nueva no queda sin vigilar.
+- `npm run evals` (`evals/preguntas.json` + `evals/correr.mjs`) mide si un modelo elige la tool y los
+  argumentos correctos ante preguntas de alumno, incluidas las de frontera entre tools parecidas y las que no
+  deberían llamar ninguna. Corre con más de un modelo y señala las preguntas donde el chico falla y el capaz
+  no: ahí hay que mejorar nombres o descripciones. Necesita `ANTHROPIC_API_KEY`; se corre a mano antes de cada
+  versión, no en CI.
 - Lo que UADE publica como imagen (cronograma de inscripción, PDFs escaneados) se devuelve como
   contenido de imagen del MCP para que el modelo lo lea; no se transcribe con OCR ni se carga a mano.
 - Los fixtures de `test/fixtures/` son sintéticos: reproducen la estructura relevada con datos inventados.
