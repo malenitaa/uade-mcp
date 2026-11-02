@@ -2,7 +2,8 @@
 
 > **Estado (02/11/2026, 0.4.0):** hecho por el camino A. `pia_add_to_cart` (`src/sources/pia/navegador.ts`,
 > `src/tools/pia.ts`, permiso `pia.carrito`) recorre PIA en la ventana visible hasta `InscripcionFinalizar.aspx`
-> y se detiene. Probado contra fixtures en `test/pia-navegador.test.ts`. Lo que sigue abierto: la verificación
+> y se detiene; `kind: "exam"` hace lo mismo en el PIA de exámenes (`pia.uade.edu.ar`, `navegador-examen.ts`,
+> relevado en vivo el 01/11/2026) hasta "Cálculo de Aranceles". Probado contra fixtures en `test/pia-navegador.test.ts` y `test/pia-examen-navegador.test.ts`. Lo que sigue abierto: la verificación
 > en vivo de los selectores del diálogo de condiciones (`abrirDialogConfirmacionOfertaAmpliada`) cuando haya
 > una clase con condiciones, y el 401 del cliente HTTP (`pia_class_search`), que este camino no necesita.
 > El resto del documento es el plan original, que sirve como contexto.

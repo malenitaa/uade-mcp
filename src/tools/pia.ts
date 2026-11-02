@@ -10,6 +10,7 @@ import { abrirInscripciones, paginaInscripciones } from '../auth/login.js';
 import { ConfirmationError } from '../auth/confirm.js';
 import type { Page } from 'playwright-core';
 import { llevarAFinalizar } from '../sources/pia/navegador.js';
+import { llevarAArancelExamen } from '../sources/pia/navegador-examen.js';
 import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { resumenClase, resumenPrevio } from '../sources/pia/alta.js';
 import { Pia } from '../sources/pia/index.js';
@@ -132,38 +133,49 @@ export function registerPiaTools(
   server.registerTool(
     'pia_add_to_cart',
     {
-      title: 'Add a class to the PIA cart and stop at the final screen',
+      title: 'Add a class or an exam to the PIA cart and stop at the final screen',
       description:
-        'Write (needs the pia.carrito permission). In the visible browser window on the student\'s computer, with their session, it opens the enrollment window in PIA, selects the subject, searches, and, after the student confirms in a dialog that shows the class and the conditions PIA requires, adds that one class to the cart and continues to the final screen (cart, fee summary with amounts and due dates, terms). It stops there and returns what that screen shows. It never ticks the terms nor presses Finalizar: the student does that in the window. Use subject code + class number from webcampus_class_offering / the planner; show the pia_prepare_enrollment summary first. shift is required when the window offers more than one.',
+        'Write (needs the pia.carrito permission). In the visible browser window on the student\'s computer, with their session, it walks PIA and, after the student confirms in a dialog that shows exactly what will be added, puts that one item in the cart and continues to the final screen, where it stops and returns what that screen shows. kind "class" (subject + classNumber from webcampus_class_offering / the planner; shift when the window offers more than one): subject window → cart → final screen with cart, fee summary with amounts and due dates, terms. kind "exam" (subject; classNumber only if PIA offers more than one exam class): previos window → cart → "Cálculo de Aranceles" screen (fee type and payment plan). It never ticks terms nor presses Finalizar: the student does that in the window. Show the pia_prepare_enrollment summary first.',
       inputSchema: {
+        kind: z.enum(['class', 'exam']).default('class'),
         subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/),
-        classNumber: z.string().regex(/^\d+$/),
+        classNumber: z.string().regex(/^\d+$/).optional().describe('required for kind "class"'),
         window: z.string().max(60).optional().describe('part of the window name'),
-        shift: z.string().max(20).optional().describe('e.g. MAÑANA, NOCHE, INTENSIVO'),
+        shift: z.string().max(20).optional().describe('kind "class": e.g. MAÑANA, NOCHE, INTENSIVO'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    ({ subject, classNumber, window, shift }) =>
+    ({ kind, subject, classNumber, window, shift }) =>
       run(granted, 'pia.carrito', async () => {
         if (!server.server.getClientCapabilities()?.elicitation) {
           throw new ConfirmationError('Tu cliente MCP no soporta confirmaciones (elicitation), así que no se puede agregar nada al carrito. Usá uade_open_enrollment_site y hacelo en la ventana.');
         }
-        const abiertas = (await ventanas()).filter((v) => v.tipo === 'inscripcion' && v.abierta && v.link);
+        const tipo = kind === 'exam' ? 'examenes' : 'inscripcion';
+        const abiertas = (await ventanas()).filter((v) => v.tipo === tipo && v.abierta && v.link);
         const ventana = window ? abiertas.find((v) => v.nombre.toLowerCase().includes(window.toLowerCase())) : abiertas[0];
         if (!ventana?.link) {
-          throw new Error(abiertas.length ? `No hay una ventana abierta que se llame "${window}". Abiertas: ${abiertas.map((v) => v.nombre).join('; ')}.` : 'No hay ninguna ventana de inscripción abierta ahora.');
+          throw new Error(abiertas.length ? `No hay una ventana abierta que se llame "${window}". Abiertas: ${abiertas.map((v) => v.nombre).join('; ')}.` : `No hay ninguna ventana de inscripción a ${kind === 'exam' ? 'exámenes previos' : 'materias'} abierta ahora.`);
         }
+        const pantalla = 'Nada se envió: la persona revisa la pantalla final en la ventana y aprieta Finalizar si está de acuerdo (o Cancelar / Volver, o borra del carrito).';
+        if (kind === 'exam') {
+          const resumen = await resumenPrevio(fuentesPrevio, subject);
+          const page = await pagina();
+          const r = await llevarAArancelExamen(page, ventana.link, { codigo: subject, clase: classNumber }, (detalle) => confirmar(`${resumen}\n\n${detalle}`));
+          return { ventana: ventana.nombre, pantalla: `La ventana quedó en "Cálculo de Aranceles" de PIA. ${pantalla}`, avisoDePia: r.avisoPia, examen: r.clase, aranceles: r.aranceles };
+        }
+        if (!classNumber) throw new Error('Para una materia hace falta el número de clase (classNumber).');
         // Valida contra la oferta que la clase existe y arma el mismo resumen que pia_prepare_enrollment.
         const resumen = await resumenClase(fuentesClase, subject, classNumber);
         const page = await pagina();
         const { form: _form, ...final } = await llevarAFinalizar(page, ventana.link, { codigo: subject, clase: classNumber, turno: shift }, (detalle) => confirmar(`${resumen}\n\n${detalle}`));
         return {
           ventana: ventana.nombre,
-          pantalla: 'La ventana quedó en la pantalla final de PIA. Nada se envió: la persona revisa el carrito y el Resumen Arancelario, acepta los términos y aprieta Finalizar si está de acuerdo (o Volver / borrar del carrito).',
+          pantalla: `La ventana quedó en la pantalla final de PIA (carrito, Resumen Arancelario y términos). ${pantalla}`,
           carrito: final.pendientes.map(({ btnBorrar: _b, ...p }) => p),
           resumenArancelario: final.aranceles,
           terminosYCondiciones: final.terminos,
         };
       }),
   );
+
 }

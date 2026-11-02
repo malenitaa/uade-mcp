@@ -18,18 +18,20 @@ export interface VentanaInscripcion {
   abierta: boolean;
   desde: string | null; // ISO, con hora si la hay (yyyy-mm-ddThh:mm)
   hasta: string | null;
-  // Link firmado a PIA (data-linkid) de una ventana abierta. Lleva la sesión de PIA: las tools
-  // lo usan por dentro y no lo devuelven al modelo.
+  // Link firmado a PIA (data-linkid) de una ventana abierta (materias: inscripcionespia; exámenes:
+  // pia.uade.edu.ar). Lleva la sesión de PIA: las tools lo usan por dentro y no lo devuelven al modelo.
   link?: string;
 }
 
 export const PIA = 'https://inscripcionespia.uade.edu.ar';
+// Los exámenes previos van a otra app de PIA, con otras pantallas (src/sources/pia/navegador-examen.ts).
+export const PIA_EXAMEN = 'https://pia.uade.edu.ar';
 
-function linkPia(raw: string | undefined): string | undefined {
+function linkPia(raw: string | undefined, origen: string): string | undefined {
   if (!raw) return undefined;
   try {
     const u = new URL(raw);
-    return u.origin === PIA ? u.href : undefined;
+    return u.origin === origen ? u.href : undefined;
   } catch {
     return undefined;
   }
@@ -63,7 +65,7 @@ export function parseVentanas(html: string): VentanaInscripcion[] {
       desde: fechaHora(clean($(p).find('.desde').text())),
       hasta: fechaHora(clean($(p).find('.hasta').text())),
     };
-    const href = tipo === 'inscripcion' ? linkPia(link.attr('data-linkid')) : undefined;
+    const href = tipo === 'inscripcion' ? linkPia(link.attr('data-linkid'), PIA) : tipo === 'examenes' ? linkPia(link.attr('data-linkid'), PIA_EXAMEN) : undefined;
     if (href) v.link = href;
     out.push(v);
   });

@@ -108,7 +108,7 @@ describe('el código nunca aprieta Finalizar ni marca los términos', () => {
     expect(src).not.toMatch(/\.(check|click|fill|press)\([^)]*terminos/i);
   });
   it('CONTROLES.finalizar solo se usa en el parser, para saber si el botón está', () => {
-    const archivos = ['src/sources/pia/index.ts', 'src/sources/pia/alta.ts', 'src/sources/pia/navegador.ts', 'src/tools/pia.ts', 'src/auth/login.ts'];
+    const archivos = ['src/sources/pia/index.ts', 'src/sources/pia/alta.ts', 'src/sources/pia/navegador.ts', 'src/sources/pia/navegador-examen.ts', 'src/tools/pia.ts', 'src/auth/login.ts'];
     for (const f of archivos) expect(readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'), f).not.toMatch(/CONTROLES\.finalizar|btnFinalizar/);
     const parse = readFileSync(new URL('../src/sources/pia/parse.ts', import.meta.url), 'utf8');
     expect(parse.match(/CONTROLES\.finalizar/g)?.length).toBe(1);
