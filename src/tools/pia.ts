@@ -10,7 +10,7 @@ import { abrirInscripciones, paginaInscripciones } from '../auth/login.js';
 import { ConfirmationError } from '../auth/confirm.js';
 import type { Page } from 'playwright-core';
 import { llevarAFinalizar } from '../sources/pia/navegador.js';
-import { llevarAArancelExamen } from '../sources/pia/navegador-examen.js';
+import { llevarAFinalExamen } from '../sources/pia/navegador-examen.js';
 import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { resumenClase, resumenPrevio } from '../sources/pia/alta.js';
 import { Pia } from '../sources/pia/index.js';
@@ -135,7 +135,7 @@ export function registerPiaTools(
     {
       title: 'Add a class or an exam to the PIA cart and stop at the final screen',
       description:
-        'Write (needs the pia.carrito permission). In the visible browser window on the student\'s computer, with their session, it walks PIA and, after the student confirms in a dialog that shows exactly what will be added, puts that one item in the cart and continues to the final screen, where it stops and returns what that screen shows. kind "class" (subject + classNumber from webcampus_class_offering / the planner; shift when the window offers more than one): subject window → cart → final screen with cart, fee summary with amounts and due dates, terms. kind "exam" (subject; classNumber only if PIA offers more than one exam class): previos window → cart → "Cálculo de Aranceles" screen (fee type and payment plan). It never ticks terms nor presses Finalizar: the student does that in the window. Show the pia_prepare_enrollment summary first.',
+        'Write (needs the pia.carrito permission). In the visible browser window on the student\'s computer, with their session, it walks PIA and, after the student confirms in a dialog that shows exactly what will be added, puts that one item in the cart and continues to the final screen, where it stops and returns what that screen shows. kind "class" (subject + classNumber from webcampus_class_offering / the planner; shift when the window offers more than one): subject window → cart → final screen with cart, fee summary with amounts and due dates, terms. kind "exam" (subject; classNumber only if PIA offers more than one exam class): previos window → cart → "Terminos y Condiciones" screen (text + checkbox, then Continuar leads to "Cálculo de Aranceles" with fee type and payment plan; if PIA skips the terms it returns the fees). It never ticks terms nor presses Continuar or Finalizar: the student does that in the window. Show the pia_prepare_enrollment summary first.',
       inputSchema: {
         kind: z.enum(['class', 'exam']).default('class'),
         subject: z.string().regex(/^[A-Z]?\d+(\.\d+)+$/),
@@ -160,8 +160,10 @@ export function registerPiaTools(
         if (kind === 'exam') {
           const resumen = await resumenPrevio(fuentesPrevio, subject);
           const page = await pagina();
-          const r = await llevarAArancelExamen(page, ventana.link, { codigo: subject, clase: classNumber }, (detalle) => confirmar(`${resumen}\n\n${detalle}`));
-          return { ventana: ventana.nombre, pantalla: `La ventana quedó en "Cálculo de Aranceles" de PIA. ${pantalla}`, avisoDePia: r.avisoPia, examen: r.clase, aranceles: r.aranceles };
+          const r = await llevarAFinalExamen(page, ventana.link, { codigo: subject, clase: classNumber }, (detalle) => confirmar(`${resumen}\n\n${detalle}`));
+          return r.pantalla === 'terminos'
+            ? { ventana: ventana.nombre, pantalla: 'La ventana quedó en "Terminos y Condiciones" de PIA (Paso 3). Nada se envió: la persona lee las condiciones, marca la tilde y aprieta Continuar si está de acuerdo; después viene "Cálculo de Aranceles" con Finalizar (o Cancelar).', avisoDePia: r.avisoPia, examen: r.clase, terminos: r.terminos }
+            : { ventana: ventana.nombre, pantalla: `La ventana quedó en "Cálculo de Aranceles" de PIA. ${pantalla}`, avisoDePia: r.avisoPia, examen: r.clase, aranceles: r.aranceles };
         }
         if (!classNumber) throw new Error('Para una materia hace falta el número de clase (classNumber).');
         // Valida contra la oferta que la clase existe y arma el mismo resumen que pia_prepare_enrollment.

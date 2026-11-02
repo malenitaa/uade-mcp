@@ -311,8 +311,29 @@ export function parseFinalizar(html: string): Finalizar {
 }
 
 // --- PIA de exámenes (pia.uade.edu.ar/Pia/Vistas/Inscripcion): otra app, con otras pantallas.
-// Relevada en vivo el 01/11/2026 (solo lectura). La pantalla final es "Cálculo de Aranceles"
+// Relevada en vivo el 01/11/2026 (solo lectura). Después del carrito viene "Terminos y Condiciones"
+// (TerminosYCondicionesTexto.aspx, probada en vivo el 02/11/2026: texto, tilde "Tomo conocimiento y
+// acepto…", Anterior / Continuar / Cancelar) y recién después "Cálculo de Aranceles"
 // (ArancelInscripcion.aspx): tipo de arancel, período y plan de cuotas, con Finalizar / Cancelar.
+
+export interface TerminosExamen {
+  texto: string; // las condiciones que PIA pide aceptar
+  aceptado: boolean; // la tilde, tal como está: el MCP nunca la marca
+}
+
+export function parseTerminosExamen(html: string): TerminosExamen {
+  const $ = cheerio.load(html);
+  const tilde = $('input[type=checkbox]').filter((_, i) => /acepto/i.test($(i).parent().text() + $(`label[for="${$(i).attr('id')}"]`).text())).first();
+  if (!tilde.length) throw new PageChangedError('términos y condiciones de PIA (exámenes)', $.html());
+  $('script, style, input, a, button').remove();
+  const texto = clean($('body').text())
+    .replace(/Terminos y Condiciones/i, '')
+    .replace(/Tomo conocimiento y acepto[^.]*\./i, '')
+    .replace(/\b(Anterior|Continuar|Cancelar)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { texto, aceptado: tilde.is(':checked') };
+}
 
 export interface ArancelExamen {
   tipo: string;

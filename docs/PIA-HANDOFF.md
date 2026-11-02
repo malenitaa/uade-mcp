@@ -3,7 +3,8 @@
 > **Estado (02/11/2026, 0.4.0):** hecho por el camino A. `pia_add_to_cart` (`src/sources/pia/navegador.ts`,
 > `src/tools/pia.ts`, permiso `pia.carrito`) recorre PIA en la ventana visible hasta `InscripcionFinalizar.aspx`
 > y se detiene; `kind: "exam"` hace lo mismo en el PIA de exámenes (`pia.uade.edu.ar`, `navegador-examen.ts`,
-> relevado en vivo el 01/11/2026) hasta "Cálculo de Aranceles". Probado contra fixtures en `test/pia-navegador.test.ts` y `test/pia-examen-navegador.test.ts`. Lo que sigue abierto: la verificación
+> relevado en vivo el 01/11/2026) hasta "Terminos y Condiciones" (Paso 3) o, si PIA la saltea, "Cálculo de
+> Aranceles"; probado en vivo con una cuenta real el 02/11/2026 (llegó a términos sin marcar nada). Probado contra fixtures en `test/pia-navegador.test.ts` y `test/pia-examen-navegador.test.ts`. Lo que sigue abierto: la verificación
 > en vivo de los selectores del diálogo de condiciones (`abrirDialogConfirmacionOfertaAmpliada`) cuando haya
 > una clase con condiciones, y el 401 del cliente HTTP (`pia_class_search`), que este camino no necesita.
 > El resto del documento es el plan original, que sirve como contexto.
@@ -37,7 +38,7 @@ aprieta la persona, siempre. Esto no cambia.
 - Al terminar hay que actualizar lo que hoy promete otra cosa: `SECURITY.md` ("No envía
   inscripciones"), `README.md`, `docs/COBERTURA.md` (fila "Inscripción en PIA"), `docs/AUDITORIA.md`
   (sección nueva, con tests) y en el sitio `mcp/index.html` ("Te inscribe ni aprieta Finalizar: te
-  deja en Inscripciones con tu sesión" pasa a "te deja en la última pantalla, con el arancel a la vista").
+  deja en Inscripciones con tu sesión" pasa a "te deja en la última pantalla, con los términos y el arancel a la vista").
 
 ## Qué hay hecho
 

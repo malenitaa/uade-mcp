@@ -109,7 +109,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `pia_class_search` | Clases en PIA con vacantes y condiciones (en verificación: PIA rechaza el acceso fuera del navegador) |
 | `pia_prepare_enrollment` | Resumen exacto de una inscripción a materia o a previo: qué, cuándo, cuánto y si tiene baja |
 | `uade_open_enrollment_site` | Abre Inscripciones con tu sesión iniciada; la inscripción y el Finalizar los hacés vos |
-| `pia_add_to_cart` | Con el permiso `pia.carrito` (apagado por defecto): en esa ventana recorre PIA, te muestra en un diálogo la clase (o el examen previo) y sus condiciones y, si confirmás, lo agrega al carrito y te deja en la pantalla final: la del Resumen Arancelario para materias, la de "Cálculo de Aranceles" para previos. Nunca marca los términos ni aprieta Finalizar: eso lo hacés vos |
+| `pia_add_to_cart` | Con el permiso `pia.carrito` (apagado por defecto): en esa ventana recorre PIA, te muestra en un diálogo la clase (o el examen previo) y sus condiciones y, si confirmás, lo agrega al carrito y te deja en la pantalla final: la del Resumen Arancelario para materias, la de Términos y Condiciones para previos (un Continuar antes de "Cálculo de Aranceles"). Nunca marca los términos ni aprieta Continuar o Finalizar: eso lo hacés vos |
 
 **Plata y trámites**
 

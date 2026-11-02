@@ -1,14 +1,16 @@
 // Recorrido por el PIA de exámenes previos (pia.uade.edu.ar/Pia/Vistas/Inscripcion), dentro de la
-// ventana visible de la persona, hasta la pantalla "Cálculo de Aranceles" (ArancelInscripcion.aspx),
-// donde se detiene. Pasos relevados en vivo el 01/11/2026: entrada (InscripcionAgregar) → "Seleccionar
-// Clases" → código de materia + tilde que resuelve el nombre → Buscar → grilla con "Agregar al Carrito"
-// (PIA avisa con un alert "Se ha agregado la clase al carrito") → Confirmar Carrito → aranceles con
-// Finalizar / Cancelar. Finalizar es de la persona: acá no se nombra ni se toca.
+// ventana visible de la persona, hasta la pantalla que sigue al carrito, donde se detiene. Pasos
+// relevados en vivo el 01/11/2026: entrada (InscripcionAgregar) → "Seleccionar Clases" → código de
+// materia + tilde que resuelve el nombre → Buscar → grilla con "Agregar al Carrito" (PIA avisa con un
+// alert "Se ha agregado la clase al carrito") → Confirmar Carrito → "Terminos y Condiciones" (Paso 3:
+// tilde "Tomo conocimiento y acepto…" + Continuar / Cancelar; probado en vivo el 02/11/2026) → "Cálculo
+// de Aranceles" con Finalizar / Cancelar. El recorrido para en la primera de esas dos que aparezca: la
+// tilde, Continuar y Finalizar son de la persona; acá no se nombran ni se tocan.
 import type { Page } from 'playwright-core';
 import { ConfirmationError } from '../../auth/confirm.js';
 import { ErrorDeUso } from '../../error-de-uso.js';
 import { PIA_EXAMEN } from '../inscripciones/index.js';
-import { parseArancelExamen, type FinalizarExamen } from './parse.js';
+import { parseArancelExamen, parseTerminosExamen, type ArancelExamen, type TerminosExamen } from './parse.js';
 
 export interface PedidoExamen {
   codigo: string; // materia
@@ -32,7 +34,16 @@ export interface ClaseExamenVista {
   fecha: string;
 }
 
-export async function llevarAArancelExamen(page: Page, link: string, pedido: PedidoExamen, confirmar: ConfirmarExamen, origen = PIA_EXAMEN): Promise<FinalizarExamen & { clase: ClaseExamenVista; avisoPia: string | null }> {
+export interface FinalExamen {
+  pantalla: 'terminos' | 'aranceles';
+  terminos: TerminosExamen | null; // pantalla 'terminos'
+  aranceles: ArancelExamen[]; // pantalla 'aranceles'
+  puedeFinalizar: boolean; // solo se mira
+  clase: ClaseExamenVista;
+  avisoPia: string | null;
+}
+
+export async function llevarAFinalExamen(page: Page, link: string, pedido: PedidoExamen, confirmar: ConfirmarExamen, origen = PIA_EXAMEN): Promise<FinalExamen> {
   if (new URL(link).origin !== origen) throw new Error('El link de inscripción a exámenes no es de PIA.');
 
   // 1. Entrada y "Seleccionar Clases".
@@ -71,7 +82,7 @@ export async function llevarAArancelExamen(page: Page, link: string, pedido: Ped
   // 4. Confirmación de la persona. Hasta acá no se escribió nada.
   const resumen = [
     `Se va a agregar al carrito de PIA el examen previo de ${pedido.codigo} (${elegida.materia}): ${describir(elegida)}.`,
-    'Después se abre la pantalla "Cálculo de Aranceles". No se inscribe nada: Finalizar lo apretás vos.',
+    'Después PIA pasa a "Terminos y Condiciones" (o directo a "Cálculo de Aranceles") y ahí queda. No se inscribe nada: la tilde de los términos, Continuar y Finalizar los apretás vos.',
   ].join('\n');
   if (!(await confirmar(resumen))) throw new ConfirmationError('No confirmaste. No se agregó nada al carrito.');
 
@@ -87,10 +98,14 @@ export async function llevarAArancelExamen(page: Page, link: string, pedido: Ped
     page.off('dialog', aceptarDialogo);
   }
 
-  // 6. Confirmar el carrito → pantalla de aranceles. Ahí se lee y se deja a la persona.
+  // 6. Confirmar el carrito → "Terminos y Condiciones" (lo habitual) o directo a aranceles. Se lee la
+  // pantalla que apareció y se deja a la persona ahí.
   await page.locator(`${P}btnConfirmarCarrito`).click({ timeout: PASO_MS });
-  await page.waitForURL((u) => u.origin === origen && /ArancelInscripcion\.aspx/i.test(u.pathname), { timeout: PASO_MS });
-  await page.locator('th', { hasText: /plan de cuotas/i }).first().waitFor({ timeout: PASO_MS });
+  await page.waitForURL((u) => u.origin === origen && /TerminosYCondiciones|ArancelInscripcion\.aspx/i.test(u.pathname), { timeout: PASO_MS });
+  const enTerminos = /TerminosYCondiciones/i.test(new URL(page.url()).pathname);
+  await (enTerminos ? page.locator('input[type=checkbox]').first() : page.locator('th', { hasText: /plan de cuotas/i }).first()).waitFor({ timeout: PASO_MS });
   await page.bringToFront().catch(() => undefined);
-  return { ...parseArancelExamen(await page.content()), clase: elegida, avisoPia };
+  const html = await page.content();
+  if (enTerminos) return { pantalla: 'terminos', terminos: parseTerminosExamen(html), aranceles: [], puedeFinalizar: false, clase: elegida, avisoPia };
+  return { pantalla: 'aranceles', terminos: null, ...parseArancelExamen(html), clase: elegida, avisoPia };
 }
