@@ -204,6 +204,24 @@ npm run build
 
 Activá el hook una vez: `git config core.hooksPath .githooks`.
 
+### Evals
+
+Los tests no dicen si un agente **elige bien la tool** ante una pregunta de alumno. Para eso está
+`evals/`: `preguntas.json` tiene preguntas reales (directas, de frontera entre tools parecidas y otras
+donde lo correcto es no llamar ninguna) con las tools y argumentos aceptables, y `correr.mjs` arranca el
+servidor, le pasa sus tools e instrucciones a Claude y mira qué elegiría, sin ejecutar nada. Cada pregunta
+se corre 3 veces por modelo y se mide el porcentaje de acierto.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run evals
+```
+
+Flags: `--modelos claude-haiku-5-5,claude-sonnet-5-5` (el último se toma como el más capaz), `--umbral 85`
+(sale con error si el promedio baja de ahí), `--repeticiones 3`, `--solo <id>`. Si el modelo capaz acierta y
+el chico no, el reporte marca la pregunta como "descripción a mejorar": el arreglo va en la descripción de la
+tool, no en el código. No corre en CI ni en `revisar` (necesita clave y cuesta plata); sin clave explica cómo
+correrlo y termina bien. Se corre antes de cada versión.
+
 Documentación: [diseño](docs/DISENO.md) · [qué cubre](docs/COBERTURA.md) · [auditoría](docs/AUDITORIA.md).
 
 ## Licencia
