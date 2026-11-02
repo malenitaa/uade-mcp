@@ -110,8 +110,9 @@ con permiso propio y confirmación por cada acción.
 - `npm run evals` (`evals/preguntas.json` + `evals/correr.mjs`) mide si un modelo elige la tool y los
   argumentos correctos ante preguntas de alumno, incluidas las de frontera entre tools parecidas y las que no
   deberían llamar ninguna. Corre con más de un modelo y señala las preguntas donde el chico falla y el capaz
-  no: ahí hay que mejorar nombres o descripciones. Necesita `ANTHROPIC_API_KEY`; se corre a mano antes de cada
-  versión, no en CI.
+  no: ahí hay que mejorar nombres o descripciones. Corre con `ANTHROPIC_API_KEY` (API) o con
+  `--motor claude-code` (`claude -p` con la suscripción de Claude Code, tools negadas sin ejecutarse); se
+  corre a mano antes de cada versión, no en CI.
 - Lo que UADE publica como imagen (cronograma de inscripción, PDFs escaneados) se devuelve como
   contenido de imagen del MCP para que el modelo lo lea; no se transcribe con OCR ni se carga a mano.
 - Los fixtures de `test/fixtures/` son sintéticos: reproducen la estructura relevada con datos inventados.
