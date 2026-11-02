@@ -50,6 +50,12 @@
       "aceptables": [{ "tool": "webcampus_course_calendar" }, { "tool": "webcampus_current_courses" }]
     },
     {
+      "id": "guardar-parciales-calendario",
+      "grupo": "calendarios",
+      "pregunta": "Guardame los parciales y finales en mi calendario.",
+      "aceptables": [{ "tool": "webcampus_save_reminders" }]
+    },
+    {
       "id": "semanas-parciales-uade",
       "grupo": "calendarios",
       "pregunta": "¿En qué semanas son los parciales este cuatrimestre según el calendario de UADE?",
