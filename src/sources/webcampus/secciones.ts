@@ -5,6 +5,7 @@ import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
 import { aBase64, imagenesDePdf } from '../docs/pdf-imagenes.js';
 import { safeFetch } from '../../net/http.js';
+import { PolicyError } from '../../net/policy.js';
 import { WEBCAMPUS } from './client.js';
 import { SharePointClient } from '../sharepoint/index.js';
 import { WebCampusClient } from './client.js';
@@ -55,6 +56,8 @@ export function guiasEnlazadas(html: string): string[] {
   return [...new Set(urls)].slice(0, MAX_GUIAS);
 }
 const CACHE_MS = 60 * 60 * 1000;
+
+export const TEXTO_DOCUMENTO_PESADO = '(Este documento pesa más de 10 MB y el MCP no lo descarga. Abrilo en WebCampus, con tu sesión:';
 
 export interface TextoSeccion {
   seccion: Seccion;
@@ -109,7 +112,18 @@ export class Secciones {
     const hit = this.cache.get(seccion);
     if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
     const destino = SECCIONES[seccion];
-    const r = await this.client.get(typeof destino === 'number' ? `/Principal.aspx?MenuItemId=${destino}` : destino);
+    const path = typeof destino === 'number' ? `/Principal.aspx?MenuItemId=${destino}` : destino;
+    let r;
+    try {
+      r = await this.client.get(path);
+    } catch (err) {
+      // Un documento que pesa más del tope (Housing, en 11/2026: un PDF con fotos) no se baja: se
+      // devuelve el link para abrirlo en WebCampus, sin inventar contenido.
+      if (!(err instanceof PolicyError && /demasiado grande/.test(err.message))) throw err;
+      const data = { seccion, fuente: WEBCAMPUS + path, texto: `${TEXTO_DOCUMENTO_PESADO} ${WEBCAMPUS}${path}` };
+      this.cache.set(seccion, { at: Date.now(), data });
+      return data;
+    }
     if (seccion === 'aranceles_pdf') {
       const link = cheerio.load(r.html)('a[href*="sharepoint.com"]').first().attr('href');
       if (!link) throw new PageChangedError('aranceles (link al PDF)', r.html);

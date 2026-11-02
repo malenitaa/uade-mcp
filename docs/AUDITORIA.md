@@ -106,6 +106,15 @@ acotada igual:
 | Qué baja lo decide `recorrerCarpeta`, pura y testeada aparte: solo tipos de documento (`EXTENSIONES_DOCUMENTO`; código, `.rar`, video se saltean y se informan), tope de 25 MB por archivo, tope de 40 archivos por llamada, recursión opcional hasta 4 niveles. La carpeta pedida pasa por `carpetaDentroDe` y cada listado y descarga por `SITIOS_PERMITIDOS` del cliente de SharePoint, como antes | `tools/materiales.ts` | `materiales.test.ts` |
 | Anunciada como escritura (`readOnlyHint: false`) | `tools/materiales.ts` | `auditoria.test.ts` §5 |
 
+## Cambio del 01/11/2026 (versión 0.3.2): doctor vigila todas las tools
+
+Sin superficie nueva de red ni de escritura. `doctor` suma pruebas de lectura sobre fuentes que ya
+usaba (novedades, correlativas, planificador sobre la oferta cacheada, y el buscador de PIA con el
+link de la ventana abierta, que no se imprime). Cada prueba declara qué tools cubre y
+`test/doctor.test.ts` exige que toda tool registrada tenga prueba o un motivo en `TOOLS_SIN_PRUEBA`.
+`webcampus_section` ya no falla ante un documento de más de 10 MB (tope de `MAX_BODY_BYTES`, que no
+se tocó): devuelve el link a WebCampus con un texto fijo, sin contenido del documento.
+
 ## Controles por marco
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
