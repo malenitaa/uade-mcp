@@ -29,7 +29,7 @@
       "id": "materias-verano",
       "grupo": "directas",
       "pregunta": "¿Cuáles son las materias disponibles en Asignaturas Verano 2027?",
-      "aceptables": [{ "tool": "uade_enrollment_windows" }, { "tool": "pia_class_search", "args": { "window": "verano" } }, { "tool": "webcampus_class_offering" }]
+      "aceptables": [{ "tool": "uade_enrollment_windows" }, { "tool": "pia_class_search", "args": { "window": "verano" } }, { "tool": "webcampus_class_offering" }, { "tool": "uade_academic_calendar", "args": { "topic": "inscripciones" } }]
     },
     {
       "id": "finales-previos-puedo-rendir",
