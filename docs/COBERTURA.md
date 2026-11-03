@@ -106,6 +106,10 @@ con permiso propio y confirmación por cada acción.
 
 - Cada parser exige un elemento de la página que siempre está: si UADE cambia el HTML, el MCP
   responde "UADE cambió la página X" en vez de devolver datos vacíos (`test/guards.test.ts`).
+- Requiere Node 22 o más nuevo: el bundle de pdf.js que trae unpdf 1.9 usa `Iterator` (Node 22+), así
+  que en Node 20 ningún PDF se leía desde ese bump y no se notó porque ningún test ejercitaba `leerPdf`
+  en CI. Ahora sí (`legible.test.ts`), el CI corre en Node 22 y 24, y el CLI y el servidor frenan al
+  arrancar con un mensaje claro si Node es más viejo (`src/node-version.ts`).
 - `uade-mcp doctor` prueba todo lo marcado ✅ contra una cuenta real y muestra solo conteos. Cada prueba dice qué tools cubre; un test (`test/doctor.test.ts`) exige que toda tool registrada tenga prueba o un motivo para no tenerla (`TOOLS_SIN_PRUEBA`), así una tool nueva no queda sin vigilar.
 - `npm run evals` (`evals/preguntas.json` + `evals/correr.mjs`) mide si un modelo elige la tool y los
   argumentos correctos ante preguntas de alumno, incluidas las de frontera entre tools parecidas y las que no

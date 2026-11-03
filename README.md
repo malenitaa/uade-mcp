@@ -23,7 +23,7 @@ Corre en tu compu, sin servidores intermedios ni telemetría, y nunca ve tu cont
 
 ## Requisitos
 
-- Node.js 20 o más nuevo.
+- Node.js 22 o más nuevo (en Node 20 la lectura de PDFs falla: el bundle de pdf.js que trae unpdf 1.9 usa `Iterator`, de Node 22).
 - Chrome, Edge o Brave (para la ventana donde iniciás sesión con tu cuenta de UADE). Si no tenés ninguno
   (solo Safari), el MCP te ofrece bajar un Chromium propio (~190 MB) que queda en `~/.uade-mcp/browsers`
   y no toca nada más; lo borrás con `uade-mcp borrar-navegador`.

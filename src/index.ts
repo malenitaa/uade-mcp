@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // No arguments: MCP server over stdio. With arguments: CLI for the student (login, permissions).
 // Runs on the student's computer; opens no ports and talks to no server of ours.
+import './node-version.js'; // primero: en Node < 22 sale acá, antes de cargar pdf.js
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadGranted } from './auth/permissions.js';
