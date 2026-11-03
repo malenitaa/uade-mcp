@@ -172,6 +172,7 @@ sobre `@napi-rs/canvas`.
 | **Superficie de ataque:** pdf.js pasa a dibujar PDFs de `dre.uade.edu.ar` (host ya permitido) en vez de solo extraer texto. Topes: 3 páginas, 20 megapíxeles por página, 6 imágenes por PDF, además de los 80 páginas y 10 MB por archivo que ya había. El motor gráfico corre en el mismo proceso: un PDF armado para colgar Skia colgaría el MCP (riesgo aceptado: solo lee PDFs de UADE) | `docs/pdf-paginas.ts` | `pdf-paginas.test.ts` |
 | `uade_academic_calendar` devuelve contenido de imagen además del JSON (como `webcampus_section`); `DocumentoCalendario.imagenes` se guarda en la copia local cifrada (unos MB por tema) | `tools/calendario.ts`, `sources/calendario/index.ts` | `calendario.test.ts` |
 | `doctor` mide legibilidad con `textoLegible` (antes: largo > 200) y avisa con la lista de PDFs ilegibles | `cli/doctor.ts` | — |
+| Tope de texto por PDF del calendario: 6.000 → 20.000 caracteres, para que las listas de materias de verano entren enteras. Medido sin tope: 49 KB entre los 14 PDFs de inscripciones, 9,5 KB los del calendario | `sources/calendario/index.ts` | — |
 
 
 

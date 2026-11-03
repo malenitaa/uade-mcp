@@ -17,7 +17,7 @@ export type TemaCalendario = keyof typeof MENU;
 
 const MAX_PDFS = 20;
 const MAX_PAGINAS = 80;
-const MAX_TEXTO = 6000;
+const MAX_TEXTO = 20_000; // por PDF: las listas de materias de verano y las condiciones MRI entran enteras (medido 03/11/2026: 49 KB entre los 14 PDFs de inscripciones)
 const CACHE_MS = 60 * 60 * 1000;
 const DRE = /^https?:\/\/(www\.)?dre\.uade\.edu\.ar\/.+\.pdf$/i;
 
