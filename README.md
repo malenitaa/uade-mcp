@@ -125,7 +125,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 |---|---|
 | `webcampus_news` | Banners, novedades, la agenda completa de eventos (charlas, talleres, con detalle) y lo que enlazan |
 | `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, admisión (SIA/ENI), códigos… Los PDFs escaneados vuelven como imagen |
-| `uade_academic_calendar` | Calendario académico y cronogramas oficiales |
+| `uade_academic_calendar` | Calendario académico y cronogramas oficiales. Los cronogramas de inscripción (MRI, verano, previos, libres) tienen fuentes sin mapa de caracteres: vuelven como imagen de sus páginas |
 
 **Utilidades**
 

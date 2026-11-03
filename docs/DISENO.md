@@ -146,6 +146,7 @@ El cliente HTTP bloquea estas URLs por patrón, aunque haya un bug en otra parte
 | Agenda de eventos | `/MiContenido/Eventos.aspx?EsActiv=False`, `/MiContenido/Agenda.aspx?Id=` | `.card.agenda`; detalle en `Pnl_Agenda` |
 | Clases de consulta | `/Contenidos/MisClasesApoyo.aspx` | `ddlCarrera` → `ddlMateria` (postbacks) → `RadGrid1` |
 | Imágenes de PDFs escaneados | cualquier PDF sin texto | `src/sources/docs/pdf-imagenes.ts`: JPEG tal cual; FlateDecode 8 bits (gris, RGB, paleta) a PNG; tiras consecutivas pegadas; se saltean máscaras y gráficos compuestos (SMask) |
+| Páginas de PDFs con texto ilegible | cronogramas de inscripción | `src/sources/docs/legible.ts` decide (letras y números sobre no blancos ≥ 50 %); `src/sources/docs/pdf-paginas.ts` dibuja hasta 3 páginas con pdf.js sobre `@napi-rs/canvas` (opcional), 1200 px de ancho, tiras de ≤ 1560 px solapadas 40 px, 6 imágenes por PDF |
 
 ### Inscripciones (`inscripciones.uade.edu.ar`): ASP.NET MVC, login con Microsoft Entra (tenant UADE)
 
