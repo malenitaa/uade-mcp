@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fragmentos, guiasEnlazadas, textoPagina } from '../src/sources/webcampus/secciones.js';
+import { fragmentos } from '../src/sources/docs/fragmentos.js';
+import { guiasEnlazadas, textoPagina } from '../src/sources/webcampus/secciones.js';
 import { PageChangedError } from '../src/sources/webcampus/parse.js';
 
 describe('secciones de WebCampus', () => {

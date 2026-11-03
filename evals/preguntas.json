@@ -29,7 +29,7 @@
       "id": "materias-verano",
       "grupo": "directas",
       "pregunta": "¿Cuáles son las materias disponibles en Asignaturas Verano 2027?",
-      "aceptables": [{ "tool": "uade_enrollment_windows" }, { "tool": "pia_class_search", "args": { "window": "verano" } }, { "tool": "webcampus_class_offering" }]
+      "aceptables": [{ "tool": "uade_enrollment_windows" }, { "tool": "pia_class_search", "args": { "window": "verano" } }, { "tool": "webcampus_class_offering" }, { "tool": "uade_academic_calendar", "args": { "topic": "inscripciones" } }]
     },
     {
       "id": "finales-previos-puedo-rendir",
@@ -54,6 +54,18 @@
       "grupo": "calendarios",
       "pregunta": "Guardame los parciales y finales en mi calendario.",
       "aceptables": [{ "tool": "webcampus_save_reminders" }]
+    },
+    {
+      "id": "verano-mi-carrera-monserrat",
+      "grupo": "calendarios",
+      "pregunta": "¿Qué materias de mi carrera hay en el verano en Monserrat?",
+      "aceptables": [{ "tool": "uade_academic_calendar", "args": { "topic": "inscripciones", "query": "", "filter": "monserrat" } }, { "tool": "webcampus_transcript" }, { "tool": "uade_eligible_subjects" }, { "tool": "uade_plan_next_term", "args": { "campuses": ["monserrat"] } }]
+    },
+    {
+      "id": "cuando-inscribo-previos",
+      "grupo": "calendarios",
+      "pregunta": "¿Cuándo me inscribo a previos?",
+      "aceptables": [{ "tool": "uade_academic_calendar", "args": { "topic": "inscripciones", "filter": "previos" } }, { "tool": "uade_enrollment_windows" }]
     },
     {
       "id": "semanas-parciales-uade",

@@ -15,7 +15,7 @@ import { WebCampus } from '../sources/webcampus/index.js';
 import type { ClaseOfertada } from '../sources/webcampus/parse.js';
 import { cache, TTL } from '../cache/cache.js';
 import { aBase64 } from '../sources/docs/pdf-imagenes.js';
-import { fragmentos } from '../sources/webcampus/secciones.js';
+import { fragmentos } from '../sources/docs/fragmentos.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
 import { CON_IMAGENES, READ_ONLY, run } from './common.js';
 

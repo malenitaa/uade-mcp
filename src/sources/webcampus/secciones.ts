@@ -3,6 +3,7 @@
 // lista de espera MRI) ni nada de la lista negra (pagos, datos personales, trámites).
 import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
+import { fragmentos } from '../docs/fragmentos.js';
 import { aBase64, imagenesDePdf } from '../docs/pdf-imagenes.js';
 import { safeFetch } from '../../net/http.js';
 import { PolicyError } from '../../net/policy.js';
@@ -78,26 +79,6 @@ export function textoPagina(html: string): string {
   const bloques = $('[id^="ctl00_ContentPlaceHolderMain"]').filter((_, e) => !$(e).parents('[id^="ctl00_ContentPlaceHolderMain"]').length);
   if (!bloques.length) throw new PageChangedError('sección de WebCampus', $.html());
   return bloques.map((_, e) => $(e).text()).get().join(' ').replace(/\s+/g, ' ').trim();
-}
-
-// Fragmentos alrededor de cada aparición de la consulta (por palabras, sin tildes).
-export function fragmentos(texto: string, consulta: string, radio = 350): string[] {
-  const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const t = norm(texto);
-  const palabras = norm(consulta).split(/\s+/).filter((w) => w.length >= 3);
-  if (!palabras.length) return [];
-  const out: string[] = [];
-  let desde = 0;
-  while (out.length < 8) {
-    const hits = palabras.map((w) => t.indexOf(w, desde)).filter((i) => i >= 0);
-    if (!hits.length) break;
-    const i = Math.min(...hits);
-    const ini = Math.max(0, i - radio);
-    const fin = Math.min(texto.length, i + radio);
-    out.push((ini > 0 ? '…' : '') + texto.slice(ini, fin).trim() + (fin < texto.length ? '…' : ''));
-    desde = fin;
-  }
-  return out;
 }
 
 export class Secciones {
