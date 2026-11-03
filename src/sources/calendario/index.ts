@@ -3,8 +3,13 @@
 // dre.uade.edu.ar que UADE actualiza cada cuatrimestre; esos PDFs son índices con links a los
 // PDFs de detalle (por sede, por tipo de inscripción). Se recorren hasta dos niveles y se
 // devuelve el texto de cada uno. Nada está cargado a mano: si UADE cambia los PDFs, cambia esto.
+// Los PDFs de nivel 1 de inscripciones (Illustrator, fuentes sin mapa de caracteres) no tienen texto
+// legible: se devuelven como imágenes de sus páginas (pdf-paginas.ts) o, si no se puede, con el link.
 import { extractText, getDocumentProxy } from 'unpdf';
 import { safeFetch } from '../../net/http.js';
+import { aBase64 } from '../docs/pdf-imagenes.js';
+import { textoLegible } from '../docs/legible.js';
+import { paginasComoImagenes } from '../docs/pdf-paginas.js';
 import { WebCampusClient } from '../webcampus/client.js';
 
 const MENU = { calendario: 403, inscripciones: 428 } as const;
@@ -12,7 +17,7 @@ export type TemaCalendario = keyof typeof MENU;
 
 const MAX_PDFS = 20;
 const MAX_PAGINAS = 80;
-const MAX_TEXTO = 6000;
+const MAX_TEXTO = 20_000; // por PDF: las listas de materias de verano y las condiciones MRI entran enteras (medido 03/11/2026: 49 KB entre los 14 PDFs de inscripciones)
 const CACHE_MS = 60 * 60 * 1000;
 const DRE = /^https?:\/\/(www\.)?dre\.uade\.edu\.ar\/.+\.pdf$/i;
 
@@ -21,7 +26,10 @@ export interface DocumentoCalendario {
   nombre: string;
   nivel: number; // 0 = el índice del menú
   texto: string;
+  imagenes?: { mimeType: string; base64: string }[]; // páginas dibujadas, cuando el texto no se puede leer
 }
+
+export const TEXTO_ILEGIBLE = '(PDF con fuentes sin mapa de caracteres: no se puede leer como texto';
 
 interface PdfLeido {
   texto: string;
@@ -42,6 +50,16 @@ export async function leerPdf(bytes: Uint8Array): Promise<PdfLeido> {
   }
   const { text } = await extractText(pdf, { mergePages: true });
   return { texto: String(text).replace(/\s+/g, ' ').trim(), links: [...new Set(links)] };
+}
+
+async function textoOImagenes(texto: string, bytes: Uint8Array): Promise<Pick<DocumentoCalendario, 'texto' | 'imagenes'>> {
+  if (textoLegible(texto)) return { texto: texto.slice(0, MAX_TEXTO) };
+  const paginas = await paginasComoImagenes(bytes).catch(() => []);
+  if (!paginas.length) return { texto: `${TEXTO_ILEGIBLE}; abrilo en el link)` };
+  return {
+    texto: `${TEXTO_ILEGIBLE}; van ${paginas.length} ${paginas.length > 1 ? 'imágenes' : 'imagen'} de sus páginas para que las leas)`,
+    imagenes: paginas.map((p) => ({ mimeType: p.mimeType, base64: aBase64(p.bytes) })),
+  };
 }
 
 function nombreDe(url: string): string {
@@ -71,7 +89,7 @@ export class Calendario {
       try {
         const bytes = item.bytes ?? (await safeFetch(url)).body;
         const pdf = await leerPdf(bytes);
-        docs.push({ url, nombre: nombreDe(url), nivel: item.nivel, texto: pdf.texto.slice(0, MAX_TEXTO) });
+        docs.push({ url, nombre: nombreDe(url), nivel: item.nivel, ...(await textoOImagenes(pdf.texto, bytes)) });
         if (item.nivel < 2) for (const l of pdf.links) if (DRE.test(l)) cola.push({ url: l, nivel: item.nivel + 1 });
       } catch {
         docs.push({ url, nombre: nombreDe(url), nivel: item.nivel, texto: '(no se pudo leer este PDF)' });

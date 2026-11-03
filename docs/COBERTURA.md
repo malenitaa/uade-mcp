@@ -36,7 +36,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Asignaturas previas | ✅ | `webcampus_transcript`: por materia, cada acta (cursadas, exámenes, recursa, ausente, final desaprobado) y la "Fecha De Vencimiento" oficial de la regularidad de los finales pendientes (`uade_eligible_subjects` la usa en vez de calcular dos años) |
 | Exámenes previos (Excel de novedades) | ✅ | `webcampus_exam_schedule` |
 | Calendario académico (PDFs por sede y cuatrimestre) | ✅ | `uade_academic_calendar` |
-| Cronogramas de inscripción (PDFs) | ✅ | `uade_academic_calendar` (topic inscripciones) |
+| Cronogramas de inscripción (PDFs) | ✅ | `uade_academic_calendar` (topic inscripciones). Los cinco PDFs de nivel 1 (info general, MRI, verano, previos, libres) están hechos en Illustrator con fuentes sin mapa de caracteres: pdf.js devuelve un código de control por letra y no hay forma de recuperar el texto (los glifos se llaman `gidNNNNN` hasta dentro de la fuente). Se detecta con `textoLegible` y se devuelven como imagen de sus páginas (pdf.js sobre `@napi-rs/canvas`, dependencia opcional); sin el módulo, con el link. Las listas de materias de nivel 2 (CV por sede, Progra MRI) sí tienen texto |
 | Materias Regulares Intensivas (MRI) | ✅ | `webcampus_section` |
 | Carreras – Materias | ✅ | `webcampus_section` |
 | Información de Materias (programas, `MenuItemId=98`) | ⏳ | Combos en cascada de Telerik (facultad → carrera → materia) y el link directo `HomeMateria.aspx?idMateria=` responde "No fue posible procesar su solicitud" fuera de ese flujo. Queda para cuando haga falta: el programa de una materia se pregunta poco |
@@ -106,6 +106,10 @@ con permiso propio y confirmación por cada acción.
 
 - Cada parser exige un elemento de la página que siempre está: si UADE cambia el HTML, el MCP
   responde "UADE cambió la página X" en vez de devolver datos vacíos (`test/guards.test.ts`).
+- Requiere Node 22 o más nuevo: el bundle de pdf.js que trae unpdf 1.9 usa `Iterator` (Node 22+), así
+  que en Node 20 ningún PDF se leía desde ese bump y no se notó porque ningún test ejercitaba `leerPdf`
+  en CI. Ahora sí (`legible.test.ts`), el CI corre en Node 22 y 24, y el CLI y el servidor frenan al
+  arrancar con un mensaje claro si Node es más viejo (`src/node-version.ts`).
 - `uade-mcp doctor` prueba todo lo marcado ✅ contra una cuenta real y muestra solo conteos. Cada prueba dice qué tools cubre; un test (`test/doctor.test.ts`) exige que toda tool registrada tenga prueba o un motivo para no tenerla (`TOOLS_SIN_PRUEBA`), así una tool nueva no queda sin vigilar.
 - `npm run evals` (`evals/preguntas.json` + `evals/correr.mjs`) mide si un modelo elige la tool y los
   argumentos correctos ante preguntas de alumno, incluidas las de frontera entre tools parecidas y las que no
@@ -113,6 +117,8 @@ con permiso propio y confirmación por cada acción.
   no: ahí hay que mejorar nombres o descripciones. Corre con `ANTHROPIC_API_KEY` (API) o con
   `--motor claude-code` (`claude -p` con la suscripción de Claude Code, tools negadas sin ejecutarse); se
   corre a mano antes de cada versión, no en CI.
-- Lo que UADE publica como imagen (cronograma de inscripción, PDFs escaneados) se devuelve como
-  contenido de imagen del MCP para que el modelo lo lea; no se transcribe con OCR ni se carga a mano.
+- Lo que UADE publica como imagen (cronograma de inscripción, PDFs escaneados) o como PDF sin texto
+  legible (cronogramas de inscripción) se devuelve como contenido de imagen del MCP para que el modelo
+  lo lea; no se transcribe con OCR ni se carga a mano. `doctor` mide legibilidad de verdad
+  (`textoLegible`) y lista los PDFs que quedaron ilegibles.
 - Los fixtures de `test/fixtures/` son sintéticos: reproducen la estructura relevada con datos inventados.

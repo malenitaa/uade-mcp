@@ -2,6 +2,7 @@
 // OK / aviso / error con conteos y tiempos. Nunca imprime datos personales (ni notas, ni
 // materias, ni montos), así cualquiera puede compartir el reporte para diagnosticar.
 import { Calendario } from '../sources/calendario/index.js';
+import { textoLegible } from '../sources/docs/legible.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { recordatorios, recordatoriosIcs } from '../sources/webcampus/recordatorios.js';
@@ -219,8 +220,11 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   for (const tema of ['calendario', 'inscripciones'] as const) {
     await push(`calendario: ${tema}`, ['uade_academic_calendar'], async () => {
       const d = await cal.documentos(tema);
-      const conTexto = d.filter((x) => x.texto.length > 200).length;
-      return [conTexto ? 'ok' : 'aviso', `${d.length} PDFs, ${conTexto} con texto legible`];
+      const conTexto = d.filter((x) => textoLegible(x.texto) && !x.imagenes?.length).length; // el aviso de ilegible es texto legible
+      const conImagenes = d.filter((x) => x.imagenes?.length).length;
+      const ilegibles = d.filter((x) => !textoLegible(x.texto) && !x.imagenes?.length).map((x) => x.nombre);
+      const resumen = `${d.length} PDFs, ${conTexto} con texto legible${conImagenes ? `, ${conImagenes} como imagen` : ''}`;
+      return ilegibles.length ? ['aviso', `${resumen}; ilegibles: ${ilegibles.join(', ')}`] : [conTexto ? 'ok' : 'aviso', resumen];
     });
   }
   for (const s of Object.keys(SECCIONES) as Seccion[]) {

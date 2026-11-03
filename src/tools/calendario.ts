@@ -5,14 +5,14 @@ import type { Permission } from '../auth/permissions.js';
 import { Calendario } from '../sources/calendario/index.js';
 import { cache, TTL } from '../cache/cache.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
-import { READ_ONLY, run } from './common.js';
+import { CON_IMAGENES, READ_ONLY, run } from './common.js';
 
 export function registerCalendarioTools(server: McpServer, granted: ReadonlySet<Permission>, cal = new Calendario()): void {
   server.registerTool(
     'uade_academic_calendar',
     {
       title: 'UADE academic calendar',
-      description: 'Official UADE calendar PDFs (live from WebCampus): topic calendario = term dates, midterm/make-up/final weeks per shift and campus, holidays; topic inscripciones = enrollment schedules. Text comes from table-like PDFs. For the student\'s own dates use webcampus_course_calendar.',
+      description: 'Official UADE calendar PDFs (live from WebCampus): topic calendario = term dates, midterm/make-up/final weeks per shift and campus, holidays; topic inscripciones = enrollment schedules (MRI, summer courses, previos, libres and their class lists). Text comes from table-like PDFs; a PDF whose fonts have no character map comes as page images instead (read them) or, failing that, as its link. For the student\'s own dates use webcampus_course_calendar.',
       inputSchema: {
         topic: z.enum(['calendario', 'inscripciones']).default('calendario'),
         filter: z.string().max(40).optional().describe('document name part: 3sedes, online, costa, feriados, previos…'),
@@ -21,11 +21,15 @@ export function registerCalendarioTools(server: McpServer, granted: ReadonlySet<
     },
     ({ topic, filter }) =>
       run(granted, 'webcampus.leer', async () => {
-        const { value: docs, actualizado } = await cache.get(`calendario:${topic}`, TTL.semana, () => cal.documentos(topic));
+        const { value: docs, actualizado } = await // Clave nueva en 0.6.0: la copia local de antes guardaba el texto ilegible por una semana.
+        cache.get(`calendario:v2:${topic}`, TTL.semana, () => cal.documentos(topic));
         const f = filter?.toLowerCase().replace(/\s+/g, '');
         const elegidos = f ? docs.filter((d) => (d.nombre + d.url).toLowerCase().replace(/\s+|%20/g, '').includes(f)) : docs;
+        // Las imágenes de los PDFs ilegibles van como contenido de imagen del MCP, en el orden de los documentos.
+        const imagenes = elegidos.flatMap((d) => d.imagenes ?? []);
+        const documentos = elegidos.map(({ imagenes: _, ...d }) => d);
         return elegidos.length
-          ? { actualizado, aviso: UNTRUSTED_NOTE, documentos: elegidos }
+          ? { actualizado, aviso: UNTRUSTED_NOTE, documentos, [CON_IMAGENES]: imagenes }
           : { aviso: `Ningún documento coincide con "${filter}".`, disponibles: docs.map((d) => d.nombre) };
       }),
   );

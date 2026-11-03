@@ -159,7 +159,23 @@ el beneficio en palabras de alumno (cuánto cobran y hasta cuándo se puede dar 
 cuando el alumno dice "esa materia" o "la clase" sin decir cuál. Sin cambio de permisos, de red ni de
 superficie: mismas tools, mismos hosts, mismo `readOnlyHint`. Motivo y medición en `evals/`.
 
-## Controles por marco
+## Cambio del 03/11/2026 (versión 0.6.0): cronogramas de inscripción como imagen
+
+Los cinco PDFs de nivel 1 de `uade_academic_calendar` (topic inscripciones) tienen fuentes sin mapa
+de caracteres: el texto que sale es basura y ninguna opción de pdf.js lo arregla. Ahora
+`textoLegible` lo detecta y esos PDFs se devuelven como imágenes de sus páginas, dibujadas por pdf.js
+sobre `@napi-rs/canvas`.
+
+| Qué cambia | Dónde | Test |
+|---|---|---|
+| **Dependencia nativa nueva, opcional:** `@napi-rs/canvas` 0.1.84 (Skia precompilado, binario por plataforma de ~25 MB, sin scripts de instalación; `npm ci --ignore-scripts` lo instala igual). Es la misma familia que `@napi-rs/keyring`. Si falta (plataforma sin binario o instalación sin opcionales), el MCP no falla: devuelve el aviso con el link. Solo se carga para un PDF con texto ilegible; nunca para páginas ni documentos de materiales | `docs/pdf-paginas.ts` | `pdf-paginas.test.ts` |
+| **Superficie de ataque:** pdf.js pasa a dibujar PDFs de `dre.uade.edu.ar` (host ya permitido) en vez de solo extraer texto. Topes: 3 páginas, 20 megapíxeles por página, 6 imágenes por PDF, además de los 80 páginas y 10 MB por archivo que ya había. El motor gráfico corre en el mismo proceso: un PDF armado para colgar Skia colgaría el MCP (riesgo aceptado: solo lee PDFs de UADE) | `docs/pdf-paginas.ts` | `pdf-paginas.test.ts` |
+| `uade_academic_calendar` devuelve contenido de imagen además del JSON (como `webcampus_section`); `DocumentoCalendario.imagenes` se guarda en la copia local cifrada (unos MB por tema) | `tools/calendario.ts`, `sources/calendario/index.ts` | `calendario.test.ts` |
+| `doctor` mide legibilidad con `textoLegible` (antes: largo > 200) y avisa con la lista de PDFs ilegibles | `cli/doctor.ts` | — |
+| **Node 22 o más nuevo** (`engines`, chequeo al arrancar en `node-version.ts`, CI en 22 y 24). En Node 20 la lectura de PDFs fallaba desde unpdf 1.9 (`Iterator is not defined`, que recién apareció al testear `leerPdf` en CI con esta rama); Node 20 terminó su soporte en abril de 2026 | `package.json`, `src/node-version.ts`, `revisar.yml` | `node-version.test.ts` |
+| Tope de texto por PDF del calendario: 6.000 → 20.000 caracteres, para que las listas de materias de verano entren enteras. Medido sin tope: 49 KB entre los 14 PDFs de inscripciones, 9,5 KB los del calendario | `sources/calendario/index.ts` | — |
+
+
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
 

@@ -1,9 +1,12 @@
 // Imágenes de un PDF escaneado (sin texto), para que el modelo las mire: algunos documentos de
-// UADE (números ante emergencias, algunos cronogramas) son una foto pegada en un PDF. No se
-// renderiza la página (eso pediría un motor gráfico): se sacan las imágenes tal como están
-// guardadas. JPEG (DCTDecode) sale como está; las de píxeles crudos (FlateDecode, 8 bits, gris,
-// RGB o paleta) se envuelven en un PNG con zlib. Los escáneres suelen cortar la hoja en tiras del
-// mismo ancho: las tiras consecutivas se pegan en una sola imagen.
+// UADE (números ante emergencias, algunos cronogramas) son una foto pegada en un PDF. Acá no se
+// renderiza la página: se sacan las imágenes tal como están guardadas, sin motor gráfico. Desde la
+// 0.6.0 sí hay un motor gráfico opcional (@napi-rs/canvas, pdf-paginas.ts), pero solo para los PDFs
+// con texto que no se puede leer (fuentes sin mapa de caracteres); para un escaneo, sacar la foto
+// embebida sigue siendo más barato y más fiel que volver a dibujarla. JPEG (DCTDecode) sale como
+// está; las de píxeles crudos (FlateDecode, 8 bits, gris, RGB o paleta) se envuelven en un PNG con
+// zlib. Los escáneres suelen cortar la hoja en tiras del mismo ancho: las tiras consecutivas se
+// pegan en una sola imagen.
 import { deflateSync, inflateSync } from 'node:zlib';
 
 export interface ImagenPdf {

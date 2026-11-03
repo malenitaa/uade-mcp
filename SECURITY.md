@@ -23,7 +23,7 @@ No abras un issue público para temas de seguridad.
 | Mails solo como borrador a @uade.edu.ar; adjuntos solo de carpetas de documentos | `src/sources/mail/draft.ts`, `src/net/open-browser.ts` | `test/common.test.ts` |
 | Lo único que escribe en tu disco va a `Downloads/uade-mcp`: nombre saneado, solo tipos de documento, nunca pisa un archivo, legible solo por vos; las tools que escriben o abren una ventana no se anuncian como solo lectura | `src/net/open-browser.ts`, `src/tools/materiales.ts`, `src/tools/pia.ts` | `test/materiales.test.ts`, `test/auditoria.test.ts` |
 | Rutas de SharePoint ancladas a la carpeta habilitada; `folder` no acepta `..`, `.` ni segmentos vacíos | `src/sources/sharepoint/index.ts`, `src/tools/materiales.ts` | `test/materiales.test.ts` |
-| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo contando bytes reales (xlsx, docx, pptx) y por PDF escaneado (imágenes, con tope por imagen); los PDFs se recorren en tiempo lineal | `src/sources/docs/`, `src/sources/webcampus/previos.ts` | `test/previos.test.ts`, `test/materiales.test.ts`, `test/pdf-imagenes.test.ts` |
+| Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo contando bytes reales (xlsx, docx, pptx) y por PDF escaneado (imágenes, con tope por imagen), 3 páginas y 20 megapíxeles por página al dibujar un PDF con texto ilegible; los PDFs se recorren en tiempo lineal | `src/sources/docs/`, `src/sources/webcampus/previos.ts` | `test/previos.test.ts`, `test/materiales.test.ts`, `test/pdf-imagenes.test.ts` |
 | Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página); el mensaje viaja solo de errores técnicos y tapado (mails, números largos, rutas, comillas); de los errores que nombran materias, archivos o carreras (`ErrorDeUso`) va solo el tipo; un envío por tool, tipo y página por día; único path permitido en planuade.ar | `src/report/errores.ts`, `src/error-de-uso.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
 | Sin telemetría; dependencias directas con versión exacta (npm 12 ignora `npm-shrinkwrap.json`, así que las transitivas las fija el lockfile solo en desarrollo y CI); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
 
@@ -41,7 +41,7 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 - **Verificar lo instalado:** `npm audit signatures` en una carpeta con `uade-mcp` instalado comprueba la
   firma y la provenance contra el registro.
 - **CI en cada push y PR** (`revisar.yml`): tipos, tests, `npm audit` y búsqueda de secretos en todo el
-  repo, en Node 20 y 22, sin credenciales de nadie.
+  repo, en Node 22 y 24, sin credenciales de nadie.
 - **Commits firmados:** `main` solo acepta commits con firma verificada (clave SSH de quien mantiene el
   proyecto, registrada en GitHub, o la firma de GitHub en los merges). Un commit que no sea de esa clave no entra.
 - **Rama `main` protegida:** sin force-push ni borrado, historial lineal, y solo por PR con el CI en verde;
