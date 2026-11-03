@@ -33,7 +33,7 @@ if (args.length) {
   }
 } else {
   const server = new McpServer(
-    { name: 'uade-mcp', version: '0.6.0' },
+    { name: 'uade-mcp', version: '0.6.1' },
     {
       instructions: [
         'Unofficial MCP for UADE (Universidad Argentina de la Empresa, Buenos Aires). All tools are read-only and read live data; prefer them over memory.',
@@ -42,6 +42,7 @@ if (args.length) {
         'Expired session: call uade_login (it renews silently or opens a sign-in window on the student\'s computer) and tell the student what it says; then retry. Never ask for a password.',
         'Planning a term (what can I take, what is offered, build my week, I want to take X): uade_plan_next_term first; then pia_prepare_enrollment per class and, when the student wants to enroll, uade_open_enrollment_site (they do everything in the window) or pia_add_to_cart (needs the pia.carrito permission: adds the class to the PIA cart after the student confirms in a dialog and stops at the final screen; the student presses Finalizar).',
         'Which day do I enroll / enrollment calendar by shift and passed subjects: uade_enrollment_schedule (the official image plus the student\'s count; read the image). How do I enroll, why can\'t I, packs, optativas, MRI, "adeuda correlativas": uade_enrollment_guide (official FAQ and notices).',
+        'Enrollment schedules and summer offerings (uade_academic_calendar, topic inscripciones) are 14 PDFs: pass the subjects the student is after (pending ones from webcampus_transcript; the lists have no degree names) as query and their campus or the kind (previos, mri, verano) as filter instead of reading everything.',
         'What can I take / which finals can I sit: uade_eligible_subjects (computed from WebCampus transcript + prerequisites). Finals (previos) need the course regularized (final_pendiente) and passed prerequisites; current courses have their own final date in webcampus_course_calendar.',
         'Emails are drafts only (email_compose_draft); never say one was sent.',
         'If the student refers to "that subject" or "the class" without saying which one, ask which before calling any tool.',
