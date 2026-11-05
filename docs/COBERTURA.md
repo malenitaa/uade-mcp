@@ -73,7 +73,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 
 | Sección | Estado | Tool |
 |---|---|---|
-| Cuenta corriente | ✅ | `webcampus_account_balance` |
+| Cuenta corriente | ✅ | `webcampus_account_balance`: deuda vencida, "Facturado a Vencer" (vencimiento, monto, desglose de la factura y total), pagos con desglose. Una tabla de cuenta con un id desconocido sale cruda en `otras` y `doctor` la marca como aviso |
 | Aranceles | ✅ | `webcampus_section` |
 | Mis comprobantes | ✅ | `webcampus_section` |
 | Marcaciones (ingresos al edificio) | ✅ | `webcampus_section` |

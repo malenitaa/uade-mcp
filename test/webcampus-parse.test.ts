@@ -128,10 +128,24 @@ describe('WebCampus', () => {
     expect(h.materias[5]?.intentos).toEqual([]);
   });
 
-  it('cuenta corriente: sin deuda, vencimientos y pagos', () => {
+  it('cuenta corriente: sin deuda, facturado a vencer, pagos y una tabla que no conoce', () => {
     const c = parseCuenta(fx('cuenta.html'));
     expect(c.deudaVencida).toEqual([]);
-    expect(c.proximosVencimientos).toEqual([{ Vencimiento: '2030-11-10', Concepto: 'CUOTA 4 2DO CUATR 2030', Importe: 123456.78 }]);
+    // "Facturado a Vencer": filas grilla5, desglose con otras columnas y la fila del total aparte.
+    expect(c.proximosVencimientos).toEqual([
+      {
+        'Fecha Vto': '2030-11-10', 'Descripción': 'Noviembre 2030', Monto: 123456.78, 'QR de Pago': null, 'Link de Pago': null,
+        detalle: [
+          { concepto: 'Arancel Ficticio Mensual', materia: null, comprobante: 'FA-0000-00000009', monto: 120000, fecha: '2030-11-01' },
+          { concepto: 'Gastos Y Recargos Fa - C - 0000 - 000', materia: null, comprobante: 'FA-0000-00000009', monto: 3456.78, fecha: '2030-11-01' },
+        ],
+        conRecargo: true,
+      },
+    ]);
+    expect(c.totalProximosVencimientos).toBe(123456.78);
+    expect(c.otras).toEqual([
+      { id: 'ctl00_ContentPlaceHolderMain_TableBecasFicticias', titulo: 'Tabla Nueva De Prueba', encabezados: ['Columna A', 'Columna B'], filas: [['Valor ficticio', '$1,000.00']] },
+    ]);
     expect(c.pagos).toEqual([
       {
         'Fecha Pago': '2030-10-10', 'Nro. Recibo': 'RC-0000-00000001', Medio: 'Medio Ficticio 1', Total: 111111.11,
