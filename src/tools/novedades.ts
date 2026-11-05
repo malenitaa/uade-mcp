@@ -11,6 +11,7 @@ import { leerDocumento, tipoLegible } from '../sources/docs/leer.js';
 import { aBase64, imagenesDePdf } from '../sources/docs/pdf-imagenes.js';
 import { SharePointClient, SHAREPOINT } from '../sources/sharepoint/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
+import type { Banner } from '../sources/webcampus/novedades.js';
 import { textoPagina } from '../sources/webcampus/secciones.js';
 import { untrusted, UNTRUSTED_NOTE } from '../untrusted.js';
 import { CON_IMAGENES, READ_ONLY, run, type Imagen } from './common.js';
@@ -87,13 +88,45 @@ export async function leerLink(link: string, deps: { wc: WebCampus; sp: SharePoi
   return { url: final.href, ...(await leerBytesOImagenes(nombre, res.body)) };
 }
 
+// Banners del home: muchos tienen el aviso (cierres, feriados, cambios de horario o de sede) solo
+// dentro de la imagen, así que se bajan y van al modelo como imágenes, en el orden del carrusel.
+export const MAX_BANNERS = 20;
+export const MAX_BYTES_BANNER = 1.5 * 1024 * 1024;
+export interface ImagenBanner {
+  tamanio: number;
+  mimeType?: string;
+  base64?: string; // falta si la imagen pasa el tope de bytes
+}
+
+export async function bannersConImagenes(
+  banners: Banner[],
+  bajar: (url: string) => Promise<ImagenBanner>,
+): Promise<{ banners: Record<string, unknown>[]; imagenes: Imagen[] }> {
+  const aBajar = banners.filter((b) => b.imagen).slice(0, MAX_BANNERS);
+  const bajadas = await Promise.allSettled(aBajar.map((b) => bajar(b.imagen!)));
+  const imagenes: Imagen[] = [];
+  const salida = banners.map(({ imagen, ...b }) => {
+    if (!imagen) return b;
+    const i = aBajar.findIndex((x) => x.imagen === imagen);
+    if (i < 0) return { ...b, imagenUrl: imagen, nota: `No mandé esta imagen (tope de ${MAX_BANNERS} banners): abrila vos si hace falta.` };
+    const r = bajadas[i]!;
+    if (r.status === 'rejected') return { ...b, imagenUrl: imagen, nota: `No pude bajar la imagen: ${(r.reason as Error).message}` };
+    if (!r.value.base64 || !r.value.mimeType) {
+      return { ...b, imagenUrl: imagen, nota: `La imagen pesa ${(r.value.tamanio / 1024 / 1024).toFixed(1).replace('.', ',')} MB (tope 1,5 MB): no la mandé; abrila vos.` };
+    }
+    imagenes.push({ mimeType: r.value.mimeType, base64: r.value.base64 });
+    return { ...b, verImagen: imagenes.length };
+  });
+  return { banners: salida, imagenes };
+}
+
 export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<Permission>, wc = new WebCampus(), sp = new SharePointClient()): void {
   server.registerTool(
     'webcampus_news',
     {
       title: 'What UADE is announcing (WebCampus home)',
       description:
-        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list (agenda = next few events). allEvents=true: the full events agenda. eventId: one event with date, time, campus and description. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment; scanned PDFs come back as images); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, talks, events.',
+        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list (agenda = next few events) plus the banner images in carousel order (verImagen = image number): READ them, banners often carry university closures, holidays, schedule or campus changes only inside the image; tell the student what they say in text, do not show or send the images. Call it too when the student asks about a specific day or week (¿qué tengo el lunes?, ¿hay clases el 9?, ¿abre la facultad?). allEvents=true: the full events agenda. eventId: one event with date, time, campus and description. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment; scanned PDFs come back as images); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, talks, events.',
       inputSchema: {
         newsId: z.string().regex(/^\d+$/).optional(),
         eventId: z.string().regex(/^\d+$/).optional().describe('id from the agenda'),
@@ -133,8 +166,23 @@ export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<P
           });
           return { actualizado: r.actualizado, ...r.value, aviso: UNTRUSTED_NOTE };
         }
-        const r = await cache.get('home', TTL.corto, () => wc.home());
-        return { actualizado: r.actualizado, ...r.value, aviso: UNTRUSTED_NOTE };
+        const r = await cache.get('home:v2', TTL.corto, () => wc.home());
+        const { banners, imagenes } = await bannersConImagenes(r.value.banners, (url) =>
+          cache.get(`banner:${url}`, TTL.dia, async () => {
+            const { mimeType, bytes } = await wc.imagenBanner(url);
+            return bytes.length > MAX_BYTES_BANNER ? { tamanio: bytes.length } : { tamanio: bytes.length, mimeType, base64: aBase64(bytes) };
+          }).then((x) => x.value),
+        );
+        return {
+          actualizado: r.actualizado,
+          ...r.value,
+          banners,
+          imagenesDeBanners: imagenes.length
+            ? `Van ${imagenes.length} imágenes de banners, en el orden de la lista (verImagen = número de imagen). Leelas: el aviso suele estar solo en la imagen (cierres de la universidad, feriados, cambios de horario o de sede, fechas). Al estudiante contale con texto lo que dicen; no le mandes ni le muestres las imágenes.`
+            : r.value.banners.some((b) => b.imagen) ? 'No pude bajar ninguna imagen de los banners: el texto de cada uno puede estar incompleto; pasale al estudiante los links.' : undefined,
+          aviso: UNTRUSTED_NOTE,
+          [CON_IMAGENES]: imagenes,
+        };
       }),
   );
 }

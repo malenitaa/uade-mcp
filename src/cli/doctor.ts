@@ -17,6 +17,7 @@ import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { planificar } from '../sources/planificador/index.js';
 import { Pia } from '../sources/pia/index.js';
 import type { ClaseOfertada } from '../sources/webcampus/parse.js';
+import { bannersConImagenes, MAX_BANNERS, MAX_BYTES_BANNER } from '../tools/novedades.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
 interface Resultado {
@@ -156,10 +157,16 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   });
   await push('novedades y banners', ['webcampus_news'], async () => {
     const h = await wc.home();
+    const { imagenes } = await bannersConImagenes(h.banners, async (url) => {
+      const { mimeType, bytes } = await wc.imagenBanner(url);
+      return bytes.length > MAX_BYTES_BANNER ? { tamanio: bytes.length } : { tamanio: bytes.length, mimeType, base64: '-' };
+    });
+    const esperadas = Math.min(h.banners.filter((b) => b.imagen).length, MAX_BANNERS);
+    const banners = `${h.banners.length} banners, ${imagenes.length} como imagen${imagenes.length < esperadas ? ` (${esperadas - imagenes.length} no se pudieron bajar)` : ''}`;
     const primera = h.novedades[0];
-    if (!primera) return ['aviso', `${h.banners.length} banners, sin novedades publicadas`];
+    if (!primera) return ['aviso', `${banners}, sin novedades publicadas`];
     const n = await wc.novedad(primera.id);
-    return [n.titulo ? 'ok' : 'aviso', `${h.banners.length} banners, ${h.novedades.length} novedades; la primera ${n.titulo ? 'con detalle' : 'sin detalle'}${n.adjuntos?.length ? `, ${n.adjuntos.length} adjuntos` : ''}`];
+    return [n.titulo && imagenes.length === esperadas ? 'ok' : 'aviso', `${banners}, ${h.novedades.length} novedades; la primera ${n.titulo ? 'con detalle' : 'sin detalle'}${n.adjuntos?.length ? `, ${n.adjuntos.length} adjuntos` : ''}`];
   });
   await push('correlativas y elegibilidad', ['uade_eligible_subjects'], async () => {
     const [h, plan] = await Promise.all([wc.historial(), wc.correlativas()]);
