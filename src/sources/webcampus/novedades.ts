@@ -7,8 +7,22 @@ import { PageChangedError } from './parse.js';
 const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
 export interface Banner {
-  titulo: string;
+  titulo: string | null; // texto alternativo; muchos banners tienen el aviso solo dentro de la imagen
   link: string | null; // tal como está en WebCampus (puede ser un acortador de UADE)
+  imagen: string | null; // URL absoluta de la imagen, solo si está en WebCampus
+}
+
+const WEBCAMPUS_HOME = 'https://www.webcampus.uade.edu.ar/HomeWC.aspx';
+
+// La imagen de un banner, resuelta contra el home; null si no es de WebCampus.
+function imagenDe(src: string | undefined): string | null {
+  if (!src) return null;
+  try {
+    const u = new URL(src, WEBCAMPUS_HOME);
+    return u.origin === new URL(WEBCAMPUS_HOME).origin ? u.href : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface NovedadResumen {
@@ -54,10 +68,12 @@ export function parseHome(html: string, hoy = new Date()): Home {
   items.each((_, it) => {
     const a = $(it).find('a').first();
     const img = $(it).find('img').first();
-    const titulo = clean(a.attr('data-label') ?? img.attr('alt') ?? img.attr('title'));
-    if (!titulo) return;
+    const titulo = clean(a.attr('data-label') || img.attr('alt') || img.attr('title')) || null;
     const href = clean(a.attr('href'));
-    banners.push({ titulo, link: href && href !== '#' ? href : null });
+    const link = href && href !== '#' ? href : null;
+    const imagen = imagenDe(img.attr('src'));
+    if (!titulo && !link && !imagen) return;
+    banners.push({ titulo, link, imagen });
   });
 
   const novedades: NovedadResumen[] = [];

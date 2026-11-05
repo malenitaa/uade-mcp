@@ -1,5 +1,5 @@
 {
-  "_comentario": "Preguntas de alumno para medir si el modelo elige la tool correcta. `aceptables` es la lista de llamadas válidas (tool + argumentos clave, chequeados de forma flexible: el valor esperado tiene que estar contenido en el real, sin distinguir mayúsculas ni tildes); vacía = lo correcto es no llamar ninguna tool (responder o repreguntar). `grupo` sirve para leer el reporte. Las materias y códigos son inventados.",
+  "_comentario": "Preguntas de alumno para medir si el modelo elige la tool correcta. `aceptables` es la lista de llamadas válidas (tool + argumentos clave, chequeados de forma flexible: el valor esperado tiene que estar contenido en el real, sin distinguir mayúsculas ni tildes); vacía = lo correcto es no llamar ninguna tool (responder o repreguntar). `grupo` sirve para leer el reporte. `tambien` (opcional): tools que además tendrían que aparecer en el primer turno; se reporta aparte y no cambia el acierto. Las materias y códigos son inventados.",
   "preguntas": [
     {
       "id": "cuota-sistemas-noche",
@@ -135,6 +135,21 @@
       "grupo": "informacion",
       "pregunta": "¿Qué hay de nuevo en UADE?",
       "aceptables": [{ "tool": "webcampus_news" }]
+    },
+    {
+      "id": "hay-clases-lunes-9",
+      "grupo": "dias-concretos",
+      "pregunta": "¿Hay clases el lunes 9 de noviembre?",
+      "aceptables": [{ "tool": "webcampus_news" }, { "tool": "uade_academic_calendar", "args": { "topic": "calendario" } }, { "tool": "webcampus_course_calendar" }, { "tool": "webcampus_current_courses" }],
+      "tambien": ["webcampus_news"],
+      "nota": "El 09/11/2026 UADE cerró y el aviso estaba solo en la imagen de un banner del home."
+    },
+    {
+      "id": "que-tengo-lunes-martes",
+      "grupo": "dias-concretos",
+      "pregunta": "¿Qué tengo el lunes y el martes de la semana que viene?",
+      "aceptables": [{ "tool": "webcampus_news" }, { "tool": "webcampus_course_calendar" }, { "tool": "webcampus_current_courses" }, { "tool": "uade_academic_calendar", "args": { "topic": "calendario" } }],
+      "tambien": ["webcampus_news"]
     },
     {
       "id": "estacionamiento",

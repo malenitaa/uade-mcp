@@ -52,7 +52,7 @@ Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a
 | Sección | Estado | Tool |
 |---|---|---|
 | Ventanas de inscripción con fechas | ✅ | `uade_enrollment_windows` |
-| Novedades, banners y agenda del home | ✅ | `webcampus_news` (+ lectura de lo enlazado) |
+| Novedades, banners y agenda del home | ✅ | `webcampus_news` (+ lectura de lo enlazado). Los banners van como imagen (hasta 20, 1,5 MB cada una): muchos avisos, como cierres de la universidad, están solo en la imagen |
 | Avisar al proyecto cuando algo se rompe | ✅ opt-in | permiso `reportes.errores`; endpoint `api/mcp-error` en planuade.ar que manda el mail |
 | UADE cambia una página | 🟡 | modo degradado: la tool devuelve el texto plano marcado como sin estructura; `doctor --json` programable para detectarlo, y dice qué tools quedaron afectadas (`toolsRotas`) |
 | Sesión vencida (cada ~3 h) | ✅ | renovación automática sin ventana desde el perfil del navegador; `uade_login` / `/uade:login` si Microsoft pide algo |
