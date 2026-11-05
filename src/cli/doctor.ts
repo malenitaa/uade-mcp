@@ -116,7 +116,8 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   });
   await push('cuenta corriente', ['webcampus_account_balance'], async () => {
     const c = await wc.cuenta();
-    return ['ok', `${c.deudaVencida.length} deudas, ${c.proximosVencimientos.length} vencimientos, ${c.pagos.length} pagos`];
+    const filas = `${c.deudaVencida.length} deudas, ${c.proximosVencimientos.length} facturado a vencer (total ${c.totalProximosVencimientos !== null ? 'ok' : 'sin dato'}), ${c.pagos.length} pagos`;
+    return c.otras.length ? ['aviso', `${filas}; ${c.otras.length} tablas no reconocidas: ${c.otras.map((t) => `${t.id} (${t.filas.length} filas)`).join(', ')}`] : ['ok', filas];
   });
   await push('exámenes previos (Excel)', ['webcampus_exam_schedule'], async () => {
     try {

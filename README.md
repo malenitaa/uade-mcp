@@ -116,7 +116,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 
 | Tool | Qué devuelve |
 |---|---|
-| `webcampus_account_balance` | Deuda, próximos vencimientos y pagos (no paga) |
+| `webcampus_account_balance` | Deuda vencida, lo facturado a vencer (vencimiento, monto, desglose y total) y pagos; si UADE agrega una tabla que no conoce, la devuelve cruda en `otras` (no paga) |
 | `uade_tuition` | Aranceles oficiales por carrera y turno, del PDF vigente |
 
 **Información de UADE**

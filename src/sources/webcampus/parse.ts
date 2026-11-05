@@ -389,39 +389,67 @@ export interface LineaDetalle {
   materia: string | null;
   comprobante: string | null;
   monto: number | null;
+  fecha?: string | null; // solo en lo facturado a vencer (fecha de la factura)
 }
 
 export interface FilaCuenta {
   [columna: string]: string | number | null | LineaDetalle[] | boolean;
 }
 
+// Tabla de la página que el parser no conoce: va cruda para que el modelo la vea igual.
+export interface TablaDesconocida {
+  id: string;
+  titulo: string | null;
+  encabezados: string[];
+  filas: string[][];
+}
+
 export interface Cuenta {
   deudaVencida: FilaCuenta[];
+  // En la página se titula "Facturado a Vencer" (antes "Próximos a vencer"); es la misma tabla.
   proximosVencimientos: FilaCuenta[];
+  totalProximosVencimientos: number | null;
   pagos: FilaCuenta[];
+  otras: TablaDesconocida[];
+}
+
+const TABLAS_CUENTA = ['TableDeudaVencida', 'TableProximosVenc', 'TablePagosRealizados'];
+
+// Columnas del desglose según su encabezado: en pagos es Detalle | (materia) | Comprobante | Monto;
+// en lo facturado a vencer, Fecha Fact. | Comprobante | Detalle | Monto. Sin encabezado reconocible, por posición.
+function columnasDetalle(head: string[]) {
+  const i = (re: RegExp) => head.findIndex((h) => re.test(h));
+  const c = { concepto: i(/detalle|concepto|descripci/i), comprobante: i(/comprobante/i), monto: i(/monto|importe/i), materia: head.indexOf(''), fecha: i(/fecha/i) };
+  return c.concepto < 0 || c.comprobante < 0 || c.monto < 0 ? { concepto: 0, materia: 1, comprobante: 2, monto: 3, fecha: -1 } : c;
 }
 
 function parseTablaCuenta($: cheerio.CheerioAPI, id: string): FilaCuenta[] {
   const table = $(`#ctl00_ContentPlaceHolderMain_${id}`);
   if (!table.length) return [];
   const headers = table.find('> tbody > tr > td.grillahead2020, > tbody > tr > th.grillahead2020')
-    .map((_, h) => clean($(h).text()))
+    .map((_, h) => clean($(h).text()).replace(/\.$/, ''))
     .get();
   const rows: FilaCuenta[] = [];
-  table.find('> tbody > tr.grilla4').each((_, tr) => {
-    if ($(tr).attr('id') === 'sinicono') return; // "No posee."
+  // Filas de datos: grilla4 en deuda y pagos, grilla5 en lo facturado a vencer.
+  table.find('> tbody > tr[class^="grilla"]').each((_, tr) => {
+    const rid = $(tr).attr('id');
+    if (rid === 'sinicono' || rid === 'factura_avencer') return; // "No posee." y la fila del total
     const cells = $(tr).children('td').map((_, c) => clean($(c).text())).get();
     const fila: FilaCuenta = {};
     cells.forEach((v, i) => {
       const key = headers[i] ?? `col${i + 1}`;
       fila[key] = /^\$/.test(v) ? parseMoney(v) : /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v) ? parseFecha(v) : orNull(v);
     });
-    // El desplegable de cada pago es la fila siguiente con una tabla .adentro: materias, gastos, recargos.
+    // El desplegable de cada fila es la fila siguiente con una tabla .adentro: materias, gastos, recargos.
     const detalle: LineaDetalle[] = [];
-    $(tr).next('tr').find('table.adentro tr.grilla').each((_, d) => {
+    const adentro = $(tr).next('tr').find('table.adentro');
+    const col = columnasDetalle(adentro.find('tr.tr_tbl_up').first().children('td').map((_, c) => clean($(c).text())).get());
+    adentro.find('tr.grilla').each((_, d) => {
       const td = $(d).children('td').map((_, c) => clean($(c).text())).get();
       if (td.length < 4) return; // "Descargar Factura - …"
-      detalle.push({ concepto: td[0] ?? '', materia: orNull(td[1] ?? ''), comprobante: orNull(td[2] ?? ''), monto: parseMoney(td[3] ?? '') });
+      const linea: LineaDetalle = { concepto: td[col.concepto] ?? '', materia: orNull(td[col.materia] ?? ''), comprobante: orNull(td[col.comprobante] ?? ''), monto: parseMoney(td[col.monto] ?? '') };
+      if (col.fecha >= 0) linea.fecha = parseFecha(td[col.fecha] ?? '');
+      detalle.push(linea);
     });
     if (detalle.length) {
       fila.detalle = detalle;
@@ -434,13 +462,33 @@ function parseTablaCuenta($: cheerio.CheerioAPI, id: string): FilaCuenta[] {
   return rows.sort((a, b) => fecha(b).localeCompare(fecha(a)));
 }
 
+// Una tabla de cuenta con un id que el parser no conoce: encabezados y filas como texto.
+function parseTablaDesconocida($: cheerio.CheerioAPI, table: cheerio.Cheerio<AnyNode>): TablaDesconocida {
+  const encabezados = table.find('> tbody > tr > td.grillahead2020, > tbody > tr > th.grillahead2020, > thead th').map((_, h) => clean($(h).text())).get();
+  const filas: string[][] = [];
+  table.find('> tbody > tr').each((_, tr) => {
+    const cells = $(tr).children('td, th');
+    if (cells.filter('.grillahead2020, .alert').length || $(tr).find('h1, h2, h3, h4, h5, h6').length) return;
+    const fila = cells.map((_, c) => clean($(c).clone().find('table').remove().end().text())).get();
+    if (fila.some((v) => v !== '')) filas.push(fila);
+  });
+  return { id: table.attr('id') ?? '', titulo: orNull(clean(table.find('h1, h2, h3, h4, h5, h6').first().text())), encabezados, filas };
+}
+
 export function parseCuenta(html: string): Cuenta {
   const $ = cheerio.load(html);
   requireAnchor($, '#ctl00_ContentPlaceHolderMain_TablePagosRealizados, #ctl00_ContentPlaceHolderMain_TableDeudaVencida', 'cuenta corriente');
+  const total = clean($('#ctl00_ContentPlaceHolderMain_TableProximosVenc tr#factura_avencer').children('td').filter((_, c) => /^\$/.test(clean($(c).text()))).first().text());
+  const otras = $('table[id^="ctl00_ContentPlaceHolderMain_"]')
+    .filter((_, t) => !TABLAS_CUENTA.includes(($(t).attr('id') ?? '').replace('ctl00_ContentPlaceHolderMain_', '')) && !$(t).parents('table').length)
+    .map((_, t) => parseTablaDesconocida($, $(t)))
+    .get();
   return {
     deudaVencida: parseTablaCuenta($, 'TableDeudaVencida'),
     proximosVencimientos: parseTablaCuenta($, 'TableProximosVenc'),
+    totalProximosVencimientos: total ? parseMoney(total) : null,
     pagos: parseTablaCuenta($, 'TablePagosRealizados'),
+    otras,
   };
 }
 

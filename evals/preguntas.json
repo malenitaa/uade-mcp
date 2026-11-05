@@ -113,6 +113,12 @@
       "aceptables": [{ "tool": "webcampus_account_balance" }]
     },
     {
+      "id": "vence-cuota-noviembre",
+      "grupo": "plata",
+      "pregunta": "¿Cuándo vence la cuota de noviembre?",
+      "aceptables": [{ "tool": "webcampus_account_balance" }]
+    },
+    {
       "id": "matricula-abogacia-manana",
       "grupo": "plata",
       "pregunta": "¿Cuánto sale la matrícula de Abogacía a la mañana?",
