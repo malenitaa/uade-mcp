@@ -132,6 +132,21 @@ export class WebCampus {
     return { nombre: decodeURIComponent(u.pathname.split('/').pop() ?? 'archivo'), bytes: page.bytes };
   }
 
+  // La imagen de un banner del home: solo de WebCampus y solo si los bytes son de una imagen.
+  async imagenBanner(url: string): Promise<{ mimeType: string; bytes: Uint8Array }> {
+    const u = new URL(url, WEBCAMPUS);
+    if (u.origin !== WEBCAMPUS) throw new Error('Solo se bajan imágenes de banners publicadas en WebCampus.');
+    const b = (await this.client.get(u.pathname + u.search)).bytes;
+    const mimeType =
+      b[0] === 0x89 && b[1] === 0x50 ? 'image/png'
+      : b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg'
+      : b[0] === 0x47 && b[1] === 0x49 ? 'image/gif'
+      : b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50 ? 'image/webp'
+      : null;
+    if (!mimeType) throw new Error('WebCampus no devolvió una imagen.');
+    return { mimeType, bytes: b };
+  }
+
   async docentes(idAula: string): Promise<Docente[]> {
     if (!ID.test(idAula)) throw new Error('idAula inválido');
     return parseDocentes((await this.client.get(`/Integrantes/Integrantes.aspx?IdAula=${idAula}`)).html);

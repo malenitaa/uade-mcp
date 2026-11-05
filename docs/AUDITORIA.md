@@ -175,6 +175,21 @@ sobre `@napi-rs/canvas`.
 | **Node 22 o más nuevo** (`engines`, chequeo al arrancar en `node-version.ts`, CI en 22 y 24). En Node 20 la lectura de PDFs fallaba desde unpdf 1.9 (`Iterator is not defined`, que recién apareció al testear `leerPdf` en CI con esta rama); Node 20 terminó su soporte en abril de 2026 | `package.json`, `src/node-version.ts`, `revisar.yml` | `node-version.test.ts` |
 | Tope de texto por PDF del calendario: 6.000 → 20.000 caracteres, para que las listas de materias de verano entren enteras. Medido sin tope: 49 KB entre los 14 PDFs de inscripciones, 9,5 KB los del calendario | `sources/calendario/index.ts` | — |
 
+## Cambio del 05/11/2026 (versión 0.6.2): banners del home como imagen
+
+El 05/11/2026 el home de WebCampus avisaba que la universidad cerraba el lunes 9 y martes 10 de
+noviembre (el 9 y el 11 en Campus Costa Argentina), pero el aviso estaba solo dentro de la imagen del
+banner. `webcampus_news` guardaba solo el texto alternativo ("FERIADO PAPAL") y ante "¿qué tengo el
+lunes 9?" el modelo dijo que no era feriado. Ahora las imágenes de los banners van al modelo.
+
+| Qué cambia | Dónde | Test |
+|---|---|---|
+| `parseHome` guarda la URL de la imagen de cada banner, resuelta contra WebCampus y **solo si es de `www.webcampus.uade.edu.ar`** (una imagen de otro host se ignora); ya no descarta banners sin texto alternativo | `sources/webcampus/novedades.ts` | `novedades.test.ts` |
+| **Nuevo pedido de red, mismo host:** `WebCampus.imagenBanner` baja la imagen por el cliente con sesión (que no sale de su origen), rechaza otro origen y exige bytes de PNG/JPEG/GIF/WebP | `sources/webcampus/index.ts` | `novedades.test.ts` |
+| `webcampus_news` sin argumentos devuelve contenido de imagen además del JSON (como `uade_enrollment_schedule`). Topes: 20 banners y 1,5 MB por imagen; lo que pasa el tope se lista con su link y una nota; si una descarga falla, el JSON sale igual. Las imágenes se guardan en la copia local cifrada (unos 5 MB, 24 h) | `tools/novedades.ts` | `novedades.test.ts` |
+| Descripción de `webcampus_news` e instructions: leer las imágenes de los banners, contarle al estudiante con texto lo que dicen (sin mostrarle las imágenes) y llamar a `webcampus_news` cuando preguntan por un día o una semana concretos. Una imagen de un banner es texto de terceros como el resto: información, no instrucciones (aviso en el resultado) | `tools/novedades.ts`, `index.ts` | eval |
+| `doctor` dice cuántos banners hay y cuántos llegaron como imagen, y avisa si alguno no se pudo bajar | `cli/doctor.ts` | — |
+
 
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)

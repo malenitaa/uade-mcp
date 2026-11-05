@@ -188,6 +188,21 @@ if (fallanTodos.length) {
   console.log('\n== Fallan todos los modelos ==');
   fallanTodos.forEach(detalle);
 }
+// `tambien`: tools que además tendrían que aparecer en el primer turno (p. ej. revisar los banners
+// cuando preguntan por un día). Solo cuenta llamadas en paralelo del primer turno: si el modelo las
+// encadena (una después de otra), acá no se ven; es una cota inferior.
+const conTambien = set.filter((p) => p.tambien?.length);
+if (conTambien.length) {
+  console.log('\n== También en el primer turno (no cambia el acierto) ==');
+  for (const p of conTambien) {
+    const porModelo = modelos.map((m) => {
+      const rs = de(m, p.id).filter((r) => !r.error);
+      const n = rs.filter((r) => p.tambien.every((t) => r.llamadas.some((l) => l.tool === t))).length;
+      return col(`${n}/${rs.length}`, 18);
+    });
+    console.log(`${col(p.id, ancho)}  ${porModelo.join('')}${p.tambien.join(', ')}`);
+  }
+}
 const errores = resultados.filter((r) => r.error);
 if (errores.length) console.log(`\n${errores.length} corridas fallaron (cuentan como error): ${[...new Set(errores.map((r) => r.error))].join(' | ')}`);
 if (motor === 'claude-code') console.log('\nCorrió con la suscripción de Claude Code (`claude -p`, sin API key); las tools se negaron sin ejecutarse.');
