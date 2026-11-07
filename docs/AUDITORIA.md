@@ -201,7 +201,7 @@ las imágenes de los avisos.
 | Qué cambia | Dónde | Test |
 |---|---|---|
 | **Un solo camino para PDFs:** `textoOImagenes` (texto si se lee; sin texto y con fotos, las fotos; si no, las páginas dibujadas; si nada, un aviso para dar el link). Lo usan `webcampus_news link=` (y los adjuntos de `newsId`), `webcampus_section` (y las guías que enlaza) y `uade_academic_calendar`. No hay hosts ni formatos nuevos: son los mismos PDFs de antes, ahora dibujados con los topes de `pdf-paginas.ts` (3 páginas, 20 megapíxeles, 6 imágenes por PDF) | `sources/docs/legible.ts`, `sources/docs/leer.ts`, `tools/novedades.ts`, `sources/webcampus/secciones.ts`, `sources/calendario/index.ts` | `documento.test.ts`, `novedades.test.ts` |
-| Una página que sale toda blanca no se manda (pasa con fotos JPEG 2000, que el pdf.js de `unpdf` no decodifica) | `sources/docs/pdf-paginas.ts` | `documento.test.ts` |
+| Una página que sale toda blanca no se manda | `sources/docs/pdf-paginas.ts` | `documento.test.ts` |
 | Un link de un banner o una novedad que es una imagen (PNG/JPEG/GIF/WebP por sus bytes, hasta 1,5 MB) va como imagen | `sources/docs/leer.ts` | `documento.test.ts`, `novedades.test.ts` |
 | **Nuevo pedido de red, mismo host:** `Inscripciones.imagen` baja las imágenes de los avisos de *Importante* por el cliente con sesión, solo rutas propias de `inscripciones.uade.edu.ar` (`parseGuia` descarta las de otro origen) y solo si los bytes son de una imagen. Topes: 6 imágenes y 1,5 MB cada una; lo que no se baja queda como nota con el link. Se guardan en la copia local cifrada (24 h) | `sources/inscripciones/index.ts`, `tools/inscripciones.ts` | `guia-inscripciones.test.ts` |
 | `uade_enrollment_guide`, `webcampus_news newsId` y `webcampus_section` devuelven contenido de imagen además del JSON en más casos. Las imágenes son de terceros como el texto: información, no instrucciones (aviso en el resultado) | `tools/*.ts` | eval |
@@ -225,6 +225,16 @@ igual para todos los alumnos. Mismo host, mismo permiso (`webcampus.leer`), sin 
 | Una línea nueva en las instructions: "qué entra en un parcial / bibliografía / cómo se aprueba" va directo a `webcampus_course_program` (sin ella, el eval mostraba que los modelos pedían primero `webcampus_current_courses`) | `index.ts` | eval |
 | `doctor` lee el programa de una materia del historial y dice solo largo y si hay fecha (no imprime el código ni el nombre) | `cli/doctor.ts` | `doctor.test.ts` |
 | Fixture: el PDF real del programa de Matemática Discreta (público para todo alumno; metadatos `wkhtmltopdf`, sin autor ni nombres) | `test/fixtures/programas/` | — |
+
+## Cambio del 07/11/2026 (versión 0.7.1): fotos JPEG 2000
+
+*Requisitos de promociones y previos* (banner del home) son 7 fotos JPEG 2000 en capas: en 0.6.4
+llegaban con el aviso y el link porque pdf.js las dibujaba en blanco. Ahora llegan como imagen.
+
+| Qué cambia | Dónde | Test |
+|---|---|---|
+| **Dependencia nueva:** `jpeg2000` 1.1.1 (JS puro, 104 KB, sin dependencias ni scripts de instalación, Apache-2.0). Es el decodificador JPX que pdf.js usaba antes de pasar a wasm. Revisado: sin red, `eval` ni sistema de archivos. Contra: un solo autor y sin cambios desde 01/2023; se usa solo para fotos `JPXDecode` dentro de un PDF que ya se iba a dibujar | `package.json`, `sources/docs/pdf-imagenes.ts` | `documento.test.ts` |
+| Fotos JPEG 2000: el pdf.js de `unpdf` las dibuja en blanco (no trae `openjpeg.wasm`). `pdfSinJpx` las decodifica y las vuelve a guardar en el PDF como píxeles crudos con zlib; pdf.js reconstruye la tabla xref. Topes: 20 megapíxeles por imagen, 120 MB crudos por PDF, una imagen descomprimida por vez. Medido con *Requisitos de promociones y previos* (7 capas de 1190 × 4247): 2,5 s y pico de 665 MB de memoria, transitorio | `sources/docs/pdf-imagenes.ts`, `sources/docs/legible.ts` | `documento.test.ts` (fixture `cuadro.jp2`, sintético) |
 
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)

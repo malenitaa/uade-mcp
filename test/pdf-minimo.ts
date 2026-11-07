@@ -1,13 +1,13 @@
 // PDFs mínimos y sintéticos para los tests (sin datos de nadie).
 // PDF de una página con el contenido dado y, opcional, una imagen XObject; con su tabla xref.
-export function pdfMinimo(contenido: string, imagen?: Buffer): Uint8Array {
+export function pdfMinimo(contenido: string, imagen?: Buffer, { filtro = 'DCTDecode', lado = 300 } = {}): Uint8Array {
   const objs: Buffer[] = [
     Buffer.from('<</Type/Catalog/Pages 2 0 R>>'),
     Buffer.from('<</Type/Pages/Kids[3 0 R]/Count 1>>'),
     Buffer.from(`<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Contents 4 0 R${imagen ? '/Resources<</XObject<</Im1 5 0 R>>>>' : ''}>>`),
     Buffer.concat([Buffer.from(`<</Length ${contenido.length}>>\nstream\n`), Buffer.from(contenido, 'latin1'), Buffer.from('\nendstream')]),
   ];
-  if (imagen) objs.push(Buffer.concat([Buffer.from(`<</Type/XObject/Subtype/Image/Width 300/Height 300/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${imagen.length}>>\nstream\n`), imagen, Buffer.from('\nendstream')]));
+  if (imagen) objs.push(Buffer.concat([Buffer.from(`<</Type/XObject/Subtype/Image/Width ${lado}/Height ${lado}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/${filtro}/Length ${imagen.length}>>\nstream\n`), imagen, Buffer.from('\nendstream')]));
   const partes: Buffer[] = [Buffer.from('%PDF-1.4\n')];
   const offsets: number[] = [];
   let pos = partes[0]!.length;

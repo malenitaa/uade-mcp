@@ -52,7 +52,7 @@ describe('PDFs sin texto legible en una sección', () => {
     const bytes = await dibujado();
     const client = { get: async () => ({ url: new URL('https://dre.uade.edu.ar/emergencia.pdf'), bytes, html: '' }) };
     const d = await new Secciones(client as never).consultar('emergencias');
-    expect('texto' in d && d.texto).toMatch(/^\(PDF sin texto: está dibujado; van 1 imagen/);
+    expect('texto' in d && d.texto).toMatch(/^\(PDF sin texto: es un dibujo o una foto; van 1 imagen/);
     expect(d.imagenes).toHaveLength(1);
   });
 
@@ -65,7 +65,7 @@ describe('PDFs sin texto legible en una sección', () => {
     expect(d.imagenes).toHaveLength(1);
     expect('recortado' in d && d.recortado).toBe(true);
     expect('texto' in d && d.texto.length).toBeLessThan(8300);
-    expect('texto' in d && d.texto).toMatch(/\[Guía: vestimenta\.pdf\] \(PDF sin texto: está dibujado; van 1 imagen de sus páginas para que las leas\)$/);
+    expect('texto' in d && d.texto).toMatch(/\[Guía: vestimenta\.pdf\] \(PDF sin texto: es un dibujo o una foto; van 1 imagen de sus páginas para que las leas\)$/);
   });
 });
 
@@ -74,7 +74,7 @@ describe('webcampus_section con query', () => {
     const { registerSeccionesTools } = await import('../src/tools/secciones.js');
     let handler!: (a: Record<string, unknown>) => Promise<{ content: { type: string; text?: string }[] }>;
     const fake = { registerTool: (n: string, _c: unknown, h: typeof handler) => { if (n === 'webcampus_section') handler = h; } } as unknown as McpServer;
-    const sec = { consultar: async () => ({ seccion: 'emergencias', fuente: 'https://dre.uade.edu.ar/emergencia.pdf', texto: '(PDF sin texto: está dibujado; van 1 imagen de sus páginas para que las leas)', imagenes: [{ mimeType: 'image/png', base64: 'AAAA' }] }) };
+    const sec = { consultar: async () => ({ seccion: 'emergencias', fuente: 'https://dre.uade.edu.ar/emergencia.pdf', texto: '(PDF sin texto: es un dibujo o una foto; van 1 imagen de sus páginas para que las leas)', imagenes: [{ mimeType: 'image/png', base64: 'AAAA' }] }) };
     registerSeccionesTools(fake, new Set(['webcampus.leer']), sec as never, {} as never);
     const r = await handler({ section: 'emergencias', query: 'Belgrano' });
     expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);

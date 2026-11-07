@@ -8,6 +8,7 @@
 // zlib. Los escáneres suelen cortar la hoja en tiras del mismo ancho: las tiras consecutivas se
 // pegan en una sola imagen.
 import { deflateSync, inflateSync } from 'node:zlib';
+import { JpxImage } from 'jpeg2000';
 
 export interface ImagenPdf {
   mimeType: 'image/jpeg' | 'image/png';
@@ -34,6 +35,7 @@ const MAX_DICT = 4096; // un diccionario de imagen mide unas decenas de bytes; m
 interface ObjetoStream {
   n: string;
   dict: string;
+  inicioDict: number; // donde está el "<<"
   inicio: number;
 }
 
@@ -60,7 +62,7 @@ function* objetosConStream(s: string): Generator<ObjetoStream> {
       j += 6;
       if (s[j] === '\r') j++;
       if (s[j] !== '\n') continue;
-      yield { n, dict, inicio: j + 1 };
+      yield { n, dict, inicioDict: saltarBlancos(s, pos), inicio: j + 1 };
     }
   }
 }
@@ -249,6 +251,53 @@ function crc32(b: Buffer): number {
   let c = 0xffffffff;
   for (const x of b) c = TABLA_CRC[(c ^ x) & 0xff]! ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
+}
+
+// Fotos JPEG 2000 (JPXDecode): el pdf.js de unpdf no trae el decodificador (openjpeg.wasm) y las
+// dibuja en blanco. Se decodifican con jpeg2000 (el decodificador JPX que pdf.js usaba en JS puro) y
+// se vuelven a guardar en el PDF como píxeles crudos con zlib, para que pdf.js dibuje la página
+// entera, con sus capas y recortes. Los offsets de la tabla xref quedan corridos: pdf.js la
+// reconstruye recorriendo el archivo. Topes: 20 megapíxeles por imagen y 120 MB crudos por PDF (lo
+// que no entra queda como estaba). Los píxeles crudos de cada imagen se comprimen y se sueltan antes
+// de la siguiente: en memoria hay una sola a la vez. Devuelve null si no había nada que cambiar.
+const MAX_CRUDO_JPX = 120 * 1024 * 1024; // el aviso de promociones y previos son 7 capas de 15 MB
+export function pdfSinJpx(bytes: Uint8Array): Uint8Array | null {
+  const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const s = buf.toString('latin1');
+  if (!s.includes('/JPXDecode')) return null;
+  const partes: Buffer[] = [];
+  let desde = 0;
+  let presupuesto = MAX_CRUDO_JPX;
+  for (const { dict, inicioDict, inicio } of objetosConStream(s)) {
+    if (!/\/Subtype\s*\/Image\b/.test(dict) || !/\/Filter\s*\[?\s*\/JPXDecode\s*\]?/.test(dict) || /\/Length\s+\d+\s+\d+\s+R/.test(dict)) continue;
+    const ancho = num(dict, 'Width'), alto = num(dict, 'Height'), largo = num(dict, 'Length');
+    if (!ancho || !alto || !largo || ancho * alto > MAX_PIXELES || ancho * alto * 3 > presupuesto) continue;
+    let gris: boolean, crudo: Buffer;
+    try {
+      const jpx = new JpxImage();
+      jpx.parse(buf.subarray(inicio, inicio + largo));
+      if (jpx.width !== ancho || jpx.height !== alto || (jpx.componentsCount !== 1 && jpx.componentsCount !== 3)) continue;
+      gris = jpx.componentsCount === 1;
+      const c = jpx.componentsCount;
+      crudo = Buffer.alloc(ancho * alto * c);
+      for (const t of jpx.tiles) {
+        for (let y = 0; y < t.height; y++) {
+          Buffer.from(t.items.buffer, t.items.byteOffset + y * t.width * c, t.width * c).copy(crudo, ((t.top + y) * ancho + t.left) * c);
+        }
+      }
+    } catch {
+      continue;
+    }
+    presupuesto -= crudo.length;
+    const datos = deflateSync(crudo);
+    const smask = dict.match(/\/SMask\s+\d+ 0 R/)?.[0] ?? '';
+    partes.push(buf.subarray(desde, inicioDict));
+    partes.push(Buffer.from(`<</Type/XObject/Subtype/Image/Width ${ancho}/Height ${alto}/ColorSpace/${gris ? 'DeviceGray' : 'DeviceRGB'}/BitsPerComponent 8${smask}/Filter/FlateDecode/Length ${datos.length}>>\nstream\n`, 'latin1'), datos);
+    desde = inicio + largo;
+  }
+  if (!partes.length) return null;
+  partes.push(buf.subarray(desde));
+  return new Uint8Array(Buffer.concat(partes));
 }
 
 export const aBase64 = (b: Uint8Array): string => Buffer.from(b.buffer, b.byteOffset, b.byteLength).toString('base64');

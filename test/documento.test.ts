@@ -6,10 +6,13 @@ import { describe, expect, it } from 'vitest';
 import { leerArchivo, MAX_BYTES_IMAGEN } from '../src/sources/docs/leer.js';
 import { comoLlego, SIN_CONTENIDO, TEXTO_DIBUJADO, TEXTO_ESCANEADO, TEXTO_ILEGIBLE, textoOImagenes } from '../src/sources/docs/legible.js';
 import { paginasComoImagenes } from '../src/sources/docs/pdf-paginas.js';
+import { pdfSinJpx } from '../src/sources/docs/pdf-imagenes.js';
 import { pdfMinimo } from './pdf-minimo.js';
 
 const png = new Uint8Array(readFileSync(new URL('./fixtures/webcampus/banner.png', import.meta.url)));
 const ilegible = new Uint8Array(readFileSync(new URL('./fixtures/calendario/cronos_inscrip_previos.pdf', import.meta.url)));
+// Un cuadro negro sobre blanco, 240 × 240, en JPEG 2000 RGB (hecho con sips; sin datos de nadie).
+const jp2 = readFileSync(new URL('./fixtures/docs/cuadro.jp2', import.meta.url));
 const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(40, 1)]);
 
 describe('textoOImagenes', () => {
@@ -38,6 +41,19 @@ describe('textoOImagenes', () => {
     expect(r.texto.startsWith(TEXTO_DIBUJADO)).toBe(true);
     expect(r.imagenes).toHaveLength(1);
     expect(r.imagenes![0]!.mimeType).toBe('image/png');
+  });
+
+  it('fotos JPEG 2000 (como requisitos de promociones): se decodifican y la página se dibuja con ellas', async () => {
+    const pdf = pdfMinimo('q 200 0 0 200 0 0 cm /Im1 Do Q', jp2, { filtro: 'JPXDecode', lado: 240 });
+    const convertido = pdfSinJpx(pdf)!;
+    expect(Buffer.from(convertido).toString('latin1')).toMatch(/\/Width 240\/Height 240\/ColorSpace\/DeviceRGB\/BitsPerComponent 8\/Filter\/FlateDecode/);
+    expect(Buffer.from(convertido).toString('latin1')).not.toContain('JPXDecode');
+    const r = await textoOImagenes('', pdf);
+    expect(r.texto.startsWith(TEXTO_DIBUJADO)).toBe(true);
+    expect(r.imagenes).toHaveLength(1);
+    expect(await paginasComoImagenes(pdf)).toEqual([]); // sin convertir, pdf.js la dibuja en blanco
+    expect(pdfSinJpx(pdfMinimo('0 0 0 rg 20 20 160 40 re f'))).toBeNull();
+    expect(pdfSinJpx(pdfMinimo('', Buffer.from('basura'), { filtro: 'JPXDecode', lado: 240 }))).toBeNull(); // no se puede decodificar: queda igual
   });
 
   it('una página que sale toda blanca no se manda: queda el aviso para dar el link', async () => {

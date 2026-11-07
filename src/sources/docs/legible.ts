@@ -2,7 +2,7 @@
 // de inscripción, hechos en Illustrator) llevan fuentes recortadas sin mapa de caracteres: el
 // extractor devuelve un código de control por letra (\u001f\u001e…) y ningún lector puede hacer
 // más. Se mide la proporción de letras y números sobre los caracteres que no son blancos.
-import { aBase64, imagenesDePdf } from './pdf-imagenes.js';
+import { aBase64, imagenesDePdf, pdfSinJpx } from './pdf-imagenes.js';
 import { paginasComoImagenes } from './pdf-paginas.js';
 
 const UMBRAL = 0.5;
@@ -15,7 +15,7 @@ export function textoLegible(texto: string): boolean {
 }
 
 export const TEXTO_ESCANEADO = '(PDF escaneado: no tiene texto';
-export const TEXTO_DIBUJADO = '(PDF sin texto: está dibujado';
+export const TEXTO_DIBUJADO = '(PDF sin texto: es un dibujo o una foto';
 export const TEXTO_ILEGIBLE = '(PDF con fuentes sin mapa de caracteres: no se puede leer como texto';
 export const SIN_CONTENIDO = '(No pude sacar ni texto ni imágenes de este PDF';
 
@@ -28,7 +28,8 @@ const van = (n: number, de: string) => `van ${n} ${n > 1 ? 'imágenes' : 'imagen
 
 // El único camino para un PDF ya leído: si su texto se lee, el texto; si no tiene texto y trae
 // fotos (un escaneo), esas fotos tal cual; si no, sus páginas dibujadas; si nada de eso sale, un
-// texto que lo dice, para que quien llama ponga el link. Con texto ilegible no se miran las fotos
+// texto que lo dice, para que quien llama ponga el link. Las fotos JPEG 2000 se decodifican antes de
+// dibujar (pdfSinJpx). Con texto ilegible no se miran las fotos
 // embebidas: el texto está en vectores y las fotos serían solo el fondo del diseño.
 export async function textoOImagenes(texto: string, bytes: Uint8Array): Promise<PdfLegible> {
   if (textoLegible(texto)) return { texto };
@@ -37,7 +38,8 @@ export async function textoOImagenes(texto: string, bytes: Uint8Array): Promise<
     const fotos = imagenesDePdf(bytes);
     if (fotos.length) return { texto: `${TEXTO_ESCANEADO}; ${van(fotos.length, '')}`, imagenes: fotos.map((i) => ({ mimeType: i.mimeType, base64: aBase64(i.bytes) })) };
   }
-  const paginas = await paginasComoImagenes(bytes).catch(() => []);
+  // Fotos JPEG 2000: se pasan a píxeles crudos antes de dibujar (pdf-imagenes.ts).
+  const paginas = await Promise.resolve().then(() => paginasComoImagenes(pdfSinJpx(bytes) ?? bytes)).catch(() => []);
   if (paginas.length) {
     return {
       texto: `${sinTexto ? TEXTO_DIBUJADO : TEXTO_ILEGIBLE}; ${van(paginas.length, ' de sus páginas')}`,

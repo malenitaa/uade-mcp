@@ -1,6 +1,6 @@
 {
   "name": "uade-mcp",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
   "keywords": [
     "mcp",
@@ -51,6 +51,7 @@
     "@napi-rs/keyring": "2.1.2",
     "cheerio": "1.2.0",
     "fflate": "0.8.3",
+    "jpeg2000": "1.1.1",
     "playwright-core": "1.64.1",
     "read-excel-file": "9.3.12",
     "unpdf": "1.9.1",

@@ -69,7 +69,7 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 100 · 🟡 11 · ❌ 55 · ⛔ 56. ro
 | Home › banners › Banner 5 | externo | docs.google.com | público | ⛔ fuera | acortador → docs.google.com |  |
 | Home › banners › Banner 6 | pdf | dre.uade.edu.ar/cronogramasUADE.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
 | Home › banners › Banner 7 | externo | sm.pemres.net | público | ⛔ fuera | acortador → sm.pemres.net |  |
-| Home › banners › Banner 8 | pdf | www.dre.uade.edu.ar/Requisistos_promociones y previos.pdf | público | 🟡 solo link | webcampus_news link — fotos JPEG 2000: avisa y da el link (0.6.4) | 1 pág., sin texto legible |
+| Home › banners › Banner 8 | pdf | www.dre.uade.edu.ar/Requisistos_promociones y previos.pdf | público | ✅ lee | webcampus_news link — fotos JPEG 2000 decodificadas, como imagen de la página (0.7.1) | 1 pág., sin texto legible |
 | Home › banners › Banner 9 | pdf | dre.uade.edu.ar/residencia.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
 | Home › banners › Banner 10 | externo | parking.uade.edu.ar | — | ⛔ fuera | sitio externo (parking.uade.edu.ar), no se contactó |  |
 | Home › banners › Banner 11 | pdf | dre.uade.edu.ar/horariosemanales.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
@@ -325,10 +325,9 @@ uno está confirmado con la tool que debería responderlo (07/11/2026).
    0.6.4.** `webcampus_news link=`, `webcampus_section` (y sus guías) y `uade_academic_calendar` pasan por
    un solo camino (`textoOImagenes`, `sources/docs/legible.ts`): texto si se lee; si no tiene texto y trae
    fotos, las fotos; si no, las páginas dibujadas; si nada sale, un aviso con el link. Vestimenta del
-   gimnasio y números ante emergencias llegan como imagen. Queda 🟡 *Requisitos de promociones y
-   previos*: no es un dibujo sino 7 fotos **JPEG 2000**, que el pdf.js de `unpdf` no decodifica (trae
-   recortado el cargador de `openjpeg.wasm`); la página saldría en blanco, así que no se manda y se da el
-   link. Arreglo posible: decodificar JPX con el `openjpeg.wasm` de `pdfjs-dist` de la misma versión.
+   gimnasio y números ante emergencias llegan como imagen; *Requisitos de promociones y previos*, desde
+   0.7.1. Este último no era un dibujo sino 7 fotos **JPEG 2000** en capas, que el pdf.js de `unpdf` dibuja en blanco
+   (trae recortado el cargador de `openjpeg.wasm`): se decodifican antes con `jpeg2000` (`pdfSinJpx`).
 3. ~~**Avisos de inscripción que están en una imagen.**~~ **Resuelto en 0.6.4.** `uade_enrollment_guide`
    baja las imágenes de los avisos de *Importante* (mismo sitio, hasta 6, 1,5 MB cada una), las manda
    como imagen y marca con `[imagen N]` dónde estaba cada una: el aviso de las modalidades nuevas sigue
@@ -374,7 +373,7 @@ Lo que es igual para todos y está en el sitio oficial sin login, para una base 
 | Normativa académica, guía institucional, código de conducta, compromiso, vestimenta, protocolo, lineamientos de IA | dre.uade.edu.ar (normas.pdf, GuiaAluBA.pdf, …) | ✅ `webcampus_section` | Públicos; hoy se llega con sesión al menú |
 | Optativas y minors | dre.uade.edu.ar/WebCampus/Optativas y Minors/… | ✅ | 71 y 32 páginas: buenos para buscar sin bajarlos cada vez |
 | Mención de honor, guía de ingreso, reglamento del centro deportivo, AYUES, residencia | dre.uade.edu.ar | ✅ | Públicos |
-| Avisos en banners con PDF (horarios semanales, cambio/alta, vestimenta del gym, requisitos de promociones y previos) | dre.uade.edu.ar | ✅ / 🟡 | Cambian seguido; desde 0.6.4 el del gym va como imagen; el de promociones (JPEG 2000) sigue solo con link |
+| Avisos en banners con PDF (horarios semanales, cambio/alta, vestimenta del gym, requisitos de promociones y previos) | dre.uade.edu.ar | ✅ / 🟡 | Cambian seguido; desde 0.6.4 el del gym va como imagen, y desde 0.7.1 el de promociones (JPEG 2000) |
 | Números ante emergencias | dre.uade.edu.ar/emergencia.pdf | ✅ como imagen (0.6.4) | — |
 | Convenios de intercambio de grado | www.uade.edu.ar/media/…/grado-convenios-vf.pdf | ❌ | Versión liviana y legible del que en WebCampus pesa más de 10 MB |
 | Oferta académica y certificados de idioma de intercambio, FAQ de outgoing | www.uade.edu.ar/media/… | ❌ (la oferta sí, por dre) | Públicos |

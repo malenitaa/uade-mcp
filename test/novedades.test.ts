@@ -174,7 +174,7 @@ describe('leer links', () => {
   it('PDF de dre sin texto (dibujado, como el de requisitos de promociones): llega como imagen de la página, no como "escaneado"', async () => {
     vi.stubGlobal('fetch', async () => new Response(pdfMinimo('0 0 0 rg 20 20 160 40 re f'), { headers: { 'content-type': 'application/pdf' } }));
     const r = await leerLink('https://www.dre.uade.edu.ar/Requisitos%20ficticios.pdf', deps);
-    expect(r.texto).toMatch(/^\(PDF sin texto: está dibujado; van 1 imagen de sus páginas/);
+    expect(r.texto).toMatch(/^\(PDF sin texto: es un dibujo o una foto; van 1 imagen de sus páginas/);
     expect(r.imagenes).toHaveLength(1);
   });
 

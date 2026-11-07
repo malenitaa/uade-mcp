@@ -4,8 +4,8 @@
 // sin opcionales), se devuelve vacío y quien llama avisa con el link. Topes como en pdf-imagenes.ts:
 // páginas, megapíxeles y cantidad de imágenes por PDF. Las páginas largas se cortan en tiras con
 // un poco de solapamiento, porque el modelo achica cada imagen a unos 1500 px de lado. Una página
-// que sale toda blanca no se manda: pasa cuando pdf.js no puede decodificar sus fotos (JPEG 2000:
-// el pdf.js de unpdf no trae el decodificador), y mandarla sería decir que el documento está vacío.
+// que sale toda blanca no se manda: pasa cuando pdf.js no puede decodificar sus fotos (por ejemplo
+// JPEG 2000 que pdfSinJpx no pudo convertir), y mandarla sería decir que el documento está vacío.
 import { createIsomorphicCanvasFactory, getDocumentProxy } from 'unpdf';
 
 export interface PaginaPng {
