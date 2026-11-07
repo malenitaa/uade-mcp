@@ -222,6 +222,7 @@ igual para todos los alumnos. Mismo host, mismo permiso (`webcampus.leer`), sin 
 | Por nombre se busca solo en el historial propio (misma copia local que `webcampus_transcript`); si coincide con varias materias, error de uso con la lista para que el modelo repregunte | `tools/webcampus.ts` | `programas.test.ts` |
 | Copia local cifrada con TTL nuevo de 30 días (`TTL.mes`, clave `programa:<código>:<modalidad>`); `uade_refresh` la borra como al resto. Un programa no tiene datos personales | `cache/cache.ts` | — |
 | Salida acotada: sin `query`, hasta 20.000 caracteres con aviso de recorte (medidos: 10.000 a 16.500); con `query`, solo las secciones del programa que la mencionan | `tools/webcampus.ts` | `programas.test.ts` |
+| Una línea nueva en las instructions: "qué entra en un parcial / bibliografía / cómo se aprueba" va directo a `webcampus_course_program` (sin ella, el eval mostraba que los modelos pedían primero `webcampus_current_courses`) | `index.ts` | eval |
 | `doctor` lee el programa de una materia del historial y dice solo largo y si hay fecha (no imprime el código ni el nombre) | `cli/doctor.ts` | `doctor.test.ts` |
 | Fixture: el PDF real del programa de Matemática Discreta (público para todo alumno; metadatos `wkhtmltopdf`, sin autor ni nombres) | `test/fixtures/programas/` | — |
 
