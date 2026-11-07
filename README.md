@@ -95,6 +95,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | `webcampus_transcript` | Historial: aprobadas, finales pendientes (con vencimiento de la regularidad), recursadas y ausentes anteriores, cursando, sin cursar y promedio |
 | `uade_eligible_subjects` | Qué podés cursar y qué finales podés rendir, cruzando historial y correlativas del plan |
 | `webcampus_exam_schedule` | Cronograma oficial de exámenes previos (por defecto, de tus finales pendientes) |
+| `webcampus_course_program` | El programa oficial de cualquier materia (no solo las tuyas): unidades y temas, cronograma de clases (qué entra en cada parcial), cómo se aprueba y bibliografía. Por código o por nombre de una materia de tu plan; con `query` ("bibliografía", "evaluación") trae solo esas secciones |
 | `planuade_import_transcript` | Abre [Plan UADE](https://planuade.ar) con tu historial para importarlo; confirmás ahí |
 
 **Inscripciones**

@@ -14,6 +14,7 @@ export const TTL = {
   medio: 12 * HORA, // planificación, oferta, exámenes previos
   dia: 24 * HORA, // cursos, docentes, historial
   semana: 7 * 24 * HORA, // calendario, secciones (PDFs)
+  mes: 30 * 24 * HORA, // programas de materias (cambian una vez por cuatrimestre, como mucho)
 } as const;
 
 interface Item {

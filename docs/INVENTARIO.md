@@ -55,7 +55,7 @@ Columnas: **Acceso** es público (sin login), igual para todos pero detrás del 
 
 <!-- inventario:inicio (lo genera scripts/inventario.mjs; no editar a mano) -->
 
-Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. robots.txt: www.uade.edu.ar no tiene (404), dre.uade.edu.ar no tiene (200). Sitemap: 10052 URLs (8661 de agenda), 28 elegidas por el criterio.
+Recorrido del 07/11/2026: 222 ítems. ✅ 100 · 🟡 11 · ❌ 55 · ⛔ 56. robots.txt: www.uade.edu.ar no tiene (404), dre.uade.edu.ar no tiene (200). Sitemap: 10052 URLs (8661 de agenda), 28 elegidas por el criterio.
 
 ### WebCampus
 
@@ -156,18 +156,18 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | Académico › Información › Materias Regulares Intensivas (MRI) › www.uade.edu.ar | link roto | /Contenidos/www.uade.edu.ar | igual para todos (login) | ⛔ fuera | link mal armado en la página de UADE (relativo a otro sitio) |  |
 | Académico › Información › Materias Regulares Intensivas (MRI) › Facebook / UADE COSTA ARGENTINA | externo | www.facebook.com | — | ⛔ fuera | sitio externo (www.facebook.com), no se contactó |  |
 | Académico › Información › Carreras - Materias | pagina | /Contenidos/ListaCarreras.aspx | igual para todos (login) | 🟡 lee mal | webcampus_section carreras — recortado a 8.000 caracteres sin query (tiene 9480) | tbl_Carreras; 176 img |
-| Académico › Información › Carreras - Materias › Contador Público | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=922 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Contador Público (Costa Argentina) | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P92 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Diplomatura en Administración Contable | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P13 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Diplomatura en Sistemas de Gestión Empresarial sap Next-gen | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=146 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Diplomatura Universitaria en Administración de Inversiones Financieras | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=128 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Comercio Internacional | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=419 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Finanzas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=420 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Recursos Humanos | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=431 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Abogacía | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=932 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Administración de Empresas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=409 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Administración de Empresas (Costa Argentina) | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P40 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
-| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Finanzas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=926 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (el código abre el programa) |  |
+| Académico › Información › Carreras - Materias › Contador Público | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=922 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Contador Público (Costa Argentina) | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P92 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Diplomatura en Administración Contable | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P13 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Diplomatura en Sistemas de Gestión Empresarial sap Next-gen | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=146 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Diplomatura Universitaria en Administración de Inversiones Financieras | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=128 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Comercio Internacional | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=419 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Finanzas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=420 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Administración de Empresas y Recursos Humanos | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=431 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Abogacía | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=932 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Administración de Empresas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=409 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Administración de Empresas (Costa Argentina) | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=P40 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
+| Académico › Información › Carreras - Materias › Doble Titulación en Contador Público y Finanzas | pagina | /Contenidos/PlanesEstudioListaMaterias.aspx?IdFacultad=3&IdCarrera=926 | igual para todos (login) | ❌ no lee | materias de cada carrera, con su código (con el código, webcampus_course_program trae el programa) |  |
 | Académico › Información › Información de Materias | pagina | /PlanesProgramas/Planes.aspx | igual para todos (login) | ❌ no lee | combos en cascada (facultad → carrera → materia) |  |
 | Académico › Información › Información de Materias › SIA-COMPRENSIÓN DE TEXTOS | pagina | /HomeMateria.aspx?idMateria=… | igual para todos (login) | ❌ no lee |  |  |
 | Académico › Información › Información de Materias › Cuadernillo SIA-COMPRENSIÓN DE TEXTOS | pdf | /Docs/Comprension-de-texto-Cuadernillo.pdf | igual para todos (login) | ❌ no lee |  | 66 pág., texto legible |
@@ -230,7 +230,7 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | Mis Cursos › aula de ejemplo › Integrantes | pagina | /Integrantes/Integrantes.aspx?IdAula=… | personal | ✅ lee | webcampus_teachers | tableintegrantes: Foto / Nombre / Email / Legajo / Rol; 30 img |
 | Mis Cursos › aula de ejemplo › Mi Semana | pagina | /PlanificacionClases/MiSemana.aspx?IdAula=… | personal | ✅ lee | webcampus_course_calendar | 1500 [tr_ancho, celda_cursada_desplegada] |
 | Mis Cursos › aula de ejemplo › Historial de novedades | pagina | /Contenidos/NovedadHist.aspx?IdAula=…&IdNov=… | personal | ❌ no lee | sin ejemplo con contenido | tabla; 1 img; vacía |
-| Mis Cursos › aula de ejemplo › Programa de la materia | pdf | /Programas/<código>_<materia>_<fecha>.pdf | igual para todos (login) | ❌ no lee | programa de la materia (igual para todos los que la cursan) | 5 pág., texto legible |
+| Mis Cursos › aula de ejemplo › Programa de la materia | pdf | /Programas/<código>_<materia>_<fecha>.pdf | igual para todos (login) | ✅ lee | webcampus_course_program | 5 pág., texto legible |
 | Mis Cursos › aula de ejemplo › Certificado de examen | no seguido | /contenidos/certificadoExamen.aspx | personal | ⛔ fuera | genera un certificado: no se abre |  |
 | Mis Cursos › Alumno › Clases de consulta | pagina | /Contenidos/MisClasesApoyo.aspx | igual para todos (login) | ✅ lee | webcampus_consultation_classes | tabla; 2 combos |
 
@@ -309,14 +309,18 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 Qué preguntaría un alumno que hoy no se responde o se responde mal, de más a menos importante. Cada
 uno está confirmado con la tool que debería responderlo (07/11/2026).
 
-1. **"¿Qué temas entran, cómo se aprueba, qué bibliografía tiene X?"** El programa de cada materia es
+1. ~~**"¿Qué temas entran, cómo se aprueba, qué bibliografía tiene X?"**~~ **Resuelto en 0.7.0** con
+   `webcampus_course_program`. El programa de cada materia es
    un PDF con texto legible (5 páginas en el aula de ejemplo) y **ninguna tool lo lee**. COBERTURA lo
    daba por difícil (combos en cascada de "Información de Materias"), pero hay un camino directo:
    `Contenidos/DownloadPrograma.aspx?IdMateria=<código>` redirige a `/Programas/<código>_<materia>_<fecha>.pdf`
    para **cualquier** materia, no solo las que se cursan (probado con tres códigos de otra carrera).
    Los códigos salen de la lista de materias de cada carrera (`PlanesEstudioListaMaterias.aspx`, ver
    el punto 5) o del historial. Igual para todos, detrás del login. Arreglo: una tool de solo lectura
-   con el código o el nombre de la materia.
+   con el código o el nombre de la materia. Hecho: el redirect necesita `VieneDe=P` (sin eso, página
+   vacía); `EsVirtual=True` da el programa de la modalidad virtual, y un código sin programa va a
+   `/Archivo404.aspx`. Por nombre se resuelve solo dentro del plan propio; para otra carrera hace
+   falta el código hasta que se lea el punto 5.
 2. ~~**"¿Qué necesito para promocionar o rendir previo?" y otros avisos en PDF sin texto.**~~ **Resuelto en
    0.6.4.** `webcampus_news link=`, `webcampus_section` (y sus guías) y `uade_academic_calendar` pasan por
    un solo camino (`textoOImagenes`, `sources/docs/legible.ts`): texto si se lee; si no tiene texto y trae

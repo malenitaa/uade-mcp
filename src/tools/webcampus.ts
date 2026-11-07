@@ -8,9 +8,13 @@ import { guardarEnSalida } from '../net/open-browser.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { MateriaHistorial } from '../sources/webcampus/parse.js';
 import { recordatorios, recordatoriosIcs } from '../sources/webcampus/recordatorios.js';
+import { buscarMateria, CODIGO_MATERIA, partesDelPrograma } from '../sources/webcampus/programas.js';
+import { ErrorDeUso } from '../error-de-uso.js';
 import { cache, TTL } from '../cache/cache.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
-import { READ_ONLY, run } from './common.js';
+import { CON_IMAGENES, READ_ONLY, run } from './common.js';
+
+const MAX_PROGRAMA = 20_000; // caracteres; los programas medidos (11/2026) tienen 10.000 a 15.000
 
 const idAula = z.string().regex(/^\d+$/).describe('from webcampus_current_courses');
 
@@ -189,6 +193,49 @@ export function registerWebCampusTools(server: McpServer, granted: ReadonlySet<P
         const r = await cache.get(`consultas:${subject ?? ''}`, TTL.medio, () => wc.clasesDeConsulta(subject));
         const { form: _f, carreras: _c, ...v } = r.value;
         return { actualizado: r.actualizado, ...v, materias: v.materias.map((m) => m.nombre) };
+      }),
+  );
+
+  server.registerTool(
+    'webcampus_course_program',
+    {
+      title: 'Subject syllabus (programa de la materia)',
+      description:
+        "Official syllabus (programa) of ANY UADE subject, not only the student's: objectives, units and their topics, class-by-class schedule (cronograma: which units go into each parcial), teaching method, how to pass (attendance, parciales, promoción, final) and bibliography (obligatoria, complementaria), with the program's date and link. subject: code (3.1.024) or a name from the student's degree plan; for another degree's subject pass the code. query (e.g. \"bibliografía\", \"unidad\", \"aprobación\"): only the sections that mention it. What goes into a parcial: no query, read the cronograma at the end.",
+      inputSchema: {
+        subject: z.string().min(3).max(80).describe('code like 3.1.024 or part of the name'),
+        query: z.string().min(3).max(80).optional(),
+        modality: z.enum(['presencial', 'virtual']).default('presencial'),
+      },
+      annotations: READ_ONLY,
+    },
+    ({ subject, query, modality }) =>
+      read(async () => {
+        const s = subject.trim();
+        let codigo = s;
+        if (!CODIGO_MATERIA.test(s)) {
+          if (/^[\d.\s]+$/.test(s)) throw new ErrorDeUso(`"${s}" no es un código de materia (tienen la forma 3.1.024).`);
+          const h = (await cache.get('historial:', TTL.dia, () => wc.historial())).value;
+          const encontradas = buscarMateria(h.materias, s);
+          if (!encontradas.length) throw new ErrorDeUso(`"${s}" no está en tu plan (${h.carrera}). Si es de otra carrera, pasá el código de la materia (forma 3.1.024).`);
+          if (encontradas.length > 1) throw new ErrorDeUso(`"${s}" coincide con varias materias de tu plan: ${encontradas.map((m) => `${m.codigo} ${m.nombre}`).join('; ')}. Preguntale al estudiante cuál y pasá el código.`);
+          codigo = encontradas[0]!.codigo;
+        }
+        const { value: p, actualizado } = await cache.get(`programa:${codigo}:${modality}`, TTL.mes, () => wc.programa(codigo, modality));
+        const { texto, imagenes, ...datos } = p;
+        if (query && !imagenes) {
+          const partes = partesDelPrograma(texto, query);
+          return { actualizado, aviso: UNTRUSTED_NOTE, ...datos, partes: partes.length ? partes : [`No aparece "${query}" en el programa; pedilo sin query para leerlo entero.`] };
+        }
+        const recortado = texto.length > MAX_PROGRAMA;
+        return {
+          actualizado,
+          aviso: UNTRUSTED_NOTE,
+          ...datos,
+          texto: recortado ? `${texto.slice(0, MAX_PROGRAMA)} … (recortado: pasá query para buscar una parte)` : texto,
+          recortado: recortado || undefined,
+          [CON_IMAGENES]: imagenes,
+        };
       }),
   );
 
