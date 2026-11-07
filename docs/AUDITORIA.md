@@ -209,6 +209,23 @@ las imágenes de los avisos.
 | Claves nuevas en la copia local (`link:v2`, `novedad:v2`, `seccion:v2`, `guia-inscripciones:v2`): las de antes guardaban por hasta una semana el resultado sin contenido | `tools/*.ts` | — |
 | `doctor` cuenta cuántos documentos llegaron como texto, como imagen o solo con el link (novedades, secciones, guía) y avisa con el nombre de los que quedaron sin contenido (documentos públicos de UADE, no datos de la persona) | `cli/doctor.ts` | `documento.test.ts` |
 
+## Cambio del 07/11/2026 (versión 0.7.0): programa de una materia
+
+Tool nueva de solo lectura, `webcampus_course_program`: el programa oficial (PDF) de cualquier materia,
+igual para todos los alumnos. Mismo host, mismo permiso (`webcampus.leer`), sin escritura.
+
+| Qué cambia | Dónde | Test |
+|---|---|---|
+| **Pedido nuevo, mismo host:** `GET /Contenidos/DownloadPrograma.aspx?IdMateria=<código>&VieneDe=P&EsVirtual=<True\|False>` por el cliente con sesión de WebCampus. El código se valida contra `^\d{1,2}\.\d{1,2}\.\d{3}$` **antes** de armar la URL (no se puede inyectar `&`, `/` ni otro path); la modalidad es un enum | `sources/webcampus/programas.ts` | `programas.test.ts` |
+| **La redirección solo se acepta dentro de WebCampus:** el PDF se lee solo si la URL final es `www.webcampus.uade.edu.ar/Programas/*.pdf` y los bytes empiezan con `%PDF`. Un salto a otro host lo sigue `safeFetch` solo si está en la allowlist y **sin cookies** (van solo al origen), y después se rechaza sin leerlo | `sources/webcampus/programas.ts`, `net/http.ts` | `programas.test.ts` |
+| El PDF pasa por `leerPdf` (topes de 80 páginas y 10 MB) y por el camino común de la 0.6.4, `textoOImagenes` (texto, fotos o páginas dibujadas con los topes de `pdf-paginas.ts`). Texto de terceros: el resultado lleva el aviso de `UNTRUSTED_NOTE` | `sources/webcampus/programas.ts`, `sources/docs/legible.ts`, `tools/webcampus.ts` | `programas.test.ts` |
+| Por nombre se busca solo en el historial propio (misma copia local que `webcampus_transcript`); si coincide con varias materias, error de uso con la lista para que el modelo repregunte | `tools/webcampus.ts` | `programas.test.ts` |
+| Copia local cifrada con TTL nuevo de 30 días (`TTL.mes`, clave `programa:<código>:<modalidad>`); `uade_refresh` la borra como al resto. Un programa no tiene datos personales | `cache/cache.ts` | — |
+| Salida acotada: sin `query`, hasta 20.000 caracteres con aviso de recorte (medidos: 10.000 a 16.500); con `query`, solo las secciones del programa que la mencionan | `tools/webcampus.ts` | `programas.test.ts` |
+| Una línea nueva en las instructions: "qué entra en un parcial / bibliografía / cómo se aprueba" va directo a `webcampus_course_program` (sin ella, el eval mostraba que los modelos pedían primero `webcampus_current_courses`) | `index.ts` | eval |
+| `doctor` lee el programa de una materia del historial y dice solo largo y si hay fecha (no imprime el código ni el nombre) | `cli/doctor.ts` | `doctor.test.ts` |
+| Fixture: el PDF real del programa de Matemática Discreta (público para todo alumno; metadatos `wkhtmltopdf`, sin autor ni nombres) | `test/fixtures/programas/` | — |
+
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
 

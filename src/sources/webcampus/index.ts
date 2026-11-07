@@ -3,6 +3,7 @@ import { WebCampusClient, WEBCAMPUS } from './client.js';
 import { parseCorrelativas, type Correlativas } from './correlativas.js';
 import { parseEvento, parseEventos, parseHome, parseNovedad, type Evento, type EventoAgenda, type Home, type Novedad } from './novedades.js';
 import { parseClasesDeConsulta, type ClasesDeConsulta } from './consultas.js';
+import { programa as leerPrograma, type Modalidad, type Programa } from './programas.js';
 import { coincide, parseAdjuntoPrevios, parseLinksNovedades, parsePreviosXlsx, type ExamenPrevio } from './previos.js';
 import {
   parsePlanificacion,
@@ -145,6 +146,11 @@ export class WebCampus {
       : null;
     if (!mimeType) throw new Error('WebCampus no devolvió una imagen.');
     return { mimeType, bytes: b };
+  }
+
+  // Programa oficial de cualquier materia, por código (programas.ts).
+  programa(codigo: string, modalidad?: Modalidad): Promise<Programa> {
+    return leerPrograma(this.client, codigo, modalidad);
   }
 
   async docentes(idAula: string): Promise<Docente[]> {

@@ -33,7 +33,7 @@ if (args.length) {
   }
 } else {
   const server = new McpServer(
-    { name: 'uade-mcp', version: '0.6.4' },
+    { name: 'uade-mcp', version: '0.7.0' },
     {
       instructions: [
         'Unofficial MCP for UADE (Universidad Argentina de la Empresa, Buenos Aires). All tools are read-only and read live data; prefer them over memory.',
@@ -44,6 +44,7 @@ if (args.length) {
         'Which day do I enroll / enrollment calendar by shift and passed subjects: uade_enrollment_schedule (the official image plus the student\'s count; read the image). How do I enroll, why can\'t I, packs, optativas, MRI, "adeuda correlativas": uade_enrollment_guide (official FAQ and notices).',
         'Enrollment schedules and summer offerings (uade_academic_calendar, topic inscripciones) are 14 PDFs: pass the subjects the student is after (pending ones from webcampus_transcript; the lists have no degree names) as query and their campus or the kind (previos, mri, verano) as filter instead of reading everything.',
         'What can I take / which finals can I sit: uade_eligible_subjects (computed from WebCampus transcript + prerequisites). Finals (previos) need the course regularized (final_pendiente) and passed prerequisites; current courses have their own final date in webcampus_course_calendar.',
+        'What a subject covers (topics, units, what goes into each parcial, bibliography, how to pass or promote): webcampus_course_program directly with the subject as the student named it; it works for any subject, taken or not, so no need to look up current courses first.',
         'Emails are drafts only (email_compose_draft); never say one was sent.',
         'If the student refers to "that subject" or "the class" without saying which one, ask which before calling any tool.',
         'Use summaries by default; ask for detail flags only when needed. Answers come from a local encrypted copy with an "actualizado" time; if the student wants the latest, call uade_refresh first.',

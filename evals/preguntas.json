@@ -206,6 +206,24 @@
       "aceptables": [{ "tool": "webcampus_current_courses" }, { "tool": "webcampus_teachers" }, { "tool": "email_compose_draft" }]
     },
     {
+      "id": "bibliografia-discreta",
+      "grupo": "programas",
+      "pregunta": "¿Qué bibliografía tiene Matemática Discreta?",
+      "aceptables": [{ "tool": "webcampus_course_program", "args": { "subject": "discreta" } }]
+    },
+    {
+      "id": "temas-segundo-parcial",
+      "grupo": "programas",
+      "pregunta": "¿Qué temas entran en el segundo parcial de Física I?",
+      "aceptables": [{ "tool": "webcampus_course_program", "args": { "subject": "fisica" } }]
+    },
+    {
+      "id": "como-se-aprueba-poo",
+      "grupo": "programas",
+      "pregunta": "¿Cómo se aprueba Paradigma Orientado a Objetos?",
+      "aceptables": [{ "tool": "webcampus_course_program", "args": { "subject": "paradigma" } }]
+    },
+    {
       "id": "como-estudiar-para-un-final",
       "grupo": "sin-tool",
       "pregunta": "¿Qué técnica de estudio me recomendás para preparar un final oral?",
