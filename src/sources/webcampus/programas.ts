@@ -4,9 +4,7 @@
 // vacía; si no hay programa para ese código, redirige a /Archivo404.aspx. Igual para todos los alumnos.
 import { leerPdf } from '../calendario/index.js';
 import { fragmentos } from '../docs/fragmentos.js';
-import { textoLegible } from '../docs/legible.js';
-import { paginasComoImagenes } from '../docs/pdf-paginas.js';
-import { aBase64 } from '../docs/pdf-imagenes.js';
+import { textoOImagenes } from '../docs/legible.js';
 import { ErrorDeUso } from '../../error-de-uso.js';
 import { WEBCAMPUS, type WebCampusClient } from './client.js';
 
@@ -44,15 +42,9 @@ export async function programa(client: WebCampusClient, codigo: string, modalida
     throw new Error('El link del programa no llevó a un PDF de WebCampus como se esperaba.');
   }
   const base = { codigo, modalidad, ...datosDelArchivo(r.url.pathname), link: r.url.href };
-  const { texto } = await leerPdf(r.bytes);
-  if (textoLegible(texto)) return { ...base, texto };
-  const paginas = await paginasComoImagenes(r.bytes).catch(() => []);
-  if (!paginas.length) return { ...base, texto: '(el PDF del programa no tiene texto legible; abrilo en el link)' };
-  return {
-    ...base,
-    texto: `(el PDF del programa no tiene texto legible; van ${paginas.length} ${paginas.length > 1 ? 'imágenes' : 'imagen'} de sus páginas para que las leas)`,
-    imagenes: paginas.map((p) => ({ mimeType: p.mimeType, base64: aBase64(p.bytes) })),
-  };
+  // El camino común para PDFs (texto, fotos o páginas dibujadas). No leerArchivo: recorta a 12.000
+  // caracteres y el cronograma, al final del programa, quedaría afuera.
+  return { ...base, ...(await textoOImagenes((await leerPdf(r.bytes)).texto, r.bytes)) };
 }
 
 // Materias del plan que coinciden con un nombre (sin tildes ni mayúsculas): la igual, o las que lo contienen.

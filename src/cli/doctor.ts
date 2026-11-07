@@ -136,8 +136,9 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     const m = h.materias.find((x) => x.situacion === 'cursando') ?? h.materias[0];
     if (!m) return ['aviso', 'historial vacío: sin materia para probar'];
     const p = await wc.programa(m.codigo);
-    const lectura = p.imagenes?.length ? `${p.imagenes.length} páginas como imagen` : textoLegible(p.texto) ? `${p.texto.length} caracteres` : 'sin texto legible';
-    return [p.fecha && !p.imagenes?.length && textoLegible(p.texto) ? 'ok' : 'aviso', `${lectura}, fecha ${p.fecha ? 'ok' : 'no está en el nombre del archivo'}`];
+    const como = comoLlego(p);
+    const lectura = como === 'texto' ? `${p.texto.length} caracteres` : como === 'imagen' ? `${p.imagenes!.length} imágenes` : 'solo link';
+    return [p.fecha && como === 'texto' ? 'ok' : 'aviso', `como ${como}: ${lectura}, fecha ${p.fecha ? 'ok' : 'no está en el nombre del archivo'}`];
   });
   await push('cuenta corriente', ['webcampus_account_balance'], async () => {
     const c = await wc.cuenta();
