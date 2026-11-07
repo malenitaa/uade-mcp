@@ -18,7 +18,7 @@ describe('Calendario.documentos', () => {
     const client = { get: async () => ({ url: new URL('https://dre.uade.edu.ar/cronogramasUADE.pdf'), bytes: fx('cronos_inscrip_previos.pdf') }) };
     const docs = await new Calendario(client as never).documentos('inscripciones');
     expect(docs).toHaveLength(1); // el único link del PDF va a help.uade.edu.ar, que no es un PDF de dre
-    expect(docs[0]!.texto.startsWith(TEXTO_ILEGIBLE)).toBe(true);
+    expect(docs[0]!.texto).toContain('van 1 imagen de sus páginas'); // este recorte del PDF no trae ni los códigos de control
     expect(docs[0]!.imagenes).toHaveLength(1);
     expect(docs[0]!.imagenes![0]!.mimeType).toBe('image/png');
   });

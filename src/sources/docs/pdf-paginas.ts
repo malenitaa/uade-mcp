@@ -3,7 +3,9 @@
 // (Skia precompilado, dependencia opcional). Si el módulo no está (plataforma sin binario, instalación
 // sin opcionales), se devuelve vacío y quien llama avisa con el link. Topes como en pdf-imagenes.ts:
 // páginas, megapíxeles y cantidad de imágenes por PDF. Las páginas largas se cortan en tiras con
-// un poco de solapamiento, porque el modelo achica cada imagen a unos 1500 px de lado.
+// un poco de solapamiento, porque el modelo achica cada imagen a unos 1500 px de lado. Una página
+// que sale toda blanca no se manda: pasa cuando pdf.js no puede decodificar sus fotos (JPEG 2000:
+// el pdf.js de unpdf no trae el decodificador), y mandarla sería decir que el documento está vacío.
 import { createIsomorphicCanvasFactory, getDocumentProxy } from 'unpdf';
 
 export interface PaginaPng {
@@ -47,6 +49,7 @@ export async function paginasComoImagenes(bytes: Uint8Array): Promise<PaginaPng[
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, ancho, alto);
       await page.render({ canvas: pagina as never, canvasContext: ctx as never, viewport }).promise;
+      if (enBlanco(ctx.getImageData(0, 0, ancho, alto).data)) continue;
       for (let y = 0; y < alto && out.length < MAX_IMAGENES; y += ALTO_TIRA - SOLAPE) {
         const h = Math.min(ALTO_TIRA, alto - y);
         let tira = pagina;
@@ -62,4 +65,10 @@ export async function paginasComoImagenes(bytes: Uint8Array): Promise<PaginaPng[
     await pdf.loadingTask.destroy();
   }
   return out;
+}
+
+// Toda blanca (casi): se mira uno de cada 7 píxeles.
+function enBlanco(px: Uint8ClampedArray): boolean {
+  for (let i = 0; i < px.length; i += 4 * 7) if (px[i]! < 250 || px[i + 1]! < 250 || px[i + 2]! < 250) return false;
+  return true;
 }

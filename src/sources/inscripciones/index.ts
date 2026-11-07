@@ -5,6 +5,7 @@
 import * as cheerio from 'cheerio';
 import { keychainStore, renovarSesion, SessionClient, SessionExpiredError, type SessionStore } from '../../net/session.js';
 import { PageChangedError, parseFecha } from '../webcampus/parse.js';
+import { tipoDeImagen } from '../docs/leer.js';
 
 export const INSCRIPCIONES = 'https://inscripciones.uade.edu.ar';
 export const INSCRIPCIONES_ACCOUNT = 'inscripciones';
@@ -101,7 +102,8 @@ export function parseCronograma(html: string): Cronograma {
 
 // Pestañas Importante (avisos del momento), Instructivos (tutoriales) y Preguntas Frecuentes.
 export interface GuiaInscripciones {
-  importante: string[];
+  importante: string[]; // "[imagen N]" marca dónde estaba cada imagen de imagenesImportante
+  imagenesImportante: string[]; // paths en el sitio: parte del aviso está solo en la imagen
   instructivos: { titulo: string; link: string }[];
   preguntasFrecuentes: { pregunta: string; respuesta: string }[];
   ayuda: string | null; // link externo (help.uade.edu.ar), fuera del MCP
@@ -110,6 +112,17 @@ export interface GuiaInscripciones {
 export function parseGuia(html: string): GuiaInscripciones {
   const $ = cheerio.load(html);
   if (!$('.nav-tabs').length || !$('#home, #menuImportante').length) throw new PageChangedError('guía del sitio de inscripciones', $.html());
+  // Las imágenes de los avisos (la grilla que dice cómo se ven las modalidades nuevas, por ejemplo)
+  // son parte del aviso: se marca dónde estaba cada una y se guarda su ruta, solo si es de este sitio.
+  const imagenesImportante: string[] = [];
+  $('#menuImportante .alert img[src]').each((_, img) => {
+    let u: URL;
+    try { u = new URL($(img).attr('src')!.replace(/^~/, ''), INSCRIPCIONES); } catch { return; }
+    if (u.origin !== INSCRIPCIONES) return;
+    const path = u.pathname + u.search;
+    if (!imagenesImportante.includes(path)) imagenesImportante.push(path);
+    $(img).replaceWith(` [imagen ${imagenesImportante.indexOf(path) + 1}] `);
+  });
   $('script, style, noscript, img').remove();
   $('p, div, li, br, h1, h2, h3, h4, h5, td, tr').append(' ');
 
@@ -136,7 +149,7 @@ export function parseGuia(html: string): GuiaInscripciones {
   });
 
   const ayuda = $('.nav-tabs a[href^="http"]').first().attr('href') ?? null;
-  return { importante, instructivos, preguntasFrecuentes, ayuda };
+  return { importante, imagenesImportante, instructivos, preguntasFrecuentes, ayuda };
 }
 
 export class InscripcionesClient extends SessionClient {
@@ -177,11 +190,17 @@ export class Inscripciones {
   async cronograma(): Promise<{ url: string; alt: string | null; mimeType: string; bytes: Uint8Array }> {
     const home = await this.client.get('/');
     const c = parseCronograma(home.html);
-    const img = await this.client.get(c.imagen);
-    const b = img.bytes;
-    const mimeType = b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png' : null;
-    if (!mimeType) throw new PageChangedError('cronograma de inscripción (imagen)');
-    return { url: INSCRIPCIONES + c.imagen, alt: c.alt, mimeType, bytes: b };
+    const { mimeType, bytes } = await this.imagen(c.imagen, 'cronograma de inscripción (imagen)');
+    return { url: INSCRIPCIONES + c.imagen, alt: c.alt, mimeType, bytes };
+  }
+
+  // Una imagen del sitio (path propio, con la sesión): solo JPEG, PNG, GIF o WebP.
+  async imagen(path: string, que = 'imagen de un aviso de inscripción'): Promise<{ mimeType: string; bytes: Uint8Array }> {
+    if (!path.startsWith('/')) throw new PageChangedError(que);
+    const { bytes } = await this.client.get(path);
+    const mimeType = tipoDeImagen(bytes);
+    if (!mimeType) throw new PageChangedError(que);
+    return { mimeType, bytes };
   }
 
   async guia(): Promise<GuiaInscripciones> {

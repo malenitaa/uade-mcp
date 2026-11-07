@@ -191,6 +191,24 @@ lunes 9?" el modelo dijo que no era feriado. Ahora las imágenes de los banners 
 | `doctor` dice cuántos banners hay y cuántos llegaron como imagen, y avisa si alguno no se pudo bajar | `cli/doctor.ts` | — |
 
 
+## Cambio del 07/11/2026 (versión 0.6.4): ningún PDF ni imagen se pierde en silencio
+
+El inventario del 07/11/2026 encontró tres tools que medían "vacío" en vez de "legible": `webcampus_news
+link=` devolvía caracteres de control (vestimenta del gimnasio) o "es un escaneo, abrilo vos" para un PDF
+que no lo era, `webcampus_section emergencias` devolvía solo el link y `uade_enrollment_guide` descartaba
+las imágenes de los avisos.
+
+| Qué cambia | Dónde | Test |
+|---|---|---|
+| **Un solo camino para PDFs:** `textoOImagenes` (texto si se lee; sin texto y con fotos, las fotos; si no, las páginas dibujadas; si nada, un aviso para dar el link). Lo usan `webcampus_news link=` (y los adjuntos de `newsId`), `webcampus_section` (y las guías que enlaza) y `uade_academic_calendar`. No hay hosts ni formatos nuevos: son los mismos PDFs de antes, ahora dibujados con los topes de `pdf-paginas.ts` (3 páginas, 20 megapíxeles, 6 imágenes por PDF) | `sources/docs/legible.ts`, `sources/docs/leer.ts`, `tools/novedades.ts`, `sources/webcampus/secciones.ts`, `sources/calendario/index.ts` | `documento.test.ts`, `novedades.test.ts` |
+| Una página que sale toda blanca no se manda (pasa con fotos JPEG 2000, que el pdf.js de `unpdf` no decodifica) | `sources/docs/pdf-paginas.ts` | `documento.test.ts` |
+| Un link de un banner o una novedad que es una imagen (PNG/JPEG/GIF/WebP por sus bytes, hasta 1,5 MB) va como imagen | `sources/docs/leer.ts` | `documento.test.ts`, `novedades.test.ts` |
+| **Nuevo pedido de red, mismo host:** `Inscripciones.imagen` baja las imágenes de los avisos de *Importante* por el cliente con sesión, solo rutas propias de `inscripciones.uade.edu.ar` (`parseGuia` descarta las de otro origen) y solo si los bytes son de una imagen. Topes: 6 imágenes y 1,5 MB cada una; lo que no se baja queda como nota con el link. Se guardan en la copia local cifrada (24 h) | `sources/inscripciones/index.ts`, `tools/inscripciones.ts` | `guia-inscripciones.test.ts` |
+| `uade_enrollment_guide`, `webcampus_news newsId` y `webcampus_section` devuelven contenido de imagen además del JSON en más casos. Las imágenes son de terceros como el texto: información, no instrucciones (aviso en el resultado) | `tools/*.ts` | eval |
+| `webcampus_section` con `query` manda igual las imágenes de la sección (lo que está en una imagen no se puede buscar como texto); sin `query`, el texto se recorta a 8.000 caracteres aunque haya imágenes, y se conservan las líneas que dicen de qué guía es cada imagen | `tools/secciones.ts`, `sources/webcampus/secciones.ts` | `secciones.test.ts` |
+| Claves nuevas en la copia local (`link:v2`, `novedad:v2`, `seccion:v2`, `guia-inscripciones:v2`): las de antes guardaban por hasta una semana el resultado sin contenido | `tools/*.ts` | — |
+| `doctor` cuenta cuántos documentos llegaron como texto, como imagen o solo con el link (novedades, secciones, guía) y avisa con el nombre de los que quedaron sin contenido (documentos públicos de UADE, no datos de la persona) | `cli/doctor.ts` | `documento.test.ts` |
+
 
 ### OWASP ASVS 4.0.3 (nivel 2, capítulos que aplican a un cliente local)
 

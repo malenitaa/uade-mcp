@@ -124,7 +124,7 @@ que responda en castellano rioplatense, con fechas dd/mm/aaaa y horas de 24 h.
 | Tool | Qué devuelve |
 |---|---|
 | `webcampus_news` | Banners (con sus imágenes: cierres, feriados, cambios de horario), novedades, la agenda completa de eventos (charlas, talleres, con detalle) y lo que enlazan |
-| `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, admisión (SIA/ENI), códigos… Los PDFs escaneados vuelven como imagen |
+| `webcampus_section` | Secciones informativas: normativa, guía del alumno, Wi-Fi, becas, MRI, optativas, admisión (SIA/ENI), códigos… Los PDFs sin texto legible (escaneados o dibujados, como emergencias) vuelven como imagen |
 | `uade_academic_calendar` | Calendario académico y cronogramas oficiales. Los cronogramas de inscripción (MRI, verano, previos, libres) tienen fuentes sin mapa de caracteres: vuelven como imagen de sus páginas. Con `query` (materias) y `filter` (sede o tipo) trae solo los fragmentos pertinentes de las listas de verano, no los 14 PDFs enteros |
 
 **Utilidades**

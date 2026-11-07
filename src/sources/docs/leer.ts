@@ -7,6 +7,9 @@ import WordExtractor from 'word-extractor';
 import { read as leerXls, utils as xlsUtils } from 'xlsx';
 import { leerPdf } from '../calendario/index.js';
 import { assertXlsxRazonable, MAX_DESCOMPRIMIDO } from '../webcampus/previos.js';
+import { ErrorDeUso } from '../../error-de-uso.js';
+import { textoOImagenes, type PdfLegible } from './legible.js';
+import { aBase64 } from './pdf-imagenes.js';
 
 const MAX_TEXTO = 12000;
 
@@ -77,4 +80,45 @@ export async function leerDocumento(nombre: string, bytes: Uint8Array): Promise<
   }
   texto = texto.replace(/\u0000/g, '').trim();
   return texto.length > MAX_TEXTO ? { texto: texto.slice(0, MAX_TEXTO), recortado: true } : { texto, recortado: false };
+}
+
+// Una imagen suelta (un link o un aviso que es solo una foto) va al modelo tal cual, con el mismo
+// tope que los banners del home.
+export const MAX_BYTES_IMAGEN = 1.5 * 1024 * 1024;
+
+export function tipoDeImagen(b: Uint8Array): string | null {
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return 'image/gif';
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  return null;
+}
+
+// Un solo punto para leer un documento bajado de UADE (link de un banner o una novedad, sección de
+// WebCampus): imagen → la imagen; PDF → texto si se lee, si no imágenes (textoOImagenes); otros
+// formatos → su texto. El tipo sale del nombre o, si no tiene extensión conocida, de los primeros bytes.
+export async function leerArchivo(nombre: string, bytes: Uint8Array): Promise<PdfLegible & { recortado?: boolean }> {
+  const mime = tipoDeImagen(bytes);
+  if (mime) {
+    const mb = (bytes.length / 1024 / 1024).toFixed(1).replace('.', ',');
+    return bytes.length > MAX_BYTES_IMAGEN
+      ? { texto: `(Es una imagen de ${mb} MB, más que el tope de 1,5 MB: abrila vos en el link)` }
+      : { texto: '(Es una imagen: va para que la leas)', imagenes: [{ mimeType: mime, base64: aBase64(bytes) }] };
+  }
+  const esPdf = bytes[0] === 0x25 && bytes[1] === 0x50; // "%P"
+  if (esPdf || /\.pdf$/i.test(nombre)) {
+    const { texto, recortado } = await leerDocumento('archivo.pdf', bytes).catch((err: Error) => { throw new ErrorDeUso(`No pude leer ${nombre}: ${err.message}`); });
+    return { ...(await textoOImagenes(texto, bytes)), ...(recortado ? { recortado } : {}) };
+  }
+  const candidatos = tipoLegible(nombre) ? [nombre] : bytes[0] === 0x50 && bytes[1] === 0x4b ? ['archivo.xlsx', 'archivo.docx', 'archivo.pptx'] : ['archivo.txt'];
+  let ultimo = '';
+  for (const c of candidatos) {
+    try {
+      const r = await leerDocumento(c, bytes);
+      if (r.texto.trim()) return r.recortado ? r : { texto: r.texto };
+    } catch (err) {
+      ultimo = (err as Error).message;
+    }
+  }
+  throw new ErrorDeUso(`No pude leer ${nombre}${ultimo ? `: ${ultimo}` : ''}.`);
 }

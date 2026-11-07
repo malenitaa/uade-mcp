@@ -4,7 +4,7 @@
 import * as cheerio from 'cheerio';
 import { leerPdf } from '../calendario/index.js';
 import { fragmentos } from '../docs/fragmentos.js';
-import { aBase64, imagenesDePdf } from '../docs/pdf-imagenes.js';
+import { textoOImagenes } from '../docs/legible.js';
 import { safeFetch } from '../../net/http.js';
 import { PolicyError } from '../../net/policy.js';
 import { WEBCAMPUS } from './client.js';
@@ -65,7 +65,7 @@ export interface TextoSeccion {
   fuente: string; // URL de la página o del PDF
   texto: string;
   recortado?: boolean;
-  // PDF escaneado (sin texto): sus imágenes en base64, para que el modelo las mire.
+  // PDF sin texto legible (escaneado, dibujado o con fuentes sin mapa): sus imágenes en base64.
   imagenes?: { mimeType: string; base64: string }[];
 }
 
@@ -113,21 +113,16 @@ export class Secciones {
       return data;
     }
     const esPdf = r.bytes[0] === 0x25 && r.bytes[1] === 0x50; // "%P"
-    let texto = esPdf ? (await leerPdf(r.bytes)).texto : textoPagina(r.html);
-    let imagenes: TextoSeccion['imagenes'];
-    if (esPdf && texto.length < 100) {
-      // PDF escaneado (por ejemplo, "Números ante emergencias"): se mandan sus imágenes.
-      const imgs = imagenesDePdf(r.bytes);
-      if (imgs.length) {
-        imagenes = imgs.map((i) => ({ mimeType: i.mimeType, base64: aBase64(i.bytes) }));
-        texto = `(PDF escaneado: no tiene texto; van ${imgs.length} imagen${imgs.length > 1 ? 'es' : ''} para que las leas)`;
-      }
-    }
+    // Un PDF sin texto legible (por ejemplo, "Números ante emergencias", dibujado) va como imágenes.
+    let { texto, imagenes } = esPdf ? await textoOImagenes((await leerPdf(r.bytes)).texto, r.bytes) : { texto: textoPagina(r.html), imagenes: undefined };
     if (!esPdf) {
       for (const guia of guiasEnlazadas(r.html)) {
+        const nombre = decodeURIComponent(guia.split('/').pop()!);
         try {
           const bytes = guia.startsWith('https://') ? (await safeFetch(guia)).body : (await this.client.get(guia)).bytes;
-          texto += `\n\n[Guía: ${decodeURIComponent(guia.split('/').pop()!)}] ${(await leerPdf(bytes)).texto}`;
+          const g = await textoOImagenes((await leerPdf(bytes)).texto, bytes);
+          texto += `\n\n[Guía: ${nombre}] ${g.texto}`;
+          if (g.imagenes?.length) imagenes = [...(imagenes ?? []), ...g.imagenes];
         } catch {
           texto += `\n\n[Guía: ${guia}] (no se pudo leer)`;
         }
@@ -151,7 +146,10 @@ export class Secciones {
       return { seccion, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${consulta}" en esta sección.`] };
     }
     if (!d.texto) return { ...d, texto: '(la sección no tiene texto: puede ser un PDF escaneado o una página que se completa con filtros)' };
-    if (d.imagenes) return d;
-    return d.texto.length > MAX_TEXTO ? { ...d, texto: d.texto.slice(0, MAX_TEXTO) + ' … (recortado: pasá query para buscar una parte)', recortado: true } : d;
+    if (d.texto.length <= MAX_TEXTO) return d;
+    // Con imágenes también se recorta (una guía con imagen no tiene que traer de arrastre 160 KB de
+    // texto), pero las líneas que explican qué imagen es de qué guía quedan.
+    const deImagenes = d.imagenes ? (d.texto.slice(MAX_TEXTO).match(/\[Guía: [^\]]+\] \(PDF[^)]*\)/g) ?? []) : [];
+    return { ...d, texto: [d.texto.slice(0, MAX_TEXTO) + ' … (recortado: pasá query para buscar una parte)', ...deImagenes].join('\n\n'), recortado: true };
   }
 }
