@@ -69,13 +69,13 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | Home › banners › Banner 5 | externo | docs.google.com | público | ⛔ fuera | acortador → docs.google.com |  |
 | Home › banners › Banner 6 | pdf | dre.uade.edu.ar/cronogramasUADE.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
 | Home › banners › Banner 7 | externo | sm.pemres.net | público | ⛔ fuera | acortador → sm.pemres.net |  |
-| Home › banners › Banner 8 | pdf | www.dre.uade.edu.ar/Requisistos_promociones y previos.pdf | público | 🟡 lee mal | webcampus_news link — PDF sin texto legible | 1 pág., sin texto legible |
+| Home › banners › Banner 8 | pdf | www.dre.uade.edu.ar/Requisistos_promociones y previos.pdf | público | 🟡 solo link | webcampus_news link — fotos JPEG 2000: avisa y da el link (0.6.4) | 1 pág., sin texto legible |
 | Home › banners › Banner 9 | pdf | dre.uade.edu.ar/residencia.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
 | Home › banners › Banner 10 | externo | parking.uade.edu.ar | — | ⛔ fuera | sitio externo (parking.uade.edu.ar), no se contactó |  |
 | Home › banners › Banner 11 | pdf | dre.uade.edu.ar/horariosemanales.pdf | público | ✅ lee | webcampus_news link | 1 pág., texto legible |
 | Home › banners › Banner 12 | externo | forms.gle | público | ⛔ fuera | acortador → forms.gle |  |
 | Home › banners › Banner 13 | pagina | uadeeduar.sharepoint.com/… | público | ✅ lee | webcampus_news link |  |
-| Home › banners › Banner 14 | pdf | dre.uade.edu.ar/vestimentagym2026.pdf | público | 🟡 lee mal | webcampus_news link — PDF sin texto legible | 1 pág., sin texto legible |
+| Home › banners › Banner 14 | pdf | dre.uade.edu.ar/vestimentagym2026.pdf | público | ✅ lee | webcampus_news link — como imagen de la página (0.6.4) | 1 pág., sin texto legible |
 | Home › Novedades (lista) | pagina | /MiContenido/Novedades.aspx?EsDC=False | igual para todos (login) | ✅ lee | webcampus_news newsId | 1 img |
 | Home › Una novedad (ejemplo) | pagina | /MiContenido/Novedades.aspx?Id=…&EsDC=False | igual para todos (login) | ✅ lee | webcampus_news newsId | 1 img |
 | Home › Una novedad (ejemplo) › Exámenes Previos (noviembre - diciembre): Campus Buenos Aires, UADE Online y Campus Costa  | pagina | /MiContenido/Novedades.aspx?Id=…&EsDC=False | igual para todos (login) | ✅ lee | webcampus_news newsId | 1 img |
@@ -91,7 +91,7 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | Barra superior › Mis marcaciones | pagina | /Contenidos/Marcaciones.aspx | personal | ✅ lee | webcampus_section marcaciones | tabla: RadDatePicker / Title and navigation / S / M / T [rcWeek, rcRow, rcbReadOnly]; 1 controles que envían |
 | Barra lateral › Consultas | no seguido | /Atencion.aspx | personal | ⛔ fuera | formulario que manda un mail: no se abre |  |
 | Barra lateral › Encuestas | no seguido | /MiContenido/Encuesta.aspx | personal | ⛔ fuera | encuestas (escritura): no se abre |  |
-| Barra lateral › Barra lateral › NÚMEROS ANTE EMERGENCIAS | pdf | dre.uade.edu.ar/emergencia.pdf | público | 🟡 lee mal | webcampus_section emergencias — PDF sin texto legible | 1 pág., sin texto legible |
+| Barra lateral › Barra lateral › NÚMEROS ANTE EMERGENCIAS | pdf | dre.uade.edu.ar/emergencia.pdf | público | ✅ lee | webcampus_section emergencias — como imagen de la página (0.6.4) | 1 pág., sin texto legible |
 | General › Mi perfil › Cuenta Corriente | pagina | /Contenidos/CuentaCorrientes.aspx | personal | ✅ lee | webcampus_account_balance | TableDeudaVencida: Deuda Vencida impaga [grilla4]; TableProximosVenc [grilla5, tr_tbl_up, grilla]; TablePagosRealizados [grilla4, tr_tbl_up, grilla]; 1 img; 2 controles que envían |
 | General › Mi perfil › Cuenta Corriente › aquí. | pagina | /Aranceles/ArancelesWC.aspx?VieneDeCC=1 | personal | ✅ lee | webcampus_section aranceles | tbl_Pago [tit2, tit3] |
 | General › Mi perfil › Certificado de Alumno Regular | pagina | /contenidos/CertificadoAlumnoReg.aspx | personal | ⛔ fuera | genera el PDF con un postback | TblPrincipal; 1 controles que envían; 1 combos |
@@ -130,7 +130,7 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | General › Interés › Ayuda al Estudiante › este enlace | pdf | dre.uade.edu.ar/ayuescosta.pdf | público | ✅ lee | webcampus_section ayuda_estudiante (guía enlazada) | 1 pág., texto legible |
 | General › Interés › Ayuda al Estudiante › <mail> | link roto | /Contenidos/ayues.costa@uade.edu.ar | igual para todos (login) | ⛔ fuera | link mal armado en la página de UADE (relativo a otro sitio) |  |
 | General › Interés › UADE Housing | pdf | dre.uade.edu.ar/residencia.pdf | público | ✅ lee | webcampus_section housing | 1 pág., texto legible |
-| General › Interés › Números ante emergencia | pdf | dre.uade.edu.ar/emergencia.pdf | público | 🟡 lee mal | webcampus_section emergencias — PDF sin texto legible | 1 pág., sin texto legible |
+| General › Interés › Números ante emergencia | pdf | dre.uade.edu.ar/emergencia.pdf | público | ✅ lee | webcampus_section emergencias — como imagen de la página (0.6.4) | 1 pág., sin texto legible |
 | Académico › Trámites varios › Lista de alumnos interesados en la apertura de la materia | no seguido | /Principal.aspx?MenuItemId=248 | personal | ⛔ fuera | lista de interesados (escritura): no se abre |  |
 | Académico › Trámites varios › Enviar Documentación Escaneada | bloqueado | /Principal.aspx?MenuItemId=303 | personal | ⛔ fuera | lista negra: datos personales y trámites |  |
 | Académico › Trámites varios › Disponibilidad de Clases | pagina | /Contenidos/MiProgramacion.aspx | igual para todos (login) | ✅ lee | webcampus_class_offering — solo remite a la Programación del sitio de inscripciones |  |
@@ -251,8 +251,8 @@ Recorrido del 07/11/2026: 222 ítems. ✅ 99 · 🟡 11 · ❌ 56 · ⛔ 56. rob
 | Pestaña menu1 › menu1 › Inscripciones.uade.edu.ar > Inscribite > Asignaturas/Optativas | pagina | inscripciones.uade.edu.ar/ | igual para todos (login) | ❌ no lee |  |  |
 | Pestaña menu2 › menu2 › Fechas de inscripciones 2020 - UADE sede Monserrat | imagen | inscripciones.uade.edu.ar/Content/images/cuadro_inscripciones01.jpg | igual para todos (login) | ✅ lee | uade_enrollment_schedule (imagen) |  |
 | Pestaña menu2 › menu2 › chequeá la disponibilidad de clases antes de inscribirte | pagina | /MiProgramacion/Contenidos/MiProgramacion.aspx?IdUsuario=… | personal | ✅ lee | webcampus_class_offering |  |
-| Pestaña menuImportante › menuImportante › imagen mensaje-min.png | imagen | inscripciones.uade.edu.ar/Content/images/imagen mensaje-min.png | igual para todos (login) | 🟡 lee mal | uade_enrollment_guide — aviso en imagen: la guía manda el texto y descarta la imagen |  |
-| Pestaña menuImportante › menuImportante › grilla mensaje-min.png | imagen | inscripciones.uade.edu.ar/Content/images/grilla mensaje-min.png | igual para todos (login) | 🟡 lee mal | uade_enrollment_guide — aviso en imagen: la guía manda el texto y descarta la imagen |  |
+| Pestaña menuImportante › menuImportante › imagen mensaje-min.png | imagen | inscripciones.uade.edu.ar/Content/images/imagen mensaje-min.png | igual para todos (login) | ✅ lee | uade_enrollment_guide — va como imagen con el aviso (0.6.4) |  |
+| Pestaña menuImportante › menuImportante › grilla mensaje-min.png | imagen | inscripciones.uade.edu.ar/Content/images/grilla mensaje-min.png | igual para todos (login) | ✅ lee | uade_enrollment_guide — va como imagen con el aviso (0.6.4) |  |
 
 
 ### Sitio oficial
@@ -317,21 +317,18 @@ uno está confirmado con la tool que debería responderlo (07/11/2026).
    Los códigos salen de la lista de materias de cada carrera (`PlanesEstudioListaMaterias.aspx`, ver
    el punto 5) o del historial. Igual para todos, detrás del login. Arreglo: una tool de solo lectura
    con el código o el nombre de la materia.
-2. **"¿Qué necesito para promocionar o rendir previo?" y otros avisos en PDF sin texto.** La familia de
-   los cronogramas de esta semana sigue abierta en dos tools que miden "vacío" en vez de "legible":
-   - `webcampus_news link=` sobre el banner *Requisitos de promociones y previos*
-     (`Requisistos_promociones y previos.pdf`, dibujado, sin texto ni fotos) responde "PDF sin texto: es
-     una imagen escaneada; abrilo vos". No es un escaneo y no manda nada.
-   - Sobre el banner de vestimenta del gimnasio (`vestimentagym2026.pdf`, fuentes sin mapa de
-     caracteres) devuelve **caracteres de control** como si fueran el texto.
-   - `webcampus_section emergencias` (`emergencia.pdf`, vectores) devuelve solo el link (ya anotado 🟡 en
-     COBERTURA).
-   Arreglo: usar `textoLegible` en `leerBytesOImagenes` y en `Secciones.leer`, y caer en
-   `paginasComoImagenes` (lo mismo que ya hace `uade_academic_calendar`). Cierra los tres de una.
-3. **Avisos de inscripción que están en una imagen.** La pestaña *Importante* de inscripciones tiene
-   dos imágenes (`imagen mensaje-min.png`, `grilla mensaje-min.png`). `uade_enrollment_guide` manda el
-   texto y las descarta: el primer aviso termina en "identificadas de la siguiente manera:" y lo que
-   sigue está en la imagen. Arreglo: devolverlas como imagen, como los banners del home.
+2. ~~**"¿Qué necesito para promocionar o rendir previo?" y otros avisos en PDF sin texto.**~~ **Resuelto en
+   0.6.4.** `webcampus_news link=`, `webcampus_section` (y sus guías) y `uade_academic_calendar` pasan por
+   un solo camino (`textoOImagenes`, `sources/docs/legible.ts`): texto si se lee; si no tiene texto y trae
+   fotos, las fotos; si no, las páginas dibujadas; si nada sale, un aviso con el link. Vestimenta del
+   gimnasio y números ante emergencias llegan como imagen. Queda 🟡 *Requisitos de promociones y
+   previos*: no es un dibujo sino 7 fotos **JPEG 2000**, que el pdf.js de `unpdf` no decodifica (trae
+   recortado el cargador de `openjpeg.wasm`); la página saldría en blanco, así que no se manda y se da el
+   link. Arreglo posible: decodificar JPX con el `openjpeg.wasm` de `pdfjs-dist` de la misma versión.
+3. ~~**Avisos de inscripción que están en una imagen.**~~ **Resuelto en 0.6.4.** `uade_enrollment_guide`
+   baja las imágenes de los avisos de *Importante* (mismo sitio, hasta 6, 1,5 MB cada una), las manda
+   como imagen y marca con `[imagen N]` dónde estaba cada una: el aviso de las modalidades nuevas sigue
+   en la grilla que muestra cómo se ven en la oferta.
 4. **"¿Con qué universidades hay convenio de intercambio?"** `webcampus_section intercambio` responde
    "(no se pudo leer)" para `convenios.pdf` y `convenioposgrado.pdf`: pesan más de 10 MB. El sitio
    oficial tiene una versión liviana y legible del de grado (`grado-convenios-vf.pdf`, 38 páginas,
@@ -373,8 +370,8 @@ Lo que es igual para todos y está en el sitio oficial sin login, para una base 
 | Normativa académica, guía institucional, código de conducta, compromiso, vestimenta, protocolo, lineamientos de IA | dre.uade.edu.ar (normas.pdf, GuiaAluBA.pdf, …) | ✅ `webcampus_section` | Públicos; hoy se llega con sesión al menú |
 | Optativas y minors | dre.uade.edu.ar/WebCampus/Optativas y Minors/… | ✅ | 71 y 32 páginas: buenos para buscar sin bajarlos cada vez |
 | Mención de honor, guía de ingreso, reglamento del centro deportivo, AYUES, residencia | dre.uade.edu.ar | ✅ | Públicos |
-| Avisos en banners con PDF (horarios semanales, cambio/alta, vestimenta del gym, requisitos de promociones y previos) | dre.uade.edu.ar | ✅ / 🟡 | Cambian seguido; los dos ilegibles se renderizarían en la Action |
-| Números ante emergencias | dre.uade.edu.ar/emergencia.pdf | 🟡 solo el link | Renderizarlo una vez |
+| Avisos en banners con PDF (horarios semanales, cambio/alta, vestimenta del gym, requisitos de promociones y previos) | dre.uade.edu.ar | ✅ / 🟡 | Cambian seguido; desde 0.6.4 el del gym va como imagen; el de promociones (JPEG 2000) sigue solo con link |
+| Números ante emergencias | dre.uade.edu.ar/emergencia.pdf | ✅ como imagen (0.6.4) | — |
 | Convenios de intercambio de grado | www.uade.edu.ar/media/…/grado-convenios-vf.pdf | ❌ | Versión liviana y legible del que en WebCampus pesa más de 10 MB |
 | Oferta académica y certificados de idioma de intercambio, FAQ de outgoing | www.uade.edu.ar/media/… | ❌ (la oferta sí, por dre) | Públicos |
 | Cronograma de becas, reinscripciones, preguntas frecuentes, sedes | www.uade.edu.ar (páginas) | ❌ | Solo están ahí |

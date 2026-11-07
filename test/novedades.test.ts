@@ -2,13 +2,14 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fechaAgenda, parseEvento, parseEventos, parseHome, parseNovedad } from '../src/sources/webcampus/novedades.js';
-import { bannersConImagenes, leerBytes, leerLink, MAX_BANNERS, MAX_BYTES_BANNER } from '../src/tools/novedades.js';
+import { bannersConImagenes, leerBytesOImagenes, leerLink, MAX_BANNERS, MAX_BYTES_BANNER } from '../src/tools/novedades.js';
 import { WebCampus } from '../src/sources/webcampus/index.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerNovedadesTools } from '../src/tools/novedades.js';
 import type { WebCampusClient } from '../src/sources/webcampus/client.js';
 import type { Banner } from '../src/sources/webcampus/novedades.js';
 import type { SharePointClient } from '../src/sources/sharepoint/index.js';
+import { pdfMinimo } from './pdf-minimo.js';
 
 vi.mock('../src/cache/cache.js', () => ({ TTL: { corto: 1, dia: 1 }, cache: { get: async (_k: string, _ttl: number, fn: () => Promise<unknown>) => ({ value: await fn(), actualizado: '2026-11-05T00:00' }) } }));
 const fx = (p: string) => readFileSync(new URL(`./fixtures/webcampus/${p}`, import.meta.url), 'utf8');
@@ -103,6 +104,18 @@ describe('webcampus_news sin argumentos', () => {
     expect(j.imagenesDeBanners).toContain('cierres de la universidad');
   });
 
+  it('newsId: un adjunto sin texto legible manda sus imágenes y dice cuáles son', async () => {
+    const handler = registrar(async (p) => {
+      if (p.startsWith('/MiContenido/Novedades')) return { html: fx('novedad.html'), bytes: new Uint8Array() };
+      return { html: '', bytes: new Uint8Array(), url: new URL(p, 'https://www.webcampus.uade.edu.ar') };
+    });
+    vi.stubGlobal('fetch', async () => new Response(pdfMinimo('0 0 0 rg 20 20 160 40 re f'), { headers: { 'content-type': 'application/pdf' } }));
+    const r = await handler({ newsId: '1001', allEvents: false });
+    expect(r.content.map((c) => c.type)).toEqual(['text', 'image']);
+    const j = JSON.parse(r.content[0]!.text!) as { adjuntos: { nombre: string; verImagenes?: string }[] };
+    expect(j.adjuntos.find((a) => a.nombre === 'guia.pdf')).toMatchObject({ verImagenes: '1' });
+  });
+
   it('si no se puede bajar ninguna imagen, el JSON sale igual con una nota', async () => {
     const handler = registrar(async (p) => {
       if (p === '/HomeWC.aspx') return { html: fx('home.html'), bytes: new Uint8Array() };
@@ -158,8 +171,27 @@ describe('leer links', () => {
     expect((await leerLink('https://www.webcampus.uade.edu.ar/DocsDownload/Novedades/1.txt', deps)).texto).toContain('adjunto');
   });
 
-  it('leerBytes adivina por los primeros bytes cuando el nombre no dice el tipo', async () => {
-    const t = await leerBytes('cualquiera', new TextEncoder().encode('texto plano'));
+  it('PDF de dre sin texto (dibujado, como el de requisitos de promociones): llega como imagen de la página, no como "escaneado"', async () => {
+    vi.stubGlobal('fetch', async () => new Response(pdfMinimo('0 0 0 rg 20 20 160 40 re f'), { headers: { 'content-type': 'application/pdf' } }));
+    const r = await leerLink('https://www.dre.uade.edu.ar/Requisitos%20ficticios.pdf', deps);
+    expect(r.texto).toMatch(/^\(PDF sin texto: está dibujado; van 1 imagen de sus páginas/);
+    expect(r.imagenes).toHaveLength(1);
+  });
+
+  it('PDF que no se puede dibujar (sale en blanco): no manda nada vacío; dice que hay que abrir el link', async () => {
+    vi.stubGlobal('fetch', async () => new Response(pdfMinimo(''), { headers: { 'content-type': 'application/pdf' } }));
+    const r = await leerLink('https://dre.uade.edu.ar/vacio.pdf', deps);
+    expect(r).toEqual({ url: 'https://dre.uade.edu.ar/vacio.pdf', texto: expect.stringContaining('abrilo vos en el link') });
+  });
+
+  it('link a una imagen: va como imagen', async () => {
+    const png = new Uint8Array(readFileSync(new URL('./fixtures/webcampus/banner.png', import.meta.url)));
+    vi.stubGlobal('fetch', async () => new Response(png, { headers: { 'content-type': 'image/png' } }));
+    expect((await leerLink('https://dre.uade.edu.ar/aviso.png', deps)).imagenes).toHaveLength(1);
+  });
+
+  it('leerBytesOImagenes adivina por los primeros bytes cuando el nombre no dice el tipo', async () => {
+    const { texto: t } = await leerBytesOImagenes('cualquiera', new TextEncoder().encode('texto plano'));
     expect(t).toContain('texto plano');
     expect(t).toMatch(/^<contenido_externo origen="cualquiera">/); // texto de terceros, marcado
   });

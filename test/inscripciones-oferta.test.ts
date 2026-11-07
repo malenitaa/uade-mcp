@@ -25,9 +25,11 @@ describe('inscripciones', () => {
   it('guía: avisos de Importante, instructivos y preguntas frecuentes', () => {
     const g = parseGuia(fx('inscripciones/home.html'));
     expect(g.importante).toEqual([
-      '¡Aviso ficticio uno! Como alumno de CARRERA FICTICIA, también podés cursar en otro campus. ¿Cómo me inscribo? Vas a ver la oferta identificada así: Consultas a ficticio@uade.edu.ar',
+      '[imagen 1] ¡Aviso ficticio uno! Como alumno de CARRERA FICTICIA, también podés cursar en otro campus. ¿Cómo me inscribo? Vas a ver la oferta identificada así: [imagen 2] Consultas a ficticio@uade.edu.ar',
       '¡Importante! Recordatorio para quienes no cursaron: • Materia ficticia A • Materia ficticia B Hace falta una notebook.',
     ]);
+    // Parte del aviso está en las imágenes: se marca dónde estaba cada una y se guarda su ruta.
+    expect(g.imagenesImportante).toEqual(['/Content/images/imagen%20mensaje-min.png', '/Content/images/grilla.png']);
     expect(g.instructivos).toEqual([
       { titulo: 'Tutorial ficticio de examen', link: 'https://www.youtube.com/watch?v=ficticio1' },
       { titulo: 'Tutorial ficticio de asignaturas', link: 'https://youtu.be/ficticio2' },

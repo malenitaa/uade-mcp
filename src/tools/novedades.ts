@@ -7,50 +7,32 @@ import type { Permission } from '../auth/permissions.js';
 import { cache, TTL } from '../cache/cache.js';
 import { ALLOWED_HOSTS } from '../net/policy.js';
 import { safeFetch } from '../net/http.js';
-import { leerDocumento, tipoLegible } from '../sources/docs/leer.js';
-import { aBase64, imagenesDePdf } from '../sources/docs/pdf-imagenes.js';
+import { leerArchivo } from '../sources/docs/leer.js';
+import { comoLlego } from '../sources/docs/legible.js';
+import { aBase64 } from '../sources/docs/pdf-imagenes.js';
 import { SharePointClient, SHAREPOINT } from '../sources/sharepoint/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import type { Banner } from '../sources/webcampus/novedades.js';
 import { textoPagina } from '../sources/webcampus/secciones.js';
 import { untrusted, UNTRUSTED_NOTE } from '../untrusted.js';
 import { CON_IMAGENES, READ_ONLY, run, type Imagen } from './common.js';
-import { ErrorDeUso } from '../error-de-uso.js';
 
 const MAX_TEXTO = 8000;
-
-// Lee bytes según el nombre o, si no tiene extensión conocida, según sus primeros bytes.
-export async function leerBytes(nombre: string, bytes: Uint8Array): Promise<string> {
-  const candidatos = tipoLegible(nombre) ? [nombre] : bytes[0] === 0x25 && bytes[1] === 0x50 ? ['archivo.pdf'] : bytes[0] === 0x50 && bytes[1] === 0x4b ? ['archivo.xlsx', 'archivo.docx', 'archivo.pptx'] : ['archivo.txt'];
-  let ultimo = '';
-  for (const c of candidatos) {
-    try {
-      const { texto } = await leerDocumento(c, bytes);
-      if (texto.trim()) return untrusted(nombre, texto.length > MAX_TEXTO ? texto.slice(0, MAX_TEXTO) + ' …(recortado)' : texto);
-      if (/\.pdf$/i.test(c)) return '(PDF sin texto: es una imagen escaneada; abrilo vos para verlo)';
-    } catch (err) {
-      ultimo = (err as Error).message;
-    }
-  }
-  throw new ErrorDeUso(`No pude leer ${nombre}${ultimo ? `: ${ultimo}` : ''}.`);
-}
 
 export interface Lectura {
   url: string; // destino final
   texto?: string;
   nota?: string;
-  // PDF escaneado (sin texto): sus imágenes, para que el modelo las mire.
+  // PDF sin texto legible o imagen suelta: sus imágenes, para que el modelo las mire.
   imagenes?: Imagen[];
 }
 
-// Texto de un documento; si es un PDF sin texto, sus imágenes.
+// Texto de un documento (recortado y marcado como de terceros) o, si no se lee, sus imágenes o un
+// texto que lo dice (leerArchivo en sources/docs/leer.ts).
 export async function leerBytesOImagenes(nombre: string, bytes: Uint8Array): Promise<{ texto: string; imagenes?: Imagen[] }> {
-  const texto = await leerBytes(nombre, bytes);
-  if (!/^\(PDF sin texto/.test(texto)) return { texto };
-  const imgs = imagenesDePdf(bytes).map((i) => ({ mimeType: i.mimeType, base64: aBase64(i.bytes) }));
-  return imgs.length
-    ? { texto: `(PDF escaneado: no tiene texto; van ${imgs.length} imagen${imgs.length > 1 ? 'es' : ''} para que las leas)`, imagenes: imgs }
-    : { texto };
+  const r = await leerArchivo(nombre, bytes);
+  if (comoLlego(r) !== 'texto') return r.imagenes?.length ? { texto: r.texto, imagenes: r.imagenes } : { texto: r.texto };
+  return { texto: untrusted(nombre, r.texto.length > MAX_TEXTO ? r.texto.slice(0, MAX_TEXTO) + ' …(recortado)' : r.texto) };
 }
 
 // Sigue un link de WebCampus (incluido el acortador de UADE) y lee el destino si es un sitio del MCP.
@@ -126,7 +108,7 @@ export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<P
     {
       title: 'What UADE is announcing (WebCampus home)',
       description:
-        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list (agenda = next few events) plus the banner images in carousel order (verImagen = image number): READ them, banners often carry university closures, holidays, schedule or campus changes only inside the image; tell the student what they say in text, do not show or send the images. Call it too when the student asks about a specific day or week (¿qué tengo el lunes?, ¿hay clases el 9?, ¿abre la facultad?). allEvents=true: the full events agenda. eventId: one event with date, time, campus and description. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment; scanned PDFs come back as images); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, talks, events.',
+        'What UADE currently communicates to students on the WebCampus home: banners (campaigns, parking reservations, quiet classrooms, housing, schedules…), news items and the agenda (talks, events). No arguments: the list (agenda = next few events) plus the banner images in carousel order (verImagen = image number): READ them, banners often carry university closures, holidays, schedule or campus changes only inside the image; tell the student what they say in text, do not show or send the images. Call it too when the student asks about a specific day or week (¿qué tengo el lunes?, ¿hay clases el 9?, ¿abre la facultad?). allEvents=true: the full events agenda. eventId: one event with date, time, campus and description. newsId: the full text of a news item plus its attachments (e.g. the previos schedule). link: opens a banner/news link and returns its content when it points to a UADE document (PDF, SharePoint file, WebCampus attachment, image; a PDF without readable text comes back as page images: read them); for other sites it returns the final URL. Use this for "¿qué hay de nuevo?", quiet classrooms, parking, campaigns, talks, events.',
       inputSchema: {
         newsId: z.string().regex(/^\d+$/).optional(),
         eventId: z.string().regex(/^\d+$/).optional().describe('id from the agenda'),
@@ -138,7 +120,7 @@ export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<P
     ({ newsId, eventId, allEvents, link }) =>
       run(granted, 'webcampus.leer', async () => {
         if (link) {
-          const r = await cache.get(`link:${link}`, TTL.dia, () => leerLink(link, { wc, sp }));
+          const r = await cache.get(`link:v2:${link}`, TTL.dia, () => leerLink(link, { wc, sp }));
           const { imagenes, ...resto } = r.value;
           return { actualizado: r.actualizado, ...resto, aviso: UNTRUSTED_NOTE, [CON_IMAGENES]: imagenes };
         }
@@ -151,20 +133,25 @@ export function registerNovedadesTools(server: McpServer, granted: ReadonlySet<P
           return { actualizado: r.actualizado, eventos: r.value, aviso: UNTRUSTED_NOTE };
         }
         if (newsId) {
-          const r = await cache.get(`novedad:${newsId}`, TTL.dia, async () => {
+          const r = await cache.get(`novedad:v2:${newsId}`, TTL.dia, async () => {
             const n = await wc.novedad(newsId);
-            const adjuntos: { nombre: string; texto?: string; nota?: string }[] = [];
+            const adjuntos: { nombre: string; texto?: string; nota?: string; verImagenes?: string }[] = [];
+            const imagenes: Imagen[] = [];
             for (const a of n.adjuntos.slice(0, 4)) {
               try {
                 const l = await leerLink(a, { wc, sp });
-                adjuntos.push({ nombre: a.split('/').pop() ?? a, texto: l.texto, nota: l.nota });
+                const desde = imagenes.length + 1;
+                imagenes.push(...(l.imagenes ?? []));
+                const verImagenes = l.imagenes?.length ? (l.imagenes.length > 1 ? `${desde} a ${imagenes.length}` : `${desde}`) : undefined;
+                adjuntos.push({ nombre: a.split('/').pop() ?? a, texto: l.texto, nota: l.nota, verImagenes });
               } catch (err) {
                 adjuntos.push({ nombre: a, nota: (err as Error).message });
               }
             }
-            return { ...n, adjuntos };
+            return { ...n, adjuntos, imagenes };
           });
-          return { actualizado: r.actualizado, ...r.value, aviso: UNTRUSTED_NOTE };
+          const { imagenes, ...novedad } = r.value;
+          return { actualizado: r.actualizado, ...novedad, aviso: UNTRUSTED_NOTE, [CON_IMAGENES]: imagenes };
         }
         const r = await cache.get('home:v2', TTL.corto, () => wc.home());
         const { banners, imagenes } = await bannersConImagenes(r.value.banners, (url) =>

@@ -2,6 +2,18 @@
   "_comentario": "Preguntas de alumno para medir si el modelo elige la tool correcta. `aceptables` es la lista de llamadas válidas (tool + argumentos clave, chequeados de forma flexible: el valor esperado tiene que estar contenido en el real, sin distinguir mayúsculas ni tildes); vacía = lo correcto es no llamar ninguna tool (responder o repreguntar). `grupo` sirve para leer el reporte. `tambien` (opcional): tools que además tendrían que aparecer en el primer turno; se reporta aparte y no cambia el acierto. Las materias y códigos son inventados.",
   "preguntas": [
     {
+      "id": "numeros-emergencia",
+      "grupo": "directas",
+      "pregunta": "¿A qué interno llamo si hay una emergencia en la sede de Lima?",
+      "aceptables": [{ "tool": "webcampus_section", "args": { "section": "emergencias" } }]
+    },
+    {
+      "id": "ropa-gimnasio",
+      "grupo": "directas",
+      "pregunta": "¿Puedo ir al gimnasio de la facu con calzas sin short?",
+      "aceptables": [{ "tool": "webcampus_news" }, { "tool": "webcampus_section", "args": { "section": "deportes" } }, { "tool": "webcampus_section", "args": { "section": "codigo_vestimenta" } }]
+    },
+    {
       "id": "cuota-sistemas-noche",
       "grupo": "directas",
       "pregunta": "¿Cuánto sale la cuota de Sistemas turno noche?",

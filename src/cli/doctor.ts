@@ -2,7 +2,7 @@
 // OK / aviso / error con conteos y tiempos. Nunca imprime datos personales (ni notas, ni
 // materias, ni montos), así cualquiera puede compartir el reporte para diagnosticar.
 import { Calendario } from '../sources/calendario/index.js';
-import { textoLegible } from '../sources/docs/legible.js';
+import { comoLlego, SIN_CONTENIDO } from '../sources/docs/legible.js';
 import { Inscripciones } from '../sources/inscripciones/index.js';
 import { WebCampus } from '../sources/webcampus/index.js';
 import { recordatorios, recordatoriosIcs } from '../sources/webcampus/recordatorios.js';
@@ -17,9 +17,25 @@ import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { planificar } from '../sources/planificador/index.js';
 import { Pia } from '../sources/pia/index.js';
 import type { ClaseOfertada } from '../sources/webcampus/parse.js';
-import { bannersConImagenes, MAX_BANNERS, MAX_BYTES_BANNER } from '../tools/novedades.js';
+import { bannersConImagenes, leerLink, MAX_BANNERS, MAX_BYTES_BANNER } from '../tools/novedades.js';
+import { imagenesDeAvisos } from '../tools/inscripciones.js';
+import { ALLOWED_HOSTS } from '../net/policy.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
+
+// Cuántos documentos llegaron al modelo como texto, como imagen o solo con el link; aviso si alguno
+// quedó sin contenido (los nombres son de documentos públicos de UADE, no de la persona).
+export function resumenDocumentos(docs: { nombre: string; texto?: string; imagenes?: unknown[] }[]): [Estado, string] {
+  const por = { texto: 0, imagen: 0, link: 0 };
+  const sinContenido: string[] = [];
+  for (const d of docs) {
+    const como = comoLlego(d);
+    por[como]++;
+    if (como === 'link') sinContenido.push(d.nombre);
+  }
+  const resumen = `${docs.length} documento${docs.length === 1 ? '' : 's'}: ${por.texto} como texto, ${por.imagen} como imagen, ${por.link} solo link`;
+  return sinContenido.length ? ['aviso', `${resumen}; sin contenido: ${sinContenido.join(', ')}`] : ['ok', resumen];
+}
 interface Resultado {
   nombre: string;
   estado: Estado;
@@ -146,7 +162,9 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   });
   await push('guía de inscripciones', ['uade_enrollment_guide'], async () => {
     const g = await insc.guia();
-    return [g.preguntasFrecuentes.length ? 'ok' : 'aviso', `${g.importante.length} avisos, ${g.instructivos.length} instructivos, ${g.preguntasFrecuentes.length} preguntas frecuentes`];
+    const { imagenes, notas } = await imagenesDeAvisos(g.imagenesImportante.map((path, i) => ({ n: i + 1, path })), insc);
+    const imgs = g.imagenesImportante.length ? `, ${imagenes.length} de ${g.imagenesImportante.length} imágenes de avisos bajadas${notas.length ? ` (${notas.length} solo link)` : ''}` : '';
+    return [g.preguntasFrecuentes.length && !notas.length ? 'ok' : 'aviso', `${g.importante.length} avisos${imgs}, ${g.instructivos.length} instructivos, ${g.preguntasFrecuentes.length} preguntas frecuentes`];
   });
   await push('agenda de eventos', ['webcampus_news'], async () => {
     const e = await wc.eventos();
@@ -167,7 +185,24 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
     const primera = h.novedades[0];
     if (!primera) return ['aviso', `${banners}, sin novedades publicadas`];
     const n = await wc.novedad(primera.id);
-    return [n.titulo && imagenes.length === esperadas ? 'ok' : 'aviso', `${banners}, ${h.novedades.length} novedades; la primera ${n.titulo ? 'con detalle' : 'sin detalle'}${n.adjuntos?.length ? `, ${n.adjuntos.length} adjuntos` : ''}`];
+    // Los documentos que enlazan los banners y los adjuntos de la primera novedad, por el mismo camino
+    // que webcampus_news link= (los links a sitios fuera del MCP no son documentos y no cuentan).
+    const sp = new SharePointClient();
+    const docs: { nombre: string; texto?: string; imagenes?: unknown[] }[] = [];
+    for (const link of [...h.banners.map((b) => b.link), ...(n.adjuntos ?? [])]) {
+      if (!link) continue;
+      const nombre = decodeURIComponent(link.split('/').pop() ?? link);
+      try {
+        const l = await leerLink(link, { wc, sp });
+        if (l.nota && /fuera del MCP/.test(l.nota)) continue;
+        docs.push({ nombre: decodeURIComponent(new URL(l.url).pathname.split('/').pop() || nombre), texto: l.texto, imagenes: l.imagenes });
+      } catch {
+        docs.push({ nombre });
+      }
+    }
+    const [estadoDocs, detalleDocs] = resumenDocumentos(docs);
+    const bien = n.titulo && imagenes.length === esperadas && estadoDocs === 'ok';
+    return [bien ? 'ok' : 'aviso', `${banners}, ${h.novedades.length} novedades; la primera ${n.titulo ? 'con detalle' : 'sin detalle'}${n.adjuntos?.length ? `, ${n.adjuntos.length} adjuntos` : ''}; ${detalleDocs}`];
   });
   await push('correlativas y elegibilidad', ['uade_eligible_subjects'], async () => {
     const [h, plan] = await Promise.all([wc.historial(), wc.correlativas()]);
@@ -228,9 +263,9 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   for (const tema of ['calendario', 'inscripciones'] as const) {
     await push(`calendario: ${tema}`, ['uade_academic_calendar'], async () => {
       const d = await cal.documentos(tema);
-      const conTexto = d.filter((x) => textoLegible(x.texto) && !x.imagenes?.length).length; // el aviso de ilegible es texto legible
-      const conImagenes = d.filter((x) => x.imagenes?.length).length;
-      const ilegibles = d.filter((x) => !textoLegible(x.texto) && !x.imagenes?.length).map((x) => x.nombre);
+      const conTexto = d.filter((x) => comoLlego(x) === 'texto').length;
+      const conImagenes = d.filter((x) => comoLlego(x) === 'imagen').length;
+      const ilegibles = d.filter((x) => comoLlego(x) === 'link').map((x) => x.nombre);
       const resumen = `${d.length} PDFs, ${conTexto} con texto legible${conImagenes ? `, ${conImagenes} como imagen` : ''}`;
       return ilegibles.length ? ['aviso', `${resumen}; ilegibles: ${ilegibles.join(', ')}`] : [conTexto ? 'ok' : 'aviso', resumen];
     });
@@ -238,11 +273,16 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   for (const s of Object.keys(SECCIONES) as Seccion[]) {
     await push(`sección: ${s}`, ['webcampus_section'], async () => {
       const d = await sec.consultar(s);
-      const largo = 'texto' in d ? d.texto.length : 0;
-      const imgs = 'imagenes' in d && Array.isArray(d.imagenes) ? d.imagenes.length : 0;
-      if (imgs) return ['ok', `PDF escaneado: ${imgs} imagen${imgs > 1 ? 'es' : ''}`];
-      if ('texto' in d && d.texto.startsWith(TEXTO_DOCUMENTO_PESADO)) return ['aviso', 'pesa más de 10 MB: la tool devuelve el link'];
-      return [largo > 100 ? 'ok' : 'aviso', largo > 100 ? `${largo} caracteres` : 'sin texto legible (PDF escaneado o página con filtros)'];
+      const texto = 'texto' in d ? d.texto : '';
+      const imgs = d.imagenes?.length ?? 0;
+      if (texto.startsWith(TEXTO_DOCUMENTO_PESADO)) return ['aviso', 'pesa más de 10 MB: la tool devuelve el link'];
+      // Guías enlazadas que no dieron ni texto ni imágenes (el texto de la sección lo dice).
+      const guiasSinContenido = texto.split(SIN_CONTENIDO).length - 1 + (texto.match(/\(no se pudo leer\)/g)?.length ?? 0);
+      // La legibilidad ya la midió Secciones en cada PDF; acá solo importa qué quedó: el documento
+      // principal como imágenes (su texto es el aviso "(PDF …"), sin contenido, o texto.
+      const como = imgs && texto.startsWith('(PDF') ? 'imagen' : texto.length <= 100 || texto.startsWith(SIN_CONTENIDO) ? 'link' : 'texto';
+      const detalle = `${como === 'imagen' ? `como imagen (${imgs})` : como === 'texto' ? `como texto (${texto.length} caracteres)${imgs ? ` y ${imgs} imágenes de guías` : ''}` : 'solo link: sin texto legible ni imágenes'}${guiasSinContenido ? `; ${guiasSinContenido} guías solo link` : ''}`;
+      return [como !== 'link' && !guiasSinContenido ? 'ok' : 'aviso', detalle];
     });
   }
 

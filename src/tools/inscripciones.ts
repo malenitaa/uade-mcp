@@ -2,7 +2,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Permission } from '../auth/permissions.js';
-import { Inscripciones } from '../sources/inscripciones/index.js';
+import { Inscripciones, INSCRIPCIONES } from '../sources/inscripciones/index.js';
+import { MAX_BYTES_IMAGEN } from '../sources/docs/leer.js';
 import { elegibilidad } from '../sources/planificador/elegibilidad.js';
 import { MAX_MATERIAS, planificar, sedesPorMateria, variadas } from '../sources/planificador/index.js';
 import { semanaHtml, semanaIcs } from '../sources/planificador/semana.js';
@@ -17,7 +18,33 @@ import { cache, TTL } from '../cache/cache.js';
 import { aBase64 } from '../sources/docs/pdf-imagenes.js';
 import { fragmentos } from '../sources/docs/fragmentos.js';
 import { UNTRUSTED_NOTE } from '../untrusted.js';
-import { CON_IMAGENES, READ_ONLY, run } from './common.js';
+import { CON_IMAGENES, READ_ONLY, run, type Imagen } from './common.js';
+
+// Imágenes de los avisos de la pestaña Importante: mismo sitio, con tope de cantidad y de bytes como
+// los banners del home. Una que no se puede bajar o pesa de más queda como nota, no se pierde en silencio.
+export const MAX_IMAGENES_AVISOS = 6;
+export async function imagenesDeAvisos(
+  aBajar: { n: number; path: string }[],
+  insc: Pick<Inscripciones, 'imagen'>,
+): Promise<{ imagenes: { n: number; imagen: Imagen }[]; notas: string[] }> {
+  const imagenes: { n: number; imagen: Imagen }[] = [];
+  const notas: string[] = [];
+  for (const { n, path } of aBajar) {
+    if (imagenes.length >= MAX_IMAGENES_AVISOS) { notas.push(`[imagen ${n}] no la mandé (tope de ${MAX_IMAGENES_AVISOS}): ${INSCRIPCIONES}${path}`); continue; }
+    try {
+      const r = await cache.get(`insc-img:${path}`, TTL.dia, async () => {
+        const { mimeType, bytes } = await insc.imagen(path);
+        return bytes.length > MAX_BYTES_IMAGEN ? { tamanio: bytes.length } : { tamanio: bytes.length, mimeType, base64: aBase64(bytes) };
+      });
+      const { mimeType, base64, tamanio } = r.value as { tamanio: number; mimeType?: string; base64?: string };
+      if (mimeType && base64) imagenes.push({ n, imagen: { mimeType, base64 } });
+      else notas.push(`[imagen ${n}] pesa ${(tamanio / 1024 / 1024).toFixed(1).replace('.', ',')} MB (tope 1,5 MB): abrila vos en ${INSCRIPCIONES}${path}`);
+    } catch (err) {
+      notas.push(`[imagen ${n}] no se pudo bajar (${(err as Error).message}): ${INSCRIPCIONES}${path}`);
+    }
+  }
+  return { imagenes, notas };
+}
 
 export function registerInscripcionesTools(
   server: McpServer,
@@ -99,21 +126,33 @@ export function registerInscripcionesTools(
     {
       title: 'Enrollment site: notices, tutorials and FAQ',
       description:
-        'What inscripciones.uade.edu.ar says besides the windows: the "Importante" notices of the moment (e.g. notebook requirements, Campus Costa modality), the tutorial links (Instructivos) and the official FAQ (when must I enroll, "adeuda correlativas", "las reglas de validación impiden continuar", packs, optativas, MRI, inglés/ENI, teachers not published). query: only the matching notices and questions. Use it for any "cómo me inscribo / por qué no puedo inscribirme" question before answering from general knowledge.',
+        'What inscripciones.uade.edu.ar says besides the windows: the "Importante" notices of the moment (e.g. notebook requirements, Campus Costa modality; part of a notice can be an image, sent along: [imagen N] marks where, read it), the tutorial links (Instructivos) and the official FAQ (when must I enroll, "adeuda correlativas", "las reglas de validación impiden continuar", packs, optativas, MRI, inglés/ENI, teachers not published). query: only the matching notices and questions. Use it for any "cómo me inscribo / por qué no puedo inscribirme" question before answering from general knowledge.',
       inputSchema: { query: z.string().min(3).max(80).optional() },
       annotations: READ_ONLY,
     },
     ({ query }) =>
       read(async () => {
-        const g = await cache.get('guia-inscripciones', TTL.dia, () => insc.guia());
-        const v = g.value;
-        if (!query) return { actualizado: g.actualizado, aviso: UNTRUSTED_NOTE, ...v, ayuda: v.ayuda ? `${v.ayuda} (sitio de ayuda de UADE, fuera del MCP: abrilo vos)` : null };
+        const g = await cache.get('guia-inscripciones:v2', TTL.dia, () => insc.guia());
+        const { imagenesImportante, ...v } = g.value;
+        const importante = query ? v.importante.filter((t) => fragmentos(t, query, 1000).length > 0) : v.importante;
+        // Solo las imágenes de los avisos que salen (con query, los que coinciden).
+        const usadas = imagenesImportante.map((_, i) => i + 1).filter((n) => importante.some((t) => t.includes(`[imagen ${n}]`)));
+        const { imagenes, notas } = await imagenesDeAvisos(usadas.map((n) => ({ n, path: imagenesImportante[n - 1]! })), insc);
+        const deAvisos = {
+          importante,
+          imagenesDeAvisos: imagenes.length
+            ? `Van ${imagenes.length > 1 ? 'estas imágenes, en este orden' : 'esta imagen'}: ${imagenes.map((i) => `[imagen ${i.n}]`).join(', ')}. En el texto, la marca está donde estaba cada una y es parte del aviso: leelas y contale al estudiante con texto lo que dicen.`
+            : undefined,
+          notasDeImagenes: notas,
+          [CON_IMAGENES]: imagenes.map((i) => i.imagen),
+        };
+        if (!query) return { actualizado: g.actualizado, aviso: UNTRUSTED_NOTE, ...v, ...deAvisos, ayuda: v.ayuda ? `${v.ayuda} (sitio de ayuda de UADE, fuera del MCP: abrilo vos)` : null };
         const coincide = (t: string) => fragmentos(t, query, 1000).length > 0;
         return {
           actualizado: g.actualizado,
           aviso: UNTRUSTED_NOTE,
           consulta: query,
-          importante: v.importante.filter(coincide),
+          ...deAvisos,
           instructivos: v.instructivos.filter((i) => coincide(i.titulo)),
           preguntasFrecuentes: v.preguntasFrecuentes.filter((p) => coincide(p.pregunta + ' ' + p.respuesta)),
         };

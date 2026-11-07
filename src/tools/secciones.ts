@@ -47,20 +47,24 @@ export function registerSeccionesTools(server: McpServer, granted: ReadonlySet<P
     'webcampus_section',
     {
       title: 'WebCampus section',
-      description: 'Text of an informational WebCampus section (page or official PDF, plus the PDF guides it links; a scanned PDF such as emergencias comes back as images). normativa_academica = official academic rules (attendance %, regularity, exams, failed exams limits, deadlines): use it for any rules question. aranceles_pdf = official fee amounts per degree and shift. admision_sia = admission exam (SIA), English level (ENI), Spanish (ENE) and the admission guide. Also Wi-Fi setup per OS, fees and payment methods, MRI, rules, student guide, scholarships and AYUES workshops, minors, electives, honors, invoices, building entries, codes of conduct… Pass query (e.g. "macOS") to get only the relevant passages.',
+      description: 'Text of an informational WebCampus section (page or official PDF, plus the PDF guides it links; a PDF without readable text, such as emergencias, comes back as page images: read them). normativa_academica = official academic rules (attendance %, regularity, exams, failed exams limits, deadlines): use it for any rules question. aranceles_pdf = official fee amounts per degree and shift. admision_sia = admission exam (SIA), English level (ENI), Spanish (ENE) and the admission guide. Also Wi-Fi setup per OS, fees and payment methods, MRI, rules, student guide, scholarships and AYUES workshops, minors, electives, honors, invoices, building entries, codes of conduct… Pass query (e.g. "macOS") to get only the relevant passages.',
       inputSchema: { section: z.enum(nombres), query: z.string().min(3).max(80).optional() },
       annotations: READ_ONLY,
     },
     ({ section, query }) =>
       run(granted, 'webcampus.leer', async () => {
-        const { value: d, actualizado } = await cache.get(`seccion:${section}`, TTL.semana, () => sec.consultar(section));
+        // Clave nueva en 0.6.4: la copia local de antes guardaba solo el link de los PDFs sin texto legible.
+        const { value: d, actualizado } = await cache.get(`seccion:v2:${section}`, TTL.semana, () => sec.consultar(section));
         if (!query) {
           const { imagenes, ...resto } = d as typeof d & { imagenes?: unknown };
           return { actualizado, aviso: UNTRUSTED_NOTE, ...resto, [CON_IMAGENES]: imagenes };
         }
         const texto = 'texto' in d ? d.texto : '';
         const f = fragmentos(texto, query);
-        return { actualizado, aviso: UNTRUSTED_NOTE, seccion: section, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${query}" en esta sección.`] };
+        // Lo que está en imágenes no se puede buscar: van igual, para que el modelo lo busque ahí.
+        const imagenes = d.imagenes ?? [];
+        const enImagenes = imagenes.length ? `Además van ${imagenes.length} ${imagenes.length > 1 ? 'imágenes' : 'imagen'} de PDFs sin texto legible: buscá "${query}" ahí.` : undefined;
+        return { actualizado, aviso: UNTRUSTED_NOTE, seccion: section, fuente: d.fuente, fragmentos: f.length ? f : [`No aparece "${query}" en el texto de esta sección.`], enImagenes, [CON_IMAGENES]: imagenes };
       }),
   );
 }
