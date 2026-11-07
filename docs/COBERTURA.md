@@ -5,6 +5,9 @@ Qué parte de UADE cubre el MCP, sección por sección. Se arma a partir del men
 pestaña por pestaña) y se verifica con `uade-mcp doctor`, que prueba cada fila marcada ✅ contra
 una cuenta real sin mostrar datos personales.
 
+El mapa completo de lo que publica UADE (incluido lo que el MCP no lee, el sitio oficial y los huecos
+priorizados) está en [INVENTARIO.md](INVENTARIO.md), que se regenera con `scripts/inventario.mjs`.
+
 Leyenda: ✅ cubierto · 🟡 parcial · ⏳ pendiente · ⛔ fuera de alcance a propósito · ↗ sitio externo (no aplica)
 
 ## Rol alumno
