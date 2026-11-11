@@ -15,9 +15,17 @@ function patronesLocales() {
   }
 }
 
+// Las etapas de test/etapas/ levantan el servidor entero contra una UADE simulada. En CI
+// (REVISAR_BASE=1) cada una corre como paso propio del workflow, así que acá se saltean.
+const etapas = process.env.REVISAR_BASE === '1' ? [] : [
+  ['E2E por protocolo MCP', 'npm run test:e2e'],
+  ['Estrés (concurrencia y entradas grandes)', 'npm run test:estres'],
+  ['Tiempos (presupuesto por tool)', 'npm run test:tiempos'],
+];
 const pasos = [
   ['Compilación (tsc)', 'npx tsc --noEmit'],
-  ['Tests (incluye auditoría)', 'npx vitest run'],
+  ['Tests unitarios y de integración (incluye auditoría)', 'npx vitest run --exclude "test/etapas/**"'],
+  ...etapas,
   ['Dependencias (npm audit)', 'npm audit --omit=dev'],
 ];
 let fallo = false;

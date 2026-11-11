@@ -182,6 +182,7 @@ Detalle en [SECURITY.md](SECURITY.md) y en la [auditoría](docs/AUDITORIA.md).
 ```
 src/
   index.ts        servidor MCP (sin argumentos) o CLI (con argumentos)
+  servidor.ts     arma el servidor con sus tools (lo usan index.ts y los tests e2e)
   tools/          una tool por archivo temático: qué recibe, qué devuelve
   sources/        cómo se lee cada sitio (WebCampus, Inscripciones, PIA, SharePoint, Teams…)
   net/            política de red (allowlist y bloqueos), cliente HTTP, sesiones
@@ -199,7 +200,7 @@ experimentos/     tu espacio para probar código aparte del MCP (ver su README)
 ```bash
 npm install
 npm test           # tests
-npm run revisar    # lo mismo que corre antes de cada commit: tipos, tests, npm audit y secretos
+npm run revisar    # lo mismo que corre antes de cada commit: tipos, tests, e2e, estrés, tiempos, npm audit y secretos
 npm run build
 ```
 
@@ -225,10 +226,11 @@ llama a la API de Anthropic. Sin `--motor`, usa `api` si hay clave y `claude-cod
 Flags: `--modelos claude-haiku-5-5,claude-sonnet-5-5` (el último se toma como el más capaz), `--umbral 85`
 (sale con error si el promedio baja de ahí), `--repeticiones 3`, `--solo <id>`. Si el modelo capaz acierta y
 el chico no, el reporte marca la pregunta como "descripción a mejorar": el arreglo va en la descripción de la
-tool, no en el código. No corre en CI ni en `revisar`; sin clave ni `claude` explica cómo correrlo y termina
-bien. Se corre antes de cada versión.
+tool, no en el código. No corre en CI ni en `revisar` (hay un workflow `evals.yml` que solo se dispara a mano y
+no hace nada sin una clave que el repo no guarda: ver [docs/CI.md](docs/CI.md)); sin clave ni `claude` explica
+cómo correrlo y termina bien. Se corre antes de cada versión.
 
-Documentación: [diseño](docs/DISENO.md) · [qué cubre](docs/COBERTURA.md) · [auditoría](docs/AUDITORIA.md).
+Documentación: [el pipeline, etapa por etapa](docs/CI.md) · [diseño](docs/DISENO.md) · [qué cubre](docs/COBERTURA.md) · [auditoría](docs/AUDITORIA.md).
 
 ## Licencia
 

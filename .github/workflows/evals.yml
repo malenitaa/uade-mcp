@@ -1,0 +1,64 @@
+# Workflow agéntico, INERTE: corre los evals de elección de tool (evals/correr.mjs) con un modelo
+# de Anthropic. Solo se dispara a mano (Actions > evals > Run workflow); no corre en push ni en PR
+# y no es un check obligatorio. Hoy el repo no guarda ninguna credencial de modelo, así que termina
+# en verde avisando que no hay nada que correr. Qué haría falta para activarlo, qué cuesta y qué
+# riesgo suma, en docs/CI.md ("Workflow agéntico"). La alternativa sin secretos, que es la que se
+# usa: `npm run evals -- --motor claude-code` en la compu de quien desarrolla.
+name: evals
+on:
+  workflow_dispatch:
+    inputs:
+      modelos:
+        description: Modelos separados por coma (el último se toma como el más capaz)
+        default: claude-haiku-5-5,claude-sonnet-5-5
+      repeticiones:
+        description: Veces que se corre cada pregunta por modelo
+        default: '3'
+      umbral:
+        description: Porcentaje de acierto mínimo para salir en verde
+        default: '85'
+permissions:
+  contents: read
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: ¿Hay credencial de modelo?
+        id: credencial
+        env:
+          HAY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          echo "hay=$HAY" >> "$GITHUB_OUTPUT"
+          if [ "$HAY" != "true" ]; then
+            {
+              echo "### Evals sin correr"
+              echo "Este repo no tiene el secreto \`ANTHROPIC_API_KEY\`, a propósito (ver docs/CI.md, \"Workflow agéntico\")."
+              echo "No se llamó a ningún modelo y no se gastó nada."
+              echo "Para correr los evals sin secretos: \`npm run evals -- --motor claude-code\` en local."
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.credencial.outputs.hay == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.credencial.outputs.hay == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      # Mismo motivo que en revisar.yml: SheetJS se baja de su CDN, fijado por integridad en el lockfile.
+      - if: steps.credencial.outputs.hay == 'true'
+        run: npm ci --ignore-scripts
+        env:
+          NPM_CONFIG_ALLOW_REMOTE: all
+      # La clave solo existe en este paso. El servidor arranca con una carpeta de datos vacía: no hay
+      # sesión de UADE ni se ejecuta ninguna tool; el modelo solo dice cuál elegiría.
+      - name: Evals de elección de tool
+        if: steps.credencial.outputs.hay == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODELOS: ${{ inputs.modelos }}
+          REPETICIONES: ${{ inputs.repeticiones }}
+          UMBRAL: ${{ inputs.umbral }}
+        run: npm run evals -- --motor api --modelos "$MODELOS" --repeticiones "$REPETICIONES" --umbral "$UMBRAL"

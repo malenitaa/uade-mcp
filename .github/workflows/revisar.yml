@@ -1,5 +1,6 @@
 # La misma revisión que corre el hook pre-commit, pero en GitHub, en cada push y cada PR:
-# tipos, tests (con la auditoría), npm audit y búsqueda de secretos en todo el árbol.
+# tipos, tests (con la auditoría), npm audit, búsqueda de secretos en todo el árbol y las etapas
+# e2e, estrés y tiempos.
 # Sin credenciales de nadie: no toca UADE ni cuentas; solo el código.
 name: revisar
 on:
@@ -28,4 +29,16 @@ jobs:
         env:
           NPM_CONFIG_ALLOW_REMOTE: all
       - run: npm run build
-      - run: REVISAR_TODO=1 npm run revisar
+      # Las etapas van como pasos con nombre para que una falla diga cuál fue. Todas corren contra una
+      # UADE simulada (fixtures sintéticas), sin red y sin sesión; se explican en docs/CI.md.
+      - name: Revisión base (tipos, tests unitarios y de integración, npm audit, secretos)
+        run: REVISAR_TODO=1 REVISAR_BASE=1 npm run revisar
+      - name: E2E por protocolo MCP
+        if: ${{ !cancelled() }}
+        run: npm run test:e2e
+      - name: Estrés (concurrencia y entradas grandes)
+        if: ${{ !cancelled() }}
+        run: npm run test:estres
+      - name: Tiempos (presupuesto por tool)
+        if: ${{ !cancelled() }}
+        run: npm run test:tiempos
