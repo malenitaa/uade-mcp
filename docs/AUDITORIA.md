@@ -280,10 +280,9 @@ cumplir con política de privacidad, consentimiento e inscripción ante la AAIP 
 
 ## Cambio del 11/11/2026 (versión 0.7.1): licencia Apache 2.0
 
-Sin cambios de código ni de comportamiento. El proyecto pasa de MIT a Apache 2.0: la licencia no
+Sin cambios de código ni de comportamiento. El proyecto adopta la licencia Apache 2.0: no
 concede el uso del nombre del proyecto, exige conservar `LICENSE` y `NOTICE` y avisar los archivos
-modificados al redistribuir, y las contribuciones entran bajo los mismos términos. Las versiones
-0.1.1 a 0.7.0 siguen bajo MIT. El paquete suma `NOTICE` a su lista cerrada de archivos, y el control
+modificados al redistribuir, y las contribuciones entran bajo los mismos términos. El paquete suma `NOTICE` a su lista cerrada de archivos, y el control
 de `publicar.yml` lo admite.
 
 ## Riesgos que quedan (aceptados)
