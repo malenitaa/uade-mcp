@@ -18,7 +18,7 @@ if (args.length) {
     process.exitCode = 1;
   }
 } else {
-  const server = await crearServidor({ name: 'uade-mcp', version: '0.7.0' });
+  const server = await crearServidor({ name: 'uade-mcp', version: '0.7.1' });
   // WebCampus vence cada ~3 h: cuando una tool se encuentra la sesión vencida, se renueva sola
   // (sin ventana, con la sesión de Microsoft que recuerda el perfil del navegador) y se reintenta.
   setRenovador(async () => (await iniciarSesion({ interactivo: false })).ok);

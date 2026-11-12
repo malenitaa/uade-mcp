@@ -278,6 +278,14 @@ Mientras el MCP sea local, no hay una base de datos de terceros: cada alumno pro
 datos en su compu. Si algún día hay un modo remoto, pasa a haber responsable de una base y hay que
 cumplir con política de privacidad, consentimiento e inscripción ante la AAIP (ver `DISENO.md`).
 
+## Cambio del 11/11/2026 (versión 0.7.1): licencia Apache 2.0
+
+Sin cambios de código ni de comportamiento. El proyecto pasa de MIT a Apache 2.0: la licencia no
+concede el uso del nombre del proyecto, exige conservar `LICENSE` y `NOTICE` y avisar los archivos
+modificados al redistribuir, y las contribuciones entran bajo los mismos términos. Las versiones
+0.1.1 a 0.7.0 siguen bajo MIT. El paquete suma `NOTICE` a su lista cerrada de archivos, y el control
+de `publicar.yml` lo admite.
+
 ## Riesgos que quedan (aceptados)
 
 1. **El agente tiene sus propias herramientas.** Un agente con acceso a la terminal puede hacer

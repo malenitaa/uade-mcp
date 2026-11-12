@@ -167,7 +167,7 @@ suma los patrones de `~/.uade-mcp/datos-personales.txt` (tu legajo, tu nombre), 
 
 `publicar.yml` se dispara solo al pushear un tag `vX.Y.Z`. Corre la revisión entera otra vez (con
 las etapas de arriba incluidas), comprueba que el tag coincida con la versión de `package.json` y
-de `src/index.ts`, que el paquete lleve solo `dist`, README, LICENSE, SECURITY y `package.json`, y
+de `src/index.ts`, que el paquete lleve solo `dist`, README, LICENSE, NOTICE, SECURITY y `package.json`, y
 recién ahí hace `npm stage publish`: la versión queda **en espera** hasta que quien mantiene el
 paquete la aprueba en npmjs.com con su segundo factor. No hay token de npm guardado: GitHub se
 identifica ante npm con OIDC ("trusted publishing").
