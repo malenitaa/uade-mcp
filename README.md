@@ -234,7 +234,6 @@ Documentación: [el pipeline, etapa por etapa](docs/CI.md) · [diseño](docs/DIS
 
 ## Licencia
 
-[Apache 2.0](LICENSE), desde la 0.7.1. Podés usarlo, copiarlo y modificarlo; si distribuís una versión
+[Apache 2.0](LICENSE). Podés usarlo, copiarlo y modificarlo; si distribuís una versión
 modificada tenés que conservar la licencia y el archivo [NOTICE](NOTICE) y avisar qué archivos cambiaste.
-La licencia no da derecho a usar el nombre del proyecto. Las versiones hasta la 0.7.0 salieron bajo MIT
-y siguen bajo esos términos.
+La licencia no da derecho a usar el nombre del proyecto.
