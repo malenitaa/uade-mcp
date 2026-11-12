@@ -1,6 +1,6 @@
 {
   "name": "uade-mcp",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
   "keywords": [
     "mcp",
@@ -18,7 +18,7 @@
   "bugs": {
     "url": "https://github.com/malenitaa/uade-mcp/issues"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "malenitaa",
   "type": "module",
   "main": "dist/index.js",
@@ -29,6 +29,7 @@
     "dist",
     "README.md",
     "LICENSE",
+    "NOTICE",
     "SECURITY.md"
   ],
   "engines": {

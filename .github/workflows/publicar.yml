@@ -38,12 +38,12 @@ jobs:
       # npm 12 (el que trae la publicación en staging) ignora npm-shrinkwrap.json, así que el lockfile
       # no puede viajar dentro del paquete: las dependencias directas van con versión exacta en
       # package.json y acá se verifica que el paquete no lleve nada de más.
-      - name: El paquete lleva solo dist, README, LICENSE, SECURITY y package.json
+      - name: El paquete lleva solo dist, README, LICENSE, NOTICE, SECURITY y package.json
         run: |
           npm pack --dry-run --json | node -e '
             const j = JSON.parse(require("fs").readFileSync(0, "utf8")); const p = Array.isArray(j) ? j[0] : Object.values(j)[0]; // npm 11 imprime una lista; npm 12, un objeto por paquete
             const files = p.files.map((f) => f.path);
-            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|SECURITY\.md$|package\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
+            if (files.some((f) => !/^(dist\/|README\.md$|LICENSE$|NOTICE$|SECURITY\.md$|package\.json$)/.test(f))) { console.error("archivo inesperado en el paquete:", files); process.exit(1); }
             console.log(files.length, "archivos");
           '
       - run: npm stage publish . --provenance --access public
