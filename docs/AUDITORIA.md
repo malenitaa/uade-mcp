@@ -285,6 +285,18 @@ concede el uso del nombre del proyecto, exige conservar `LICENSE` y `NOTICE` y a
 modificados al redistribuir, y las contribuciones entran bajo los mismos términos. El paquete suma `NOTICE` a su lista cerrada de archivos, y el control
 de `publicar.yml` lo admite.
 
+## Cambio del 15/11/2026: unpdf 2.1.0
+
+Sin cambios de comportamiento. `unpdf` pasa de 1.9.1 a 2.1.0 y trae el mismo pdf.js (6.4.299), así
+que la nota sobre CVE-2024-4367 sigue valiendo. La 2 ya no exporta su fábrica de canvas:
+`pdf-paginas.ts` le pasa a pdf.js una propia sobre `@napi-rs/canvas`, con los mismos topes. Medido
+con los PDFs de `test/fixtures` y dos sintéticos: el texto, los links y los PNG de las páginas salen
+byte a byte iguales que con la 1.9.1. La 2 suma los decodificadores de JPEG 2000 y JBIG2, pero solo
+se cargan si se los registra y acá no se registran: esas fotos siguen sin dibujarse.
+
+`unpdf` 2 declara `engines: node >=24`. En Node 22 anda (el CI corre en 22 y 24), pero `npm install`
+muestra un aviso `EBADENGINE` y quien mantiene `unpdf` ya no lo prueba ahí.
+
 ## Riesgos que quedan (aceptados)
 
 1. **El agente tiene sus propias herramientas.** Un agente con acceso a la terminal puede hacer
