@@ -6,7 +6,9 @@
 // un poco de solapamiento, porque el modelo achica cada imagen a unos 1500 px de lado. Una página
 // que sale toda blanca no se manda: pasa cuando pdf.js no puede decodificar sus fotos (JPEG 2000:
 // el pdf.js de unpdf no trae el decodificador), y mandarla sería decir que el documento está vacío.
-import { createIsomorphicCanvasFactory, getDocumentProxy } from 'unpdf';
+// unpdf 2 ya no exporta su fábrica de canvas: a pdf.js se le pasa una propia (opción CanvasFactory)
+// y los constructores DOMMatrix y Path2D de @napi-rs/canvas, que busca como globales al dibujar.
+import { getDocumentProxy } from 'unpdf';
 
 export interface PaginaPng {
   mimeType: 'image/png';
@@ -33,7 +35,15 @@ async function cargarCanvas(): Promise<Canvas | null> {
 export async function paginasComoImagenes(bytes: Uint8Array): Promise<PaginaPng[]> {
   const canvas = await cargarCanvas();
   if (!canvas) return [];
-  const CanvasFactory = await createIsomorphicCanvasFactory(() => Promise.resolve(canvas));
+  const g = globalThis as { DOMMatrix?: unknown; Path2D?: unknown };
+  g.DOMMatrix = canvas.DOMMatrix;
+  g.Path2D ??= canvas.Path2D;
+  type Lienzo = { canvas: import('@napi-rs/canvas').Canvas };
+  class CanvasFactory {
+    create(ancho: number, alto: number) { const c = canvas!.createCanvas(ancho, alto); return { canvas: c, context: c.getContext('2d') }; }
+    reset(l: Lienzo, ancho: number, alto: number) { l.canvas.width = ancho; l.canvas.height = alto; }
+    destroy(l: Lienzo) { l.canvas.width = 0; l.canvas.height = 0; }
+  }
   const pdf = await getDocumentProxy(new Uint8Array(bytes), { verbosity: 0, CanvasFactory });
   const out: PaginaPng[] = [];
   try {
