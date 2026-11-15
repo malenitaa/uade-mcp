@@ -32,6 +32,9 @@ Uso:
   uade-mcp permitir <permiso>  habilita un permiso (te explica qué permite y pide confirmación)
   uade-mcp revocar <permiso>   deshabilita un permiso
 
+Una vez por día, como mucho, el servidor le pregunta a npm si hay una versión nueva y te avisa (no se
+actualiza solo ni manda datos tuyos). Se apaga con UADE_MCP_AVISO_VERSION=0 en la config de tu cliente.
+
 Para sumarlo a Claude Code (lo corrés vos, en el scope que quieras):
   claude mcp add uade -- npx -y uade-mcp
 `;

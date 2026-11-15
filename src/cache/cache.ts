@@ -110,9 +110,11 @@ export class Cache {
     return { value, actualizado: new Date(at).toISOString() };
   }
 
+  // Lo que empieza con "mcp:" es estado del propio MCP (cuándo preguntó por una versión nueva), no
+  // datos de UADE: descartar la copia local no lo toca; `destroy` (logout) sí.
   clear(prefix?: string): number {
     const d = this.load();
-    const keys = Object.keys(d).filter((k) => !prefix || k.startsWith(prefix));
+    const keys = Object.keys(d).filter((k) => (prefix ? k.startsWith(prefix) : !k.startsWith('mcp:')));
     for (const k of keys) delete d[k];
     if (this.enabled) this.save();
     return keys.length;

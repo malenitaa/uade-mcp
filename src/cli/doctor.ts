@@ -20,6 +20,8 @@ import type { ClaseOfertada } from '../sources/webcampus/parse.js';
 import { bannersConImagenes, leerLink, MAX_BANNERS, MAX_BYTES_BANNER } from '../tools/novedades.js';
 import { imagenesDeAvisos } from '../tools/inscripciones.js';
 import { ALLOWED_HOSTS } from '../net/policy.js';
+import { chequeoApagado, COMO_ACTUALIZAR, versionNueva, type Ultima } from '../aviso-version.js';
+import { VERSION } from '../report/errores.js';
 
 type Estado = 'ok' | 'aviso' | 'error';
 
@@ -89,6 +91,17 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   };
 
   log('uade-mcp doctor — prueba cada capacidad. No muestra datos personales.\n');
+
+  // Lo mismo que avisa el servidor: versión instalada, la última publicada y qué cambia. Usa el
+  // mismo chequeo (a lo sumo un pedido por día, guardado en la copia local) y no gasta el aviso del día.
+  let nueva: Ultima | null = null;
+  await push('versión', [], async () => {
+    const apagado = chequeoApagado();
+    if (apagado) return ['ok', `instalada ${VERSION}; aviso de versión nueva apagado (${apagado})`];
+    nueva = await versionNueva();
+    if (!nueva) return ['ok', `instalada ${VERSION}; no hay una más nueva (o no se pudo preguntar). Se pregunta a npm a lo sumo una vez por día; se apaga con UADE_MCP_AVISO_VERSION=0`];
+    return ['aviso', `instalada ${VERSION}; ${nueva.seguridad ? `la ${nueva.version} CORRIGE UNA FALLA DE SEGURIDAD: conviene actualizar ahora` : `hay una más nueva, la ${nueva.version}`}.${nueva.cambios ? ` Qué cambia: ${nueva.cambios}` : ''} ${COMO_ACTUALIZAR}`];
+  });
 
   // Qué navegador usa el MCP para el login (sin rutas: una ruta lleva el nombre de usuario de la compu).
   await push('navegador', ['uade_login'], async () => [elegirNavegador() ? 'ok' : 'aviso', describirNavegador()]);
@@ -301,7 +314,7 @@ export async function doctor(opciones: { json?: boolean } = {}): Promise<void> {
   if (opciones.json) {
     // Para programarlo (cron, launchd, Programador de tareas): una línea por resultado, sin datos
     // personales, y código de salida 1 si algo se rompió.
-    console.log(JSON.stringify({ fecha: new Date().toISOString(), ok: n('ok'), avisos: n('aviso'), errores: n('error'), toolsProbadas: probadas, toolsRotas: rotas, toolsSinPrueba: Object.keys(TOOLS_SIN_PRUEBA), resultados: r }));
+    console.log(JSON.stringify({ fecha: new Date().toISOString(), version: { instalada: VERSION, chequeo: chequeoApagado() ? 'apagado' : 'prendido', nueva }, ok: n('ok'), avisos: n('aviso'), errores: n('error'), toolsProbadas: probadas, toolsRotas: rotas, toolsSinPrueba: Object.keys(TOOLS_SIN_PRUEBA), resultados: r }));
   } else {
     log(`\nResultado: ${n('ok')} OK, ${n('aviso')} avisos, ${n('error')} errores. Tools probadas: ${probadas.length} (sin prueba a propósito: ${Object.keys(TOOLS_SIN_PRUEBA).length}).`);
     if (rotas.length) log(`Tools afectadas: ${rotas.join(', ')}.`);

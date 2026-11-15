@@ -2,7 +2,7 @@
 // - valida cada URL (y cada salto de redirección) contra la política de red;
 // - corta por tiempo y por tamaño de respuesta;
 // - no manda nada más que lo que pide la tool: sin telemetría, sin headers de rastreo.
-import { ALLOWED_HOSTS, assertAllowed, PolicyError } from './policy.js';
+import { ALLOWED_HOSTS, assertAllowed, assertPedido, PolicyError } from './policy.js';
 
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 20_000;
@@ -16,6 +16,10 @@ export interface SafeRequest {
   cookie?: string;
   // Qué hacer si una redirección va a un host que no es del MCP: error (default) o devolver el destino sin contactarlo.
   redireccionAfuera?: 'error' | 'devolver';
+  // Topes más chicos que los generales, para un pedido que no puede demorar una respuesta: el
+  // tiempo es para el pedido entero (con sus redirecciones) y el tamaño, para el cuerpo.
+  timeoutMs?: number;
+  maxBytes?: number;
 }
 
 export interface SafeResponse {
@@ -37,18 +41,20 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
   let body = req.body;
   const setCookies: string[] = [];
   let cookie = req.cookie;
+  const limite = req.timeoutMs ? AbortSignal.timeout(req.timeoutMs) : undefined;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     // Headers propios solo al host original (mañana puede haber un Authorization).
     const headers = new Headers(url.host === originHost ? req.headers : undefined);
     if (cookie && url.host === originHost) headers.set('cookie', cookie);
+    assertPedido(url, method, headers, body);
 
     const res = await fetch(url, {
       method,
       headers,
       body,
       redirect: 'manual',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: limite ?? AbortSignal.timeout(TIMEOUT_MS),
     });
     if (url.host === originHost) {
       const fresh = res.headers.getSetCookie();
@@ -75,7 +81,7 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
       continue;
     }
 
-    const bytes = await readCapped(res);
+    const bytes = await readCapped(res, req.maxBytes ?? MAX_BODY_BYTES);
     return {
       status: res.status,
       url,
@@ -88,16 +94,16 @@ export async function safeFetch(rawUrl: string | URL, req: SafeRequest = {}): Pr
   throw new PolicyError('demasiadas redirecciones');
 }
 
-async function readCapped(res: Response): Promise<Uint8Array> {
+async function readCapped(res: Response, max: number): Promise<Uint8Array> {
   const declared = Number(res.headers.get('content-length') ?? 0);
-  if (declared > MAX_BODY_BYTES) throw new PolicyError('respuesta demasiado grande');
+  if (declared > max) throw new PolicyError('respuesta demasiado grande');
   if (!res.body) return new Uint8Array();
 
   const chunks: Uint8Array[] = [];
   let total = 0;
   for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
     total += chunk.byteLength;
-    if (total > MAX_BODY_BYTES) throw new PolicyError('respuesta demasiado grande');
+    if (total > max) throw new PolicyError('respuesta demasiado grande');
     chunks.push(chunk);
   }
   const out = new Uint8Array(total);

@@ -1,6 +1,6 @@
 {
   "name": "uade-mcp",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "MCP no oficial y de solo lectura para alumnos de UADE: WebCampus, inscripciones, apuntes e información oficial. Corre local, sin telemetría.",
   "keywords": [
     "mcp",
@@ -10,6 +10,11 @@
     "claude",
     "universidad"
   ],
+  "notasDeVersion": {
+    "version": "0.8.0",
+    "cambios": "El MCP ahora avisa cuando hay una versión nueva y qué cambia: le pregunta a npm cuál es la última, a lo sumo una vez por día y sin mandar ningún dato tuyo. Nunca se actualiza solo. Se apaga con UADE_MCP_AVISO_VERSION=0.",
+    "seguridad": false
+  },
   "homepage": "https://planuade.ar/mcp",
   "repository": {
     "type": "git",

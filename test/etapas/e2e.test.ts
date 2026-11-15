@@ -2,7 +2,7 @@
 // src/index.ts, conectado por memoria en vez de stdio) contra la UADE simulada. Responde lo que un
 // test de handler no puede: ¿lo que le llega al agente por el protocolo es lo que esperamos?
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { levantar, WC, type Simulada } from './uade-simulada.js';
+import { levantar, REGISTRO, WC, type Simulada } from './uade-simulada.js';
 
 vi.mock('@napi-rs/keyring', async () => (await import('./uade-simulada.js')).llaveroSimulado);
 
@@ -133,5 +133,14 @@ describe('e2e: errores que le llegan al agente', () => {
       vencida = false;
     }
     expect((await s.llamar('webcampus_teachers', { idAula: '900009' })).isError).toBe(false);
+  });
+});
+
+describe('e2e: aviso de versión nueva', () => {
+  it('en toda la corrida le preguntó una sola vez al registro de npm, y solo la última versión', () => {
+    expect(s.pedidos.filter((p) => p.includes('npmjs'))).toEqual([REGISTRO]);
+  });
+  it('sin versión nueva, las respuestas no traen nada de más', async () => {
+    expect((await s.llamar('webcampus_terms')).textos).toHaveLength(1);
   });
 });

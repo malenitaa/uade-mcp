@@ -14,6 +14,8 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'comunicacion.short.gy',
   // Solo para el reporte de errores opcional (permiso reportes.errores): un único path, ver DENY_RULES.
   'planuade.ar',
+  // Solo para el aviso de versión nueva (src/aviso-version.ts): una única URL (REGISTRO_URL) y un GET pelado (assertPedido).
+  'registry.npmjs.org',
   'login.microsoftonline.com',
   'graph.microsoft.com',
 ]);
@@ -23,6 +25,10 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
 // Playwright (su CDN y el de Microsoft detrás). No están en ALLOWED_HOSTS: el cliente HTTP del MCP
 // (safeFetch) sigue sin poder hablarles; los usa src/net/descargar-navegador.ts para verificar las URLs
 // que el instalador de playwright-core dice que va a bajar, antes de bajar nada.
+// El único pedido que sale hacia el registro de npm: los metadatos de la última versión publicada.
+export const REGISTRO_URL = 'https://registry.npmjs.org/uade-mcp/latest';
+const REGISTRO_HOST = new URL(REGISTRO_URL).hostname;
+
 export const HOSTS_DESCARGA_NAVEGADOR: ReadonlySet<string> = new Set(['cdn.playwright.dev', 'playwright.download.prss.microsoft.com']);
 
 interface DenyRule {
@@ -63,6 +69,10 @@ export function assertAllowed(rawUrl: string | URL): URL {
 
   const host = url.hostname.toLowerCase();
   if (!ALLOWED_HOSTS.has(host)) throw new PolicyError(`host fuera de la allowlist: ${host}`);
+  // Del registro de npm, esa URL letra por letra: ni otra ruta, ni query, ni variantes codificadas.
+  if (host === REGISTRO_HOST && url.href !== REGISTRO_URL) {
+    throw new PolicyError('bloqueado por política: al registro de npm solo se le pregunta la última versión de uade-mcp');
+  }
 
   // Un "%" mal armado (p. ej. en una Location que devuelve el servidor) haría tirar URIError: se
   // trata como URL inválida, no como excepción suelta.
@@ -76,4 +86,13 @@ export function assertAllowed(rawUrl: string | URL): URL {
     if (rule.pattern.test(target)) throw new PolicyError(`bloqueado por política: ${rule.motivo}`);
   }
   return url;
+}
+
+// Al registro de npm solo va un GET pelado: sin cuerpo, sin cookies y sin ninguna cabecera propia.
+// Lo llama el cliente HTTP en cada salto, con lo que está por mandar.
+export function assertPedido(url: URL, method: string, headers: Headers, body: unknown): void {
+  if (url.hostname.toLowerCase() !== REGISTRO_HOST) return;
+  if (method !== 'GET' || body != null || [...headers.keys()].length) {
+    throw new PolicyError('bloqueado por política: al registro de npm solo va un GET sin cuerpo, cookies ni cabeceras');
+  }
 }
