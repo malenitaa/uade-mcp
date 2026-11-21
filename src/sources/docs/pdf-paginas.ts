@@ -43,6 +43,8 @@ export async function paginasComoImagenes(bytes: Uint8Array): Promise<PaginaPng[
     create(ancho: number, alto: number) { const c = canvas!.createCanvas(ancho, alto); return { canvas: c, context: c.getContext('2d') }; }
     reset(l: Lienzo, ancho: number, alto: number) { l.canvas.width = ancho; l.canvas.height = alto; }
     destroy(l: Lienzo) { l.canvas.width = 0; l.canvas.height = 0; }
+    // unpdf 2.2 (pdf.js nuevo) le pide el contexto a la fábrica en vez de usar el que recibe render().
+    getNoAlphaContext(c: Lienzo['canvas']) { return c.getContext('2d'); }
   }
   const pdf = await getDocumentProxy(new Uint8Array(bytes), { verbosity: 0, CanvasFactory });
   const out: PaginaPng[] = [];
