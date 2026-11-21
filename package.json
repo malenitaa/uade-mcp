@@ -71,6 +71,6 @@
     "write-excel-file": "4.1.1"
   },
   "optionalDependencies": {
-    "@napi-rs/canvas": "1.1.0"
+    "@napi-rs/canvas": "1.1.1"
   }
 }
