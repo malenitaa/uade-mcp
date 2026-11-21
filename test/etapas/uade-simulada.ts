@@ -17,6 +17,10 @@ const html = (cuerpo: string | Uint8Array, init?: ResponseInit) => new Response(
 
 export const WC = 'https://www.webcampus.uade.edu.ar';
 export const INSC = 'https://inscripciones.uade.edu.ar';
+export const REGISTRO = 'https://registry.npmjs.org/uade-mcp/latest';
+export const INSTALADA: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version;
+// Lo que contesta el registro de npm simulado: los metadatos de la última versión publicada.
+export const registro = (version: string, notasDeVersion?: unknown) => Response.json({ name: 'uade-mcp', version, notasDeVersion });
 export const PROGRAMA = '/Programas/3.1.024_MATEM%c3%81TICA%20DISCRETA%20(PRESENCIAL)_12-08-2026.pdf';
 
 // Llavero en memoria. Arranca con una sesión inventada de WebCampus y de Inscripciones (las tools
@@ -65,6 +69,8 @@ function uade(u: URL, init: RequestInit): Response {
     // Menú > Calendario académico: redirige a un PDF público de dre.uade.edu.ar.
     if (p === '/principal.aspx') return new Response(null, { status: 302, headers: { location: 'https://dre.uade.edu.ar/calendario/cronos_inscrip_previos.pdf' } });
   }
+  // Sin que el test diga otra cosa, la última versión publicada es la instalada: no hay aviso.
+  if (u.href === REGISTRO) return registro(INSTALADA);
   if (u.host === 'dre.uade.edu.ar') return new Response(fx('calendario/cronos_inscrip_previos.pdf'), { headers: { 'content-type': 'application/pdf' } });
   return new Response('no existe en la UADE simulada', { status: 404 });
 }
@@ -73,8 +79,9 @@ export interface Simulada {
   client: Client;
   // Direcciones pedidas a "UADE", en orden.
   pedidos: string[];
-  // Llama una tool y devuelve su primer bloque de texto ya leído como JSON (o el texto, si no lo es).
-  llamar(name: string, args?: Record<string, unknown>): Promise<{ data: any; texto: string; isError: boolean; imagenes: number }>;
+  // Llama una tool y devuelve su primer bloque de texto ya leído como JSON (o el texto, si no lo es);
+  // `textos` son todos sus bloques de texto, en orden.
+  llamar(name: string, args?: Record<string, unknown>): Promise<{ data: any; texto: string; isError: boolean; imagenes: number; textos: string[] }>;
   cerrar(): Promise<void>;
 }
 
@@ -84,6 +91,8 @@ export async function levantar(ruta: Ruta = () => undefined): Promise<Simulada> 
   // Carpeta de datos propia y vacía: la copia cifrada de quien corre los tests no se toca. Va antes
   // de importar el servidor, que arma la caché al cargarse.
   process.env.UADE_MCP_HOME = mkdtempSync(join(tmpdir(), 'uade-mcp-etapas-'));
+  // El aviso de versión nueva queda como en una instalación real (prendido), contra el registro simulado.
+  delete process.env.UADE_MCP_AVISO_VERSION;
   const pedidos: string[] = [];
   vi.stubGlobal('fetch', async (input: URL | string, init: RequestInit = {}) => {
     const u = new URL(input);
@@ -104,7 +113,7 @@ export async function levantar(ruta: Ruta = () => undefined): Promise<Simulada> 
       const texto = content[0]?.text ?? '';
       let data: unknown = texto;
       try { data = JSON.parse(texto); } catch { /* respuesta en texto plano */ }
-      return { data, texto, isError: r.isError === true, imagenes: content.filter((c) => c.type === 'image').length };
+      return { data, texto, isError: r.isError === true, imagenes: content.filter((c) => c.type === 'image').length, textos: content.filter((c) => c.type === 'text').map((c) => c.text ?? '') };
     },
     async cerrar() {
       await client.close();

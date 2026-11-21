@@ -297,6 +297,30 @@ se cargan si se los registra y acá no se registran: esas fotos siguen sin dibuj
 `unpdf` 2 declara `engines: node >=24`. En Node 22 anda (el CI corre en 22 y 24), pero `npm install`
 muestra un aviso `EBADENGINE` y quien mantiene `unpdf` ya no lo prueba ahí.
 
+## Cambio del 15/11/2026 (versión 0.8.0): aviso de versión nueva
+
+Cambia una garantía escrita. Hasta la 0.7.2 el MCP no hacía ningún chequeo de versiones
+(`DISENO.md` §1 decía "ni update check"). Desde la 0.8.0 le pregunta al registro de npm cuál es la
+última versión publicada y avisa si hay una más nueva. El motivo: sin aviso, quien fijó la versión o
+dejó el cliente abierto puede quedarse en una versión con una falla conocida sin enterarse. Sigue sin
+actualizarse solo. Descripción completa y prueba de cómo actualiza `npx` en `docs/ACTUALIZAR.md`.
+
+Superficie nueva y cómo se acota:
+
+| Riesgo | Control | Test |
+|---|---|---|
+| Un host más en la allowlist (`registry.npmjs.org`) que otra parte del código podría usar para sacar datos | Solo pasa `https://registry.npmjs.org/uade-mcp/latest`, comparada letra por letra (ni otra ruta, ni query, ni variantes codificadas), y solo como GET sin cuerpo, sin cookies y sin ninguna cabecera propia; se controla en el cliente HTTP, en cada salto | `test/policy.test.ts` |
+| Que el chequeo cuente algo de la persona | No lleva parámetros ni identificadores: ni versión instalada, ni sistema, ni tools usadas. npm ve la IP y la hora, igual que al instalar con `npx` | `test/policy.test.ts` (el pedido sale sin cabeceras ni cuerpo) |
+| Seguimiento por frecuencia | Como mucho un pedido por día, anotado en la copia local cifrada; `uade_refresh` no lo reinicia; el resultado fallido también vale por el día | `test/aviso-version.test.ts`, `test/cache.test.ts` |
+| Texto del registro que llega al modelo (prompt injection, LLM01) | La versión tiene que ser `n.n.n`; las notas se pasan a una línea, sin caracteres de control, se recortan a 300 caracteres y van dentro de `<contenido_externo>`. Las escribe quien mantiene el proyecto y viajan en el paquete publicado (trusted publishing y aprobación con 2FA), así que para falsificarlas hay que comprometer la publicación o el registro | `test/aviso-version.test.ts` |
+| Que el aviso haga que el agente "actualice" por su cuenta | El texto dice que el MCP no se actualiza solo y que el agente no corra nada; no hay ninguna tool que actualice ni ejecute comandos | `test/aviso-version.test.ts` |
+| Que un registro caído o lento rompa o demore las tools | Tope de 2 s para el pedido entero y de 64 KB; el pedido corre en paralelo con la tool; cualquier falla termina en "sin aviso" | `test/aviso-version.test.ts` |
+| Que no se pueda apagar | `UADE_MCP_AVISO_VERSION=0`: no sale ningún pedido (un test los cuenta). Es una variable de entorno y no una clave de `config.json` porque las versiones anteriores rechazan claves que no conocen en ese archivo: quien apagara el aviso y después fijara una versión vieja se quedaría con un servidor que no arranca | `test/aviso-version.test.ts` |
+
+Lo que no cubre: con `npx -y uade-mcp` (sin versión), es `npx` y no el MCP quien baja la última en
+cada arranque; eso ya era así y no cambia. El aviso corre también en los tests del proyecto, pero
+apagado por defecto (`vitest.config.ts`) y, donde se prueba, contra un registro simulado.
+
 ## Riesgos que quedan (aceptados)
 
 1. **El agente tiene sus propias herramientas.** Un agente con acceso a la terminal puede hacer
@@ -307,6 +331,10 @@ muestra un aviso `EBADENGINE` y quien mantiene `unpdf` ya no lo prueba ahí.
    Dura poco y `logout` la borra.
 3. **Datos en URLs (L6).** El texto del borrador pasa por Outlook web; el historial va en el `#` del
    link de Plan UADE (no viaja a ningún servidor, pero queda en el historial del navegador).
+4. **El registro de npm sabe que alguien usa el MCP.** El aviso de versión nueva le hace un pedido
+   por día: npm (y Cloudflare, que lo sirve) ven la IP y la hora, sin nada que identifique a la
+   persona ni a la instalación. Es lo mismo que ya ven cuando `npx` baja el paquete. Se apaga con
+   `UADE_MCP_AVISO_VERSION=0`.
 
 ## Cómo repetir esta auditoría
 

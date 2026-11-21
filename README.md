@@ -47,6 +47,21 @@ claude mcp add uade -- npx -y uade-mcp
 En cualquier otro cliente MCP: comando `npx`, argumentos `-y uade-mcp`, transporte stdio. Si preferís
 tenerlo instalado: `npm i -g uade-mcp` y después `uade-mcp login`.
 
+### Versiones: seguir la última o fijar una
+
+- **Seguir la última** (lo de arriba, `npx -y uade-mcp`): cada vez que tu cliente arranca el MCP, `npx` le
+  pregunta a npm cuál es la última versión y, si cambió, baja esa. Para actualizar alcanza con cerrar y
+  volver a abrir el cliente. No elegís cuándo cambia.
+- **Fijar una versión** (`claude mcp add uade -- npx -y uade-mcp@0.8.0`): queda en esa hasta que cambies el
+  número en la config de tu cliente. Elegís vos cuándo actualizar.
+- **Instalado con `npm i -g`:** queda la que instalaste; se actualiza con `npm i -g uade-mcp@latest`.
+
+En los tres casos el MCP **nunca se actualiza solo**, pero te avisa: si hay una versión más nueva que la
+que está corriendo, la primera respuesta del día te dice cuál es, qué cambia y cómo actualizar (y lo dice
+primero si corrige una falla de seguridad). `uade-mcp doctor` muestra lo mismo. Si justo se publicó una
+versión y el MCP no conecta al reabrir el cliente, esperá cinco minutos: es la caché de npm. Cómo se midió
+todo esto y qué pide exactamente el aviso: [docs/ACTUALIZAR.md](docs/ACTUALIZAR.md).
+
 Desde el código (para desarrollar): `git clone`, `npm install`, `npm run build` y `node dist/index.js`.
 
 ### Sesión
@@ -159,12 +174,18 @@ código 1 si algo se rompió. En macOS/Linux, por ejemplo cada mañana con `cron
 ```
 
 En Windows, el Programador de tareas con el mismo comando. Si el log muestra `"estado":"error"`, hay que
-actualizar el MCP (`npx` usa siempre la última versión publicada; con `npm i -g`, `npm update -g uade-mcp`) o, si es nuevo, abrir un issue.
+actualizar el MCP (ver [Versiones](#versiones-seguir-la-última-o-fijar-una)) o, si es nuevo, abrir un issue.
 
 ## Privacidad y seguridad
 
 - **Local.** Corre en tu compu por stdio; no hay ningún servidor del proyecto en el medio.
-- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código (salvo el reporte de errores, si lo activás vos, y la descarga del Chromium propio desde los servidores de Playwright, solo si no tenés Chrome, Edge ni Brave y la confirmás).
+- **Sin telemetría.** Solo habla con dominios de UADE y Microsoft; cualquier otro host está bloqueado en el código (salvo el aviso de versión nueva del punto siguiente, el reporte de errores, si lo activás vos, y la descarga del Chromium propio desde los servidores de Playwright, solo si no tenés Chrome, Edge ni Brave y la confirmás).
+- **Aviso de versión nueva, prendido por defecto.** Como mucho una vez por día, el MCP le pregunta a npm cuál
+  es la última versión publicada (`GET https://registry.npmjs.org/uade-mcp/latest`). No manda cookies,
+  cabeceras propias ni ningún dato tuyo o de tu instalación: npm ve tu IP y la hora, igual que cuando `npx`
+  baja el paquete. Solo avisa; no actualiza ni ejecuta nada. Lo apagás con `UADE_MCP_AVISO_VERSION=0` en la
+  config de tu cliente (`claude mcp add uade -e UADE_MCP_AVISO_VERSION=0 -- npx -y uade-mcp`), y apagado no
+  sale ningún pedido.
 - **Sin contraseñas.** Iniciás sesión vos, en la página de Microsoft. Se guardan cookies de sesión en el
   llavero del sistema y la sesión de Microsoft en un perfil de navegador propio (`~/.uade-mcp/browser-profile`).
 - **Copia local cifrada** (AES-256-GCM, clave en el llavero) para no pedir lo mismo dos veces. Cada respuesta dice de cuándo es.
@@ -183,6 +204,7 @@ Detalle en [SECURITY.md](SECURITY.md) y en la [auditoría](docs/AUDITORIA.md).
 src/
   index.ts        servidor MCP (sin argumentos) o CLI (con argumentos)
   servidor.ts     arma el servidor con sus tools (lo usan index.ts y los tests e2e)
+  aviso-version.ts  aviso de versión nueva: el único pedido al registro de npm (docs/ACTUALIZAR.md)
   tools/          una tool por archivo temático: qué recibe, qué devuelve
   sources/        cómo se lee cada sitio (WebCampus, Inscripciones, PIA, SharePoint, Teams…)
   net/            política de red (allowlist y bloqueos), cliente HTTP, sesiones

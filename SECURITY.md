@@ -9,7 +9,7 @@ No abras un issue público para temas de seguridad.
 
 | Garantía | Dónde | Test |
 |---|---|---|
-| Solo HTTPS a la allowlist de UADE y Microsoft; cada redirección se revalida | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
+| Solo HTTPS a la allowlist de UADE y Microsoft (más dos destinos cerrados, cada uno en su fila: el reporte de errores opt-in y el aviso de versión nueva); cada redirección se revalida | `src/net/policy.ts`, `src/net/http.ts` | `test/policy.test.ts` |
 | Bloqueos fijos (pagos, bajas, desvincularse, datos personales, buscador de personas, cerrar sesión) en URLs y postbacks | `src/net/policy.ts`, `src/net/session.ts` | `test/policy.test.ts`, `test/auditoria.test.ts` |
 | Cookies y headers solo al host que corresponde; nada sale del origen de cada sitio | `src/net/http.ts`, `src/net/session.ts` | `test/webcampus-client.test.ts` |
 | Nunca ve la contraseña: el login lo hace la persona en la página de Microsoft | `src/auth/login.ts` | — |
@@ -25,7 +25,8 @@ No abras un issue público para temas de seguridad.
 | Rutas de SharePoint ancladas a la carpeta habilitada; `folder` no acepta `..`, `.` ni segmentos vacíos | `src/sources/sharepoint/index.ts`, `src/tools/materiales.ts` | `test/materiales.test.ts` |
 | Topes: 10 MB y 20 s por pedido, 5 redirecciones, 80 páginas por PDF, 60 MB descomprimidos por archivo contando bytes reales (xlsx, docx, pptx) y por PDF escaneado (imágenes, con tope por imagen), 3 páginas y 20 megapíxeles por página al dibujar un PDF sin texto legible; 1,5 MB por imagen suelta (banners, avisos de inscripción, links); los PDFs se recorren en tiempo lineal | `src/sources/docs/`, `src/sources/webcampus/previos.ts` | `test/previos.test.ts`, `test/materiales.test.ts`, `test/pdf-imagenes.test.ts` |
 | Reporte de errores opt-in (`reportes.errores`): campos fijos (versión, tool, tipo, página); el mensaje viaja solo de errores técnicos y tapado (mails, números largos, rutas, comillas); de los errores que nombran materias, archivos o carreras (`ErrorDeUso`) va solo el tipo; un envío por tool, tipo y página por día; único path permitido en planuade.ar | `src/report/errores.ts`, `src/error-de-uso.ts`, `src/net/policy.ts` | `test/reportes.test.ts` |
-| Sin telemetría; dependencias directas con versión exacta (npm 12 ignora `npm-shrinkwrap.json`, así que las transitivas las fija el lockfile solo en desarrollo y CI); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
+| Aviso de versión nueva (desde la 0.8.0): como mucho una vez por día, un GET a una única URL del registro de npm (`https://registry.npmjs.org/uade-mcp/latest`), sin cookies, sin cabeceras propias, sin cuerpo y sin ningún dato de la persona ni de la instalación; cualquier otra ruta, método, cabecera, cookie o cuerpo hacia ese host se rechaza antes de salir; tope de 2 s y 64 KB, y si falla la tool responde normal; la versión se valida con formato estricto y las notas se recortan a 300 caracteres y llegan como `<contenido_externo>`; solo avisa: nunca actualiza ni ejecuta nada; se apaga con `UADE_MCP_AVISO_VERSION=0` y apagado no sale ningún pedido ([docs/ACTUALIZAR.md](docs/ACTUALIZAR.md)) | `src/aviso-version.ts`, `src/net/policy.ts`, `src/net/http.ts`, `src/tools/common.ts` | `test/aviso-version.test.ts`, `test/policy.test.ts`, `test/etapas/e2e.test.ts` |
+| Sin telemetría: ningún pedido lleva datos de uso, de la persona ni de la instalación. Los únicos pedidos que no van a UADE ni a Microsoft son el aviso de versión nueva (fila de arriba, prendido por defecto), el reporte de errores (opt-in) y la descarga del Chromium propio (con confirmación); dependencias directas con versión exacta (npm 12 ignora `npm-shrinkwrap.json`, así que las transitivas las fija el lockfile solo en desarrollo y CI); `npm audit` en cada commit | `package.json`, `.github/workflows/publicar.yml`, `scripts/revisar.mjs` | hook pre-commit, CI |
 
 La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos aceptados) está en
 [docs/AUDITORIA.md](docs/AUDITORIA.md).
@@ -38,6 +39,10 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 - **Nada sale al público sin una persona:** GitHub solo deja la versión *en espera* en npm; la publica quien
   mantiene el paquete, aprobándola en npmjs.com con su segundo factor. Un repo o una cuenta de GitHub
   comprometidos no alcanzan para publicar.
+- **Las notas de versión tienen la misma protección que el código:** el aviso de versión nueva las lee
+  del `package.json` publicado (campo `notasDeVersion`), así que nadie puede escribir un aviso sin pasar
+  por la publicación desde GitHub y la aprobación con segundo factor. `publicar.yml` no publica una
+  versión sin sus notas.
 - **Verificar lo instalado:** `npm audit signatures` en una carpeta con `uade-mcp` instalado comprueba la
   firma y la provenance contra el registro.
 - **CI en cada push y PR** (`revisar.yml`): tipos, tests, `npm audit` y búsqueda de secretos en todo el
@@ -81,6 +86,7 @@ La auditoría completa (hallazgos, controles OWASP, NIST y ISO 27001, riesgos ac
 
 - **Nunca** commitees HTML, HAR, capturas o cookies reales. Los fixtures van anonimizados en `test/fixtures/`.
 - No se agregan dependencias que hagan llamadas de red propias (analytics, chequeo de versiones, reporte de errores).
+  El aviso de versión nueva es código de este repo, pasa por el cliente HTTP y su política, y no suma ninguna.
 - Toda tool que escriba algo necesita un permiso propio en `PERMISSIONS`, apagado por defecto, y la
   confirmación de la persona en un diálogo que el agente no pueda contestar.
 - `npm run revisar` tiene que pasar antes de cada commit (el hook lo corre solo).

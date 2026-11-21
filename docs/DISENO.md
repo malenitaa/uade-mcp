@@ -9,8 +9,14 @@ solo la estructura relevada el 2026-10-18.
 ## 1. Principios (no negociables)
 
 1. **Corre en tu compu, por stdio.** No hay servidor nuestro en el medio. Nadie más ve tus cookies, notas ni cuota.
-2. **Cero telemetría.** Ni analytics, ni crash reporting, ni "update check". El único tráfico de red
+2. **Cero telemetría.** Ni analytics, ni crash reporting. El único tráfico de red
    sale a los hosts de la allowlist (sección 4). Los logs son locales y se redactan.
+   Hasta la 0.7.2 acá decía también "ni update check". Desde la 0.8.0 hay uno, y se describe tal cual
+   es: como mucho una vez por día, un GET a `https://registry.npmjs.org/uade-mcp/latest`, sin cookies
+   ni cabeceras propias, que no lleva ningún dato tuyo ni de tu instalación (npm ve tu IP y la hora,
+   lo mismo que cuando `npx` baja el paquete). Sirve para avisarte que hay una versión nueva y qué
+   cambia; el MCP nunca se actualiza solo. Se apaga con `UADE_MCP_AVISO_VERSION=0`.
+   Detalle en [ACTUALIZAR.md](ACTUALIZAR.md).
 3. **Solo lectura por defecto.** Las herramientas que escriben vienen apagadas y se activan con un flag
    explícito en la config (`"allowWrites": ["teams.entregar"]`, por ejemplo), nunca desde el chat.
 4. **El agente no puede autoconfirmarse.** Toda escritura pide confirmación **al humano, fuera del modelo**
@@ -97,6 +103,7 @@ dre.uade.edu.ar, www.dre.uade.edu.ar (PDFs públicos: calendario académico, cro
 graph.microsoft.com                  (fase Teams/mail, si UADE lo permite)
 teams.microsoft.com, teams.cloud.microsoft, *.office.net … (Teams web, dentro del navegador propio del MCP)
 api.github.com                       (opcional)
+registry.npmjs.org                   (solo GET /uade-mcp/latest, sin cookies ni cabeceras: el aviso de versión nueva, §1)
 cdn.playwright.dev, playwright.download.prss.microsoft.com (solo la descarga del Chromium propio, si no hay Chrome/Edge/Brave y la persona confirma; nunca desde el cliente HTTP)
 (PlanUADE no: el MCP solo arma un link local, ver sección 8)
 ```
@@ -292,7 +299,7 @@ Salen de ver cómo se distribuyen otros MCP y herramientas para agentes:
 | Hooks que suben el registro de **todas** las sesiones del agente, o telemetría con detalle de tools y archivos | **Sin telemetría.** Ni opt-in por ahora. Si algún día existe, será opt-in, limitada a llamadas a este MCP y explicada en la hoja de datos |
 | Tokens en texto plano en JSON de configuración | Llavero del sistema |
 | Cabeceras propietarias que obligan a usar un instalador | Protocolo MCP estándar (stdio). Si hay modo remoto, OAuth estándar |
-| Auto-update prendido por defecto | **Sin auto-update.** Fijás la versión (`npx uade-mcp@x.y.z`) y actualizás cuando quieras |
+| Auto-update prendido por defecto | **El MCP no se actualiza solo: avisa.** Una vez por día, como mucho, le pregunta al registro de npm cuál es la última versión y, si hay una más nueva, te dice cuál es, qué cambia y cómo actualizar; se apaga con `UADE_MCP_AVISO_VERSION=0`. Quién decide la versión depende de cómo lo instalaste, y está medido en [ACTUALIZAR.md](ACTUALIZAR.md): con `npx -y uade-mcp`, npx baja la última cada vez que arranca el cliente; si querés elegir vos cuándo, fijás la versión (`npx -y uade-mcp@x.y.z`) |
 | App nativa o daemon para algo que es solo un servidor | Proceso stdio que arranca y termina con el cliente |
 
 **Hoja de datos pública** (pendiente, antes de abrir el repo): qué hace cada tool, qué guarda y dónde,

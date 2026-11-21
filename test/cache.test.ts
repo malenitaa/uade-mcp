@@ -61,6 +61,17 @@ describe('caché local cifrada', () => {
     expect(() => readFileSync(file)).toThrow();
   });
 
+  it('descartar todo no toca el estado propio del MCP ("mcp:"); destruir sí', async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'c-')), 'cache.enc');
+    const c = new Cache(file, memKeys(), true);
+    await c.get('cursada:', 10_000, async () => 1);
+    await c.get('mcp:version', 10_000, async () => 'ya preguntó');
+    expect(c.clear()).toBe(1);
+    expect((await c.get('mcp:version', 10_000, async () => 'otra vez')).value).toBe('ya preguntó');
+    c.destroy();
+    expect((await c.get('mcp:version', 10_000, async () => 'otra vez')).value).toBe('otra vez');
+  });
+
   it('se puede desactivar (UADE_MCP_CACHE=0)', async () => {
     let pedidos = 0;
     const c = new Cache(join(mkdtempSync(join(tmpdir(), 'c-')), 'cache.enc'), memKeys(), false);

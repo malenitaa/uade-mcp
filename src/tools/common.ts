@@ -1,6 +1,7 @@
 // Shared helpers for tools: permission check, error handling and Argentine date format.
 import { requirePermission, type Permission } from '../auth/permissions.js';
 import { PageChangedError } from '../sources/webcampus/parse.js';
+import { avisoDeVersion } from '../aviso-version.js';
 import { reportarError } from '../report/errores.js';
 import { untrusted } from '../untrusted.js';
 
@@ -53,6 +54,20 @@ function isEmpty(v: unknown): boolean {
 }
 
 export async function run(
+  granted: ReadonlySet<Permission>,
+  permission: Permission,
+  fn: () => Promise<unknown>,
+): Promise<ToolResult> {
+  // El aviso de versión nueva se averigua mientras la tool trabaja; nunca falla y tiene su tope de
+  // tiempo. Sale en la primera respuesta del día: al principio si es un arreglo de seguridad.
+  const aviso = avisoDeVersion();
+  const r = await responder(granted, permission, fn);
+  const a = await aviso;
+  if (a) r.content[a.primero ? 'unshift' : 'push']({ type: 'text', text: a.texto });
+  return r;
+}
+
+async function responder(
   granted: ReadonlySet<Permission>,
   permission: Permission,
   fn: () => Promise<unknown>,
