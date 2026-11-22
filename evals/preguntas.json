@@ -32,6 +32,12 @@
       "aceptables": [{ "tool": "uade_enrollment_schedule" }]
     },
     {
+      "id": "pack-anual",
+      "grupo": "directas",
+      "pregunta": "Este año cursé 2.º, ¿qué día me anoto al pack de 3.er año?",
+      "aceptables": [{ "tool": "uade_academic_calendar", "args": { "topic": "inscripciones", "filter": "pack" } }]
+    },
+    {
       "id": "que-puedo-cursar",
       "grupo": "directas",
       "pregunta": "Aprobé Programación I y Matemática I, ¿qué materias puedo cursar ahora?",
